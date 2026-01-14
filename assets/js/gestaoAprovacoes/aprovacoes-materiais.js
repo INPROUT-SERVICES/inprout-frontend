@@ -216,11 +216,6 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
                 segmento = solicitacao.os.segmentoDescricao;
             }
 
-            // --- 4. CORREÇÃO OBJETO CONTRATADO ---
-            // Usa o campo lpu.nome que populamos com o Objeto Contratado no backend
-            const lpuObj = solicitacao.lpu || {};
-            const lpuDisplay = lpuObj.nome || lpuObj.nomeLpu || 'Objeto não informado';
-
             const totalValor = calcularTotal(solicitacao.itens);
             const totalItens = (solicitacao.itens || []).length;
 
@@ -256,6 +251,17 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
 
                 return `
                     <tr>
+                        <td class="text-center">
+                            ${item.statusItem === 'PENDENTE' && podeAprovar ? `
+                                <div class="form-check d-flex justify-content-center">
+                                    <input class="form-check-input check-item-filho" 
+                                        type="checkbox" 
+                                        value="${item.id}" 
+                                        ${isItemSelected ? 'checked' : ''}
+                                        onchange="toggleItemIndividual(this, ${pedidoId})">
+                                </div>
+                            ` : ''}
+                        </td>
                         <td style="width: 60px;">
                             <div class="material-icon-box">
                                 <i class="bi bi-box-seam"></i>
@@ -318,10 +324,6 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
                                     <i class="bi bi-layers me-1"></i>${segmento}
                                 </span>
                                 
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle" title="Objeto Contratado">
-                                    <i class="bi bi-file-earmark-text me-1"></i>${lpuDisplay}
-                                </span>
-                                
                                 <span class="fw-bold text-success ms-2">${formatarMoeda(totalValor)}</span>
                             </div>
                         </div>
@@ -339,6 +341,9 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
                             <table class="table-modern-2026">
                                 <thead>
                                     <tr>
+                                        <th style="width: 40px;" class="text-center">
+                                            <i class="bi bi-check2-square"></i>
+                                        </th>
                                         <th>Ref</th>
                                         <th>Material / Descrição</th>
                                         <th class="text-center">Unid</th>
@@ -573,6 +578,61 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
             if (card) card.classList.remove('selected-card');
         }
         atualizarUIGlobal();
+    }
+
+    window.toggleItemIndividual = function (checkbox, pedidoId) {
+        const itemId = parseInt(checkbox.value);
+        const card = checkbox.closest('.pedido-item-dom');
+
+        if (checkbox.checked) {
+            if (!selecionadosMateriais.includes(itemId)) selecionadosMateriais.push(itemId);
+        } else {
+            selecionadosMateriais = selecionadosMateriais.filter(id => id !== itemId);
+        }
+
+        atualizarEstadoCheckboxPai(card, pedidoId);
+        atualizarUIGlobal();
+    };
+
+    // --- Atualiza Lógica de Seleção: Pedido Inteiro (Pai) ---
+    // Substitua a função togglePedidoInteiro existente por esta:
+    window.togglePedidoInteiro = function (checkbox, pedidoId) {
+        const card = checkbox.closest('.pedido-item-dom');
+        const checkboxesFilhos = card.querySelectorAll('.check-item-filho');
+        const isChecked = checkbox.checked;
+
+        checkboxesFilhos.forEach(child => {
+            child.checked = isChecked;
+            const itemId = parseInt(child.value);
+
+            if (isChecked) {
+                if (!selecionadosMateriais.includes(itemId)) selecionadosMateriais.push(itemId);
+            } else {
+                selecionadosMateriais = selecionadosMateriais.filter(id => id !== itemId);
+            }
+        });
+
+        if (isChecked) card.classList.add('selected-card');
+        else card.classList.remove('selected-card');
+
+        atualizarUIGlobal();
+    };
+
+    // --- Função Auxiliar Visual ---
+    function atualizarEstadoCheckboxPai(card, pedidoId) {
+        if (!card) return;
+        const checkPai = card.querySelector('.check-pedido-pai');
+        const filhos = Array.from(card.querySelectorAll('.check-item-filho'));
+        const todosMarcados = filhos.every(c => c.checked);
+        const algumMarcado = filhos.some(c => c.checked);
+
+        if (checkPai) {
+            checkPai.checked = todosMarcados;
+            checkPai.indeterminate = someMarcado && !todosMarcados;
+
+            if (algumMarcado) card.classList.add('selected-card');
+            else card.classList.remove('selected-card');
+        }
     }
 
     function atualizarUIGlobal() {
