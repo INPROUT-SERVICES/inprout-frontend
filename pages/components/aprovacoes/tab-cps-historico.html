@@ -1,0 +1,45 @@
+<div class="content-loader-container">
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1">Mês Ref.</label>
+                    <select class="form-select form-select-sm" id="cps-hist-filtro-mes-ref"></select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1">Segmento</label>
+                    <select class="form-select form-select-sm" id="cps-hist-filtro-segmento"><option value="">Todos</option></select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1">Prestador</label>
+                    <select class="form-select form-select-sm" id="cps-hist-filtro-prestador"><option value="">Todos</option></select>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-primary flex-grow-1" id="btn-atualizar-historico-cps"><i class="bi bi-funnel-fill me-1"></i> Filtrar</button>
+                        <button class="btn btn-sm btn-outline-success" id="btn-exportar-historico-cps" title="Exportar"><i class="bi bi-file-earmark-excel-fill"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white p-3 border-bottom d-flex align-items-center justify-content-between">
+            <h5 class="mb-0 card-title-modern"><i class="bi bi-clock-history me-2"></i>Histórico Recente</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3 position-relative">
+                <input type="text" class="form-control ps-5" id="input-busca-cps-historico" placeholder="Pesquisar por OS, Projeto, Prestador, Valor...">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+            </div>
+            <div class="accordion" id="accordionHistoricoCPS"></div>
+            <div class="text-center mt-4 mb-2">
+                <button id="btn-carregar-mais-historico-cps" class="btn btn-outline-primary btn-sm rounded-pill px-4"><i class="bi bi-arrow-clockwise me-1"></i> Carregar +30 dias anteriores</button>
+            </div>
+        </div>
+    </div>
+    <div class="overlay-loader d-none">
+        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div>
+    </div>
+</div>

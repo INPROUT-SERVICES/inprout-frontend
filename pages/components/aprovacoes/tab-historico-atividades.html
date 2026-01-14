@@ -1,0 +1,33 @@
+<div class="content-loader-container">
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 card-title-modern"><i class="bi bi-calendar-check me-2"></i>Histórico de Atividades</h5>
+            <div style="width: 250px;">
+                <select class="form-select form-select-sm" id="filtro-historico-status">
+                    <option value="todos">Todos os Status</option>
+                    <option value="APROVADO">Aprovado</option>
+                    <option value="RECUSADO_COORDENADOR">Recusado Coordenador</option>
+                    <option value="RECUSADO_CONTROLLER">Recusado Controller</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive custom-scroll">
+                <table class="table modern-table align-middle">
+                    <thead id="thead-historico"></thead>
+                    <tbody id="tbody-historico"></tbody>
+                </table>
+            </div>
+            <div class="text-center mt-3 mb-2">
+                <button id="btn-carregar-mais-historico" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-clock-history me-1"></i> Carregar mais antigos (+30 dias)
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="overlay-loader d-none">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,117 @@
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>102</td><td>Atividade Exemplo 2</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>103</td><td>Atividade Exemplo 3</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>104</td><td>Atividade Exemplo 4</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>105</td><td>Atividade Exemplo 5</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>106</td><td>Atividade Exemplo 6</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>107</td><td>Atividade Exemplo 7</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>108</td><td>Atividade Exemplo 8</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>109</td><td>Atividade Exemplo 9</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>110</td><td>Atividade Exemplo 10</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>110</td><td>Atividade Exemplo 10</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>110</td><td>Atividade Exemplo 10</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>110</td><td>Atividade Exemplo 10</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>
+          <tr>
+            <td> <input type="checkbox" class="row-checkbox"> </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+            <td>110</td><td>Atividade Exemplo 10</td><td>João</td><td>Input</td><td>Pedro</td><td>Sudeste</td><td>Alpha</td><td>Sim</td><td>Planejado</td><td>Não</td><td>-</td><td>Sim</td><td>Em Execução</td><td>Sim</td><td>Executado</td><td>Completa</td><td>OK</td><td>Etapa 1</td><td>Fase A</td><td>Ativo</td><td>Atualizado</td><td>12345</td><td>XPTO</td><td>R$ 1.000,00</td><td>Carla</td><td>Finalizada</td>
+          </tr>

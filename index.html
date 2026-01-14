@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sistema de Controle de Atividades</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_green.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <link rel="stylesheet" href="assets/css/root.css" />
+  <link rel="stylesheet" href="assets/css/global.css" />
+  <link rel="stylesheet" href="assets/css/index.css" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js" defer></script>
+  <link rel="icon" href="" type="image/png">
+
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg">
+    <div class="container-fluid">
+      <button class="btn toggle-sidebar" id="menu-toggle">
+        <i class="bi bi-grid fs-5"></i>
+      </button>
+
+
+      <a href="index.html">
+        <!--<img src="assets/imgs/login/logo.png" alt="Logo Inprout" class="logo-navbar mx-3">-->
+      </a>
+
+      <div class="dropdown ms-auto">
+        <a class="btn dropdown-toggle user-dropdown" href="#" role="button" data-bs-toggle="dropdown">
+          <i class="bi bi-person-circle"></i> <span id="nomeUsuario">Olá, Usuário</span>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalMinhaConta">Minha
+              Conta</button></li>
+          <li><a class="dropdown-item" href="#" id="logoutBtn">Sair</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div id="sidebar-container"></div>
+
+  <div class="container-fluid my-4">
+
+    <div class="card overview-card shadow-sm mb-4">
+
+      <div class="card-header bg-white p-0">
+
+        <a href="#collapseDashboardCards" data-bs-toggle="collapse" role="button" aria-expanded="false"
+          aria-controls="collapseDashboardCards"
+          class="d-flex justify-content-between align-items-center w-100 p-3 text-decoration-none text-dark">
+
+          <div class="d-flex align-items-center gap-3">
+            <i class="bi bi-speedometer2 text-success"></i>
+            <h5 class="mb-0">Visão geral de lançamentos</h5>
+          </div>
+
+          <i class="bi bi-chevron-down text-secondary"></i>
+        </a>
+      </div>
+
+      <div class="collapse" id="collapseDashboardCards">
+        <div class="card-body">
+          <div class="d-flex flex-wrap gap-2 dashboard-cards">
+            <div class="card card-stat card-planejamento">
+              <div class="card-body">
+                <h5>Lançamentos na data de hoje</h5>
+                <p id="card-lancamentos-hoje">0</p>
+              </div>
+            </div>
+            <div class="card card-stat card-alerta">
+              <div class="card-body">
+                <h5>Aguardando aprovação</h5>
+                <p id="card-pendentes-aprovacao">0</p>
+              </div>
+            </div>
+            <div class="card card-stat card-perigo">
+              <div class="card-body">
+                <h5>Recusadas para correção</h5>
+                <p id="card-recusados">0</p>
+              </div>
+            </div>
+            <div class="card card-stat card-info">
+              <div class="card-body">
+                <h5>Atividades em andamento</h5>
+                <p id="card-em-andamento">0</p>
+              </div>
+            </div>
+            <div class="card card-stat card-alerta">
+              <div class="card-body">
+                <h5>Atividades paralisadas</h5>
+                <p id="card-paralisadas">0</p>
+              </div>
+            </div>
+            <div class="card card-stat card-sucesso">
+              <div class="card-body">
+                <h5>Finalizados hoje</h5>
+                <p id="card-finalizadas-hoje">0</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="toolbar d-flex align-items-center justify-content-between gap-3 mb-3">
+
+      <div class="d-flex align-items-center gap-2 flex-grow-1">
+        <div class="input-group search-box flex-grow-1">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" id="searchInput" class="form-control" placeholder="Buscar por OS, Site, Projeto, LPU...">
+        </div>
+        <div class="dropdown">
+          <button class="btn btn-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-filter-circle me-1"></i> Filtros
+          </button>
+
+          <ul class="dropdown-menu dropdown-menu-end p-3 filtros-dropdown">
+            <li>
+              <h6 class="dropdown-header px-1">Filtrar por Período</h6>
+              <div class="d-flex flex-wrap">
+                <button class="dropdown-item" type="button" data-filter="periodo" data-value="hoje">Hoje</button>
+                <button class="dropdown-item" type="button" data-filter="periodo" data-value="ontem">Ontem</button>
+                <button class="dropdown-item" type="button" data-filter="periodo" data-value="semana">Última
+                  Semana</button>
+                <button class="dropdown-item" type="button" data-filter="periodo" data-value="mes">Último Mês</button>
+              </div>
+              <div class="px-2 mt-2">
+                <label for="filtroDataCustom" class="form-label small">Período Customizado</label>
+                <input type="text" class="form-control form-control-sm" id="filtroDataCustom"
+                  placeholder="Selecione um período...">
+              </div>
+            </li>
+
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li class="d-flex flex-column flex-md-row gap-2">
+              <div class="flex-fill">
+                <h6 class="dropdown-header px-1">Filtrar por Status</h6>
+                <div class="px-2">
+                  <select id="filtroStatusAprovacao" class="form-select form-select-sm">
+                    <option value="">Todos os Status</option>
+                    <option value="PENDENTE_COORDENADOR">Pendente Coordenador</option>
+                    <option value="PENDENTE_CONTROLLER">Pendente Controller</option>
+                    <option value="RECUSADO_COORDENADOR">Recusado Coordenador</option>
+                    <option value="RECUSADO_CONTROLLER">Recusado Controller</option>
+                    <option value="APROVADO">Aprovado</option>
+                  </select>
+                </div>
+              </div>
+              <div class="flex-fill">
+                <h6 class="dropdown-header px-1">Filtrar por OS</h6>
+                <div class="px-2">
+                  <select id="filtroOS" class="form-select form-select-sm">
+                    <option value="">Todas as OS</option>
+                  </select>
+                </div>
+              </div>
+            </li>
+
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            <li>
+              <div class="px-2 d-grid">
+                <button class="btn btn-sm btn-outline-danger" id="limparFiltros" type="button">
+                  <i class="bi bi-x-circle"></i> Limpar Todos os Filtros
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+
+
+        <a href="#" class="btn btn-dropdown" data-bs-toggle="modal" data-bs-target="#modalSolicitarMaterial"
+          id="btnSolicitarMaterial"> <i class="bi bi-box-seam me-1"></i> Solicitar material
+        </a>
+
+        <a href="#" class="btn btn-dropdown" data-bs-toggle="modal" data-bs-target="#modalSolicitarComplementar"
+          id="btnSolicitarComplementar">
+          <i class="bi bi-plus-circle-dotted me-1"></i> Solicitar Complementar
+        </a>
+
+        <a href="#" class="btn btn-dropdown" data-bs-toggle="modal" data-bs-target="#modalAdicionarEmLote"
+          id="btnNovoLancamento">
+          <i class="bi bi-plus-circle me-1"></i> Novo lançamento
+        </a>
+
+        <button class="btn btn-dropdown" id="btnExportar" style="display: none;">
+          <i class="bi bi-file-earmark-excel me-1"></i> Exportar
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div class="d-flex flex-wrap justify-content-between align-items-end mb-3">
+
+      <ul class="nav nav-tabs border-0 mb-0" id="lancamentosTab" role="tablist">
+        <li class="nav-item" role="presentation" id="nav-item-minhas-pendencias">
+          <button class="nav-link position-relative" id="minhasPendencias-tab" data-bs-toggle="tab"
+            data-bs-target="#minhasPendencias-pane" type="button" role="tab">
+            Lançamentos pendentes
+            <span id="notificacao-pendencias"
+              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+              style="display: none;"></span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation" id="nav-item-lancamentos">
+          <button class="nav-link active" id="lancamentos-tab" data-bs-toggle="tab" data-bs-target="#lancamentos-pane"
+            type="button" role="tab">
+            Lançamentos
+          </button>
+        </li>
+        <li class="nav-item" role="presentation" id="nav-item-pendentes">
+          <button class="nav-link" id="pendentes-tab" data-bs-toggle="tab" data-bs-target="#pendentes-pane"
+            type="button" role="tab">
+            Pendente aprovação
+          </button>
+        </li>
+        <li class="nav-item" role="presentation" id="nav-item-pendente-doc" style="display: none;">
+          <button class="nav-link position-relative" id="pendente-doc-tab" data-bs-toggle="tab"
+            data-bs-target="#pendente-doc-pane" type="button">
+            Pendente Doc.
+            <span id="badge-pendente-doc"
+              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+              style="display:none">0</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation" id="nav-item-paralisados">
+          <button class="nav-link" id="paralisados-tab" data-bs-toggle="tab" data-bs-target="#paralisados-pane"
+            type="button" role="tab">
+            Paralisados
+          </button>
+        </li>
+        <li class="nav-item" role="presentation" id="nav-item-historico">
+          <button class="nav-link" id="historico-tab" data-bs-toggle="tab" data-bs-target="#historico-pane"
+            type="button" role="tab">
+            Histórico
+          </button>
+        </li>
+      </ul>
+
+      <div class="d-flex gap-2 mb-1">
+
+        <div id="kpi-pendente-container" class="mini-kpi-card d-none align-items-center shadow-sm">
+          <div class="icon-wrapper bg-warning-subtle text-warning">
+            <i class="bi bi-hourglass-split"></i>
+          </div>
+          <div class="d-flex flex-column ms-2">
+            <span class="kpi-label">CPS pendente aprovação</span>
+            <span id="kpi-valor-pendente" class="kpi-value">R$ 0,00</span>
+          </div>
+        </div>
+
+        <div id="kpi-quantidade-container" class="mini-kpi-card d-flex align-items-center shadow-sm">
+          <div class="icon-wrapper bg-primary-subtle text-primary">
+            <i class="bi bi-list-ol"></i>
+          </div>
+          <div class="d-flex flex-column ms-2">
+            <span class="kpi-label" id="kpi-qtd-label">Itens na lista</span>
+            <span id="kpi-qtd-valor" class="kpi-value">0</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="acoes-lote-doc" class="d-none align-items-center bg-light border rounded p-2 mb-2">
+      <span class="fw-bold text-primary me-3">
+        <i class="bi bi-check-all"></i> <span id="contador-selecao-doc">0</span> itens selecionados
+      </span>
+      <button id="btnReceberLoteDoc" class="btn btn-sm btn-primary">
+        <i class="bi bi-file-earmark-check-fill me-1"></i> Confirmar Recebimento em Lote
+      </button>
+    </div>
+
+    <div class="content-loader-container">
+      <div class="tab-content" id="lancamentosTabContent">
+        <div class="tab-pane fade" id="minhasPendencias-pane" role="tabpanel" aria-labelledby="minhasPendencias-tab"
+          tabindex="0">
+          <div class="table-responsive custom-scroll">
+            <table class="table modern-table align-middle">
+              <thead> </thead>
+              <tbody id="tbody-minhas-pendencias"> </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-pane fade show active" id="lancamentos-pane" role="tabpanel" aria-labelledby="lancamentos-tab"
+          tabindex="0">
+          <div class="table-responsive custom-scroll">
+            <table class="table modern-table align-middle">
+              <thead> </thead>
+              <tbody id="tbody-lancamentos">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="pendentes-pane" role="tabpanel" aria-labelledby="pendentes-tab" tabindex="0">
+          <div class="table-responsive custom-scroll">
+            <table class="table modern-table align-middle">
+              <thead> </thead>
+              <tbody id="tbody-pendentes">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="pendente-doc-pane" role="tabpanel">
+          <div class="table-responsive custom-scroll">
+            <table class="table modern-table align-middle">
+              <thead> </thead>
+              <tbody id="tbody-pendente-doc"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="paralisados-pane" role="tabpanel" aria-labelledby="paralisados-tab" tabindex="0">
+          <div class="table-responsive custom-scroll">
+            <table class="table modern-table align-middle">
+              <thead> </thead>
+              <tbody id="tbody-paralisados"> </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="historico-pane" role="tabpanel" aria-labelledby="historico-tab" tabindex="0">
+          <div class="table-responsive custom-scroll">
+            <table class="table modern-table align-middle">
+              <thead> </thead>
+              <tbody id="tbody-historico">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="overlay-loader" class="overlay-loader d-none">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+          <span class="visually-hidden">Carregando...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalSolicitarComplementar" tabindex="-1"
+    aria-labelledby="modalSolicitarComplementarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalSolicitarComplementarLabel"><i class="bi bi-plus-circle-dotted me-2"></i>Nova
+            Solicitação de Atividade Complementar</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formSolicitarComplementar">
+            <h6 class="section-title">Dados da Solicitação</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="projetoIdComplementar" class="form-label">Projeto</label>
+                <select class="form-select" id="projetoIdComplementar" required></select>
+              </div>
+              <div class="col-md-6">
+                <label for="osIdComplementar" class="form-label">Ordem de Serviço (OS)</label>
+                <select class="form-select" id="osIdComplementar" required></select>
+              </div>
+              <div class="col-md-12">
+                <label for="lpuIdComplementar" class="form-label">Item LPU</label>
+                <select class="form-select" id="lpuIdComplementar" required disabled></select>
+              </div>
+              <div class="col-md-4">
+                <label for="siteComplementar" class="form-label">Site</label>
+                <input type="text" class="form-control" id="siteComplementar" readonly disabled
+                  style="background-color: #e9ecef;">
+              </div>
+
+              <div class="col-md-8">
+                <label for="quantidadeComplementar" class="form-label">Quantidade</label>
+                <input type="number" class="form-control" id="quantidadeComplementar" min="1" value="1" required>
+              </div>
+              <div class="col-12">
+                <label for="justificativaComplementar" class="form-label">Justificativa <small
+                    class="text-muted">(Opcional)</small></label>
+                <textarea class="form-control" id="justificativaComplementar" rows="3"
+                  placeholder="Ex: Necessidade de instalar um equipamento adicional não previsto no escopo original..."></textarea>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-1"></i>
+            Cancelar</button>
+          <button type="submit" id="btnEnviarSolicitacaoComplementar" form="formSolicitarComplementar"
+            class="btn btn-success">
+            <i class="bi bi-send me-1"></i> Enviar para Aprovação
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalSolicitarMaterial" tabindex="-1" aria-labelledby="modalSolicitarMaterialLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalSolicitarMaterialLabel">
+            <i class="bi bi-box-seam me-2"></i> Nova solicitação de material
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+
+        <div class="modal-body">
+          <form id="formSolicitarMaterial">
+
+            <h6 class="section-title">Dados da Solicitação</h6>
+            <div class="row g-3 mb-3">
+
+              <div class="col-md-6">
+                <label for="osSolicitacao" class="form-label">Ordem de Serviço (OS)</label>
+                <select class="form-select" id="osSolicitacao">
+                  <option selected disabled value="">Carregando OS...</option>
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label for="lpuSolicitacao" class="form-label">LPU</label>
+                <select class="form-select" id="lpuSolicitacao">
+                  <option selected disabled value="">Primeiro selecione a OS...</option>
+                </select>
+              </div>
+
+              <div class="col-12">
+                <label for="justificativaSolicitacao" class="form-label">
+                  Justificativa <small class="text-muted ms-1">(Opcional)</small>
+                </label>
+                <textarea class="form-control" id="justificativaSolicitacao" rows="2"
+                  placeholder="Ex: Material necessário para instalação, está em falta."></textarea>
+              </div>
+            </div>
+
+            <div class="itens-container bg-light border rounded p-3 mt-4">
+              <h6 class="section-title mt-0">Itens (Materiais)</h6>
+              <div id="listaItens">
+                <div class="row g-2 align-items-center mb-2 item-row">
+                  <div class="col-md">
+                    <label class="form-label visually-hidden">Material</label>
+                    <select class="form-select material-select" required>
+                      <option selected disabled value="">Selecione o material...</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label visually-hidden">Quantidade</label>
+                    <input type="number" class="form-control quantidade-input" placeholder="Qtde." min="1" value="1"
+                      required>
+                  </div>
+                  <div class="col-md-auto">
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-remover-item" title="Remover Item"
+                      disabled>
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button type="button" id="btnAdicionarItem" class="btn btn-outline-primary btn-sm mt-2">
+                <i class="bi bi-plus-circle me-1"></i> Adicionar Material
+              </button>
+            </div>
+
+            <div id="containerTransporte"
+              class="itens-container bg-white border border-warning rounded p-3 mt-4 d-none">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="section-title mt-0 text-warning"><i class="bi bi-truck me-2"></i>Transporte / Deslocamento
+                </h6>
+                <span class="badge bg-warning text-dark">Admin/Controller</span>
+              </div>
+
+              <div id="listaTransporte">
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center mt-2">
+                <button type="button" id="btnAdicionarTransporte" class="btn btn-outline-warning text-dark btn-sm">
+                  <i class="bi bi-plus-circle me-1"></i> Adicionar Transporte
+                </button>
+                <div class="fw-bold">
+                  Total Transporte: <span id="displayTotalTransporte" class="text-success">R$ 0,00</span>
+                </div>
+              </div>
+            </div>
+
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-1"></i> Cancelar
+          </button>
+          <button type="submit" id="btnEnviarSolicitacao" form="formSolicitarMaterial" class="btn btn-success">
+            <i class="bi bi-send me-1"></i> Enviar Solicitação
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalMinhaConta" tabindex="-1" aria-labelledby="modalMinhaContaLabel">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalMinhaContaLabel">
+            <i class="bi bi-person-circle me-2"></i> Minha Conta
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="text-center mb-3">
+            <i class="bi bi-person-circle" style="font-size: 4rem; color: #198754;"></i>
+            <h5 class="mt-2" id="nomeUsuarioModal">Nome do Usuário</h5>
+            <p class="text-muted" id="emailUsuarioModal">email@dominio.com</p>
+            <div id="userInfoDetalhes" class="mt-2"></div>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
+              data-bs-target="#alterarEmail" aria-expanded="false">
+              <i class="bi bi-envelope"></i> Alterar E-mail
+            </button>
+
+            <div class="collapse mt-2" id="alterarEmail">
+              <form id="formAlterarEmail">
+                <div class="mb-2">
+                  <label class="form-label">Novo E-mail</label>
+                  <input type="email" class="form-control" id="novoEmail" placeholder="Digite seu novo e-mail">
+                </div>
+              </form>
+            </div>
+
+            <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
+              data-bs-target="#alterarSenha" aria-expanded="false">
+              <i class="bi bi-shield-lock"></i> Alterar Senha
+            </button>
+
+            <div class="collapse mt-2" id="alterarSenha">
+              <form id="formAlterarSenha">
+                <div class="mb-2">
+                  <label class="form-label">Nova Senha</label>
+                  <input type="password" class="form-control" id="novaSenha" placeholder="Digite sua nova senha">
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">Confirmar Nova Senha</label>
+                  <input type="password" class="form-control" id="confirmarSenha" placeholder="Confirme sua nova senha">
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle"></i> Cancelar
+          </button>
+          <button type="button" class="btn btn-success" id="btnSalvarAlteracoes">
+            <i class="bi bi-check-circle"></i> Salvar Alterações
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalComentarios" tabindex="-1" aria-labelledby="modalComentariosLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalComentariosLabel">
+            <i class="bi bi-chat-left-text-fill me-2"></i> Histórico de Comentários
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+
+        <div class="modal-body bg-light" id="modalComentariosBody" style="min-height: 200px;">
+        </div>
+
+        <div class="modal-footer d-block bg-white">
+          <label for="novoComentarioTexto" class="form-label fw-bold small text-muted">Adicionar novo comentário /
+            observação</label>
+          <div class="input-group">
+            <textarea class="form-control" id="novoComentarioTexto" rows="2" placeholder="Digite aqui..."></textarea>
+            <button class="btn btn-primary" type="button" id="btnSalvarComentario">
+              <i class="bi bi-send-fill"></i> Enviar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalAnoNovo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content modal-ano-novo-content">
+        <div class="modal-body text-center p-5 position-relative overflow-hidden">
+          <div class="firework"></div>
+          <div class="firework"></div>
+          <div class="firework"></div>
+
+          <div class="position-relative z-1">
+            <h1 class="display-4 fw-bold text-gradient-gold mb-3">Feliz Ano Novo!</h1>
+            <p class="lead mb-4">Que este novo ano traga muitas conquistas, sucesso e inovações para todos nós.</p>
+
+            <hr class="w-50 mx-auto border-light opacity-50 my-4">
+
+            <p class="small text-uppercase letter-spacing-2 mb-1">Um abraço,</p>
+            <h5 class="fw-bold text-white">INPROUT SERVICES</h5>
+
+            <button type="button" class="btn btn-light rounded-pill px-4 mt-4 fw-bold" data-bs-dismiss="modal">
+              Obrigado!
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalConfirmarExclusaoLancamento" tabindex="-1"
+    aria-labelledby="modalConfirmarExclusaoLancamentoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title text-danger" id="modalConfirmarExclusaoLancamentoLabel">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> Confirmar Exclusão
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>Você tem certeza que deseja **EXCLUIR** este lançamento?</p>
+          <p class="small text-danger">Esta ação é irreversível. O lançamento será removido permanentemente do sistema.
+          </p>
+          <input type="hidden" id="deleteLancamentoId">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle"></i> Cancelar
+          </button>
+          <button type="button" class="btn btn-danger" id="btnConfirmarExclusaoLancamentoDefinitiva">
+            <i class="bi bi-trash"></i> Sim, Excluir
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalAdicionar" tabindex="-1" aria-labelledby="modalAdicionarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalAdicionarLabel">
+            <i class="bi bi-plus-circle"></i> Adicionar Nova Atividade
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <form id="formAdicionar" novalidate>
+
+            <h6 class="section-title">Dados Gerais</h6>
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label for="projetoId" class="form-label">Projeto</label>
+                <select class="form-select" id="projetoId" required>
+                  <option value="" selected disabled>Selecione um Projeto...</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="osId" class="form-label">Ordem de Serviço (OS)</label>
+                <select class="form-select" id="osId" required>
+                  <option value="" selected disabled>Carregando...</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="dataAtividade" class="form-label">Data da Atividade</label>
+                <input type="date" class="form-control" id="dataAtividade" required>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3 align-items-end">
+              <div class="col-md d-none" id="lpuContainer">
+                <label for="lpuId" class="form-label">Lista de Preços Unitários (LPU)</label>
+                <select class="form-select" id="lpuId" required>
+                  <option value="" selected disabled>Carregando...</option>
+                </select>
+              </div>
+            </div>
+
+            <h6 class="section-title">Dados da OS</h6>
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label for="site" class="form-label">Site</label>
+                <input type="text" class="form-control" id="site" readonly>
+              </div>
+              <div class="col-md-6">
+                <label for="segmento" class="form-label">Segmento</label>
+                <input type="text" class="form-control" id="segmento" readonly>
+              </div>
+              <div class="col-md-6">
+                <label for="projeto" class="form-label">Projeto</label>
+                <input type="text" class="form-control" id="projeto" readonly>
+              </div>
+              <div class="col-md-6">
+                <label for="contrato" class="form-label">Contrato</label>
+                <input type="text" class="form-control" id="contrato" readonly>
+              </div>
+            </div>
+
+            <h6 class="section-title">Responsáveis</h6>
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label">GESTOR TIM</label>
+                <input type="text" class="form-control" id="gestorTim" readonly>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">REGIONAL</label>
+                <input type="text" class="form-control" id="regional" readonly>
+              </div>
+            </div>
+
+            <h6 class="section-title">Controle de Documentação (Opcional)</h6>
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label for="tipoDocumentacaoId" class="form-label">Tipo de Documentação</label>
+                <select class="form-select" id="tipoDocumentacaoId">
+                  <option value="" selected>Não se aplica</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="documentistaId" class="form-label">Documentista Responsável</label>
+                <select class="form-select" id="documentistaId">
+                  <option value="" selected disabled>Selecione...</option>
+                </select>
+              </div>
+            </div>
+
+            <h6 class="section-title">Execução</h6>
+            <div class="etapas-scroll">
+              <div class="card etapa-card">
+                <h6>Vistoria</h6>
+                <label class="form-label">Status</label>
+                <select class="form-select" id="vistoria">
+                  <option>OK</option>
+                  <option>NOK</option>
+                  <option selected>N/A</option>
+                </select>
+                <label class="form-label mt-2">Plano (Data)</label>
+                <input type="date" class="form-control" id="planoVistoria">
+              </div>
+              <div class="card etapa-card">
+                <h6>Desmobilização</h6><label class="form-label">Status</label><select class="form-select"
+                  id="desmobilizacao">
+                  <option>OK</option>
+                  <option>NOK</option>
+                  <option selected>N/A</option>
+                </select><label class="form-label mt-2">Plano (Data)</label><input type="date" class="form-control"
+                  id="planoDesmobilizacao">
+              </div>
+              <div class="card etapa-card">
+                <h6>Instalação</h6><label class="form-label">Status</label><select class="form-select" id="instalacao">
+                  <option>OK</option>
+                  <option>NOK</option>
+                  <option selected>N/A</option>
+                </select><label class="form-label mt-2">Plano (Data)</label><input type="date" class="form-control"
+                  id="planoInstalacao">
+              </div>
+              <div class="card etapa-card">
+                <h6>Ativação</h6><label class="form-label">Status</label><select class="form-select" id="ativacao">
+                  <option>OK</option>
+                  <option>NOK</option>
+                  <option selected>N/A</option>
+                </select><label class="form-label mt-2">Plano (Data)</label><input type="date" class="form-control"
+                  id="planoAtivacao">
+              </div>
+              <div class="card etapa-card">
+                <h6>Documentação</h6><label class="form-label">Status</label><select class="form-select"
+                  id="documentacao">
+                  <option>OK</option>
+                  <option>NOK</option>
+                  <option selected>N/A</option>
+                </select><label class="form-label mt-2">Plano (Data)</label><input type="date" class="form-control"
+                  id="planoDocumentacao">
+              </div>
+            </div>
+
+            <h6 class="section-title">Etapas</h6>
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label for="etapaGeralSelect" class="form-label">ETAPA GERAL</label>
+                <select class="form-select" id="etapaGeralSelect" required>
+                  <option value="" selected disabled>Carregando...</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="etapaDetalhadaId" class="form-label">ETAPA DETALHADA</label>
+                <select class="form-select" id="etapaDetalhadaId" required disabled>
+                  <option value="" selected disabled>Primeiro, selecione a etapa geral</option>
+                </select>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">STATUS</label>
+                <select class="form-select" id="status" required disabled>
+                  <option value="" selected disabled>Primeiro, selecione a etapa detalhada</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">DETALHE DIÁRIO</label>
+              <textarea class="form-control" id="detalheDiario" rows="2" required></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">SITUAÇÃO</label>
+              <select class="form-select" id="situacao" required>
+                <option value="" disabled>Selecione...</option>
+                <option value="Não iniciado">Não iniciado</option>
+                <option value="Aguardando documentação">Aguardando documentação</option>
+                <option value="Paralisado">Paralisado</option>
+                <option value="Em andamento" selected>Em andamento</option>
+                <option value="Finalizado">Finalizado</option>
+              </select>
+            </div>
+
+            <h6 class="section-title">Financeiro</h6>
+            <div class="row g-3 mb-3">
+              <div class="col-md-8">
+                <label for="prestadorId" class="form-label">PRESTADOR</label>
+                <select class="form-select" id="prestadorId" required>
+                  <option value="" selected disabled>Selecione um prestador...</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">VALOR DA ATIVIDADE</label>
+                <div class="input-group">
+                  <span class="input-group-text">R$</span>
+                  <input type="text" class="form-control" id="valor" inputmode="numeric" />
+                </div>
+              </div>
+            </div>
+            <div id="modal-overlay-loader" class="overlay-loader d-none">
+              <div class="spinner-border text-success" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Salvando...</span>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg"></i> Fechar
+          </button>
+
+          <button type="submit" id="btnSubmitAdicionar" form="formAdicionar" class="btn btn-success">
+            <i class="bi bi-check-circle"></i> Salvar Lançamento
+          </button>
+
+          <button type="submit" form="formAdicionar" class="btn btn-outline-primary" id="btnSalvarRascunho"
+            data-acao="rascunho">
+            <i class="bi bi-save"></i> Salvar Alterações
+          </button>
+
+          <button type="submit" form="formAdicionar" class="btn btn-primary" id="btnSalvarEEnviar" data-acao="enviar">
+            <i class="bi bi-send"></i> Salvar e Enviar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalDetalheDiario" tabindex="-1" aria-labelledby="modalDetalheDiarioLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalDetalheDiarioLabel"><i class="bi bi-text-left me-2"></i>Detalhe Diário
+            Completo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body" id="modalDetalheDiarioBody" style="white-space: pre-wrap;">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalAdicionarEmLote" tabindex="-1" aria-labelledby="modalAdicionarEmLoteLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalAdicionarEmLoteLabel">
+            <i class="bi bi-plus-circle"></i> Adicionar novo lançamento
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <form id="formAdicionarEmLote" novalidate>
+
+            <h6 class="section-title">Dados Gerais</h6>
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label for="projetoIdLote" class="form-label">Projeto</label>
+                <select class="form-select" id="projetoIdLote" required>
+                  <option value="" selected disabled>Carregando...</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="osIdLote" class="form-label">Ordem de Serviço (OS)</label>
+                <select class="form-select" id="osIdLote" required>
+                  <option value="" selected disabled>Carregando...</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="dataAtividadeLote" class="form-label">Data da Atividade</label>
+                <input type="text" class="form-control" id="dataAtividadeLote" placeholder="Selecione a data..."
+                  required autocomplete="off">
+              </div>
+            </div>
+
+            <h6 class="section-title">Dados da OS</h6>
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label for="siteLote" class="form-label">Site</label>
+                <input type="text" class="form-control" id="siteLote" readonly>
+              </div>
+              <div class="col-md-4">
+                <label for="segmentoLote" class="form-label">Segmento</label>
+                <input type="text" class="form-control" id="segmentoLote" readonly>
+              </div>
+              <div class="col-md-4">
+                <label for="projetoLote" class="form-label">Projeto</label>
+                <input type="text" class="form-control" id="projetoLote" readonly>
+              </div>
+              <div class="col-md-4">
+                <label for="contratoLote" class="form-label">Contrato</label>
+                <input type="text" class="form-control" id="contratoLote" readonly>
+              </div>
+              <div class="col-md-4">
+                <label for="gestorTimLote" class="form-label">GESTOR TIM</label>
+                <input type="text" class="form-control" id="gestorTimLote" readonly>
+              </div>
+              <div class="col-md-4">
+                <label for="regionalLote" class="form-label">REGIONAL</label>
+                <input type="text" class="form-control" id="regionalLote" readonly>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Selecione os itens LPUs</label>
+
+              <div class="input-group input-group-sm mb-2">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="lpuSearchInputLote"
+                  placeholder="Buscar por código ou nome do item LPU...">
+              </div>
+              <div id="lpuChecklistContainerLote" class="border rounded p-2"
+                style="max-height: 150px; overflow-y: auto;">
+                <p class="text-muted">Selecione uma OS para ver os itens LPUs.</p>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="replicarDadosSwitchLote">
+                <label class="form-check-label" for="replicarDadosSwitchLote">Replicar dados para todos os itens</label>
+              </div>
+              <button type="button" class="btn btn-secondary" id="btnAvancarParaPreenchimentoLote"
+                disabled>Avançar</button>
+            </div>
+
+            <div id="formulariosContainerLote" class="accordion mt-3"></div>
+
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg"></i> Fechar
+          </button>
+          <button type="button" class="btn btn-outline-primary" id="btnSalvarRascunhoLote">
+            <i class="bi bi-save"></i> Salvar como Rascunho
+          </button>
+          <button type="submit" id="btnSalvarEEnviarLote" form="formAdicionarEmLote" class="btn btn-success">
+            <i class="bi bi-send"></i> Salvar e Enviar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalReceberDoc" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-file-earmark-check me-2"></i>Confirmar Recebimento</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p>Deseja confirmar o recebimento da documentação para este lançamento?</p>
+          <div class="mb-3">
+            <label for="comentarioRecebimento" class="form-label">Comentário / Observação <small
+                class="text-muted">(Opcional)</small></label>
+            <textarea class="form-control" id="comentarioRecebimento" rows="3"
+              placeholder="Ex: Documentos entregues via malote..."></textarea>
+          </div>
+          <input type="hidden" id="idLancamentoReceberDoc">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmarRecebimentoDoc">
+            <i class="bi bi-check-lg"></i> Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalConfirmarSubmissao" tabindex="-1" aria-labelledby="modalConfirmarSubmissaoLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalConfirmarSubmissaoLabel">
+            <i class="bi bi-shield-check"></i> Confirmação de Envio
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p>Tem certeza que deseja submeter este lançamento para a aprovação do coordenador?</p>
+
+          <div class="alert alert-light mt-3" role="alert">
+            <i class="bi bi-info-circle-fill me-2"></i> Após o envio, o lançamento entrará no fluxo de aprovação e não
+            poderá mais ser editado a não ser que o item seja rejeitado.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle"></i> Cancelar
+          </button>
+          <button type="button" class="btn btn-success" id="btnConfirmarSubmissao">
+            <i class="bi bi-send-check"></i> Sim, Enviar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toastMensagem" class="toast align-items-center border-0 text-bg-success" role="alert" aria-live="assertive"
+      aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="toastTexto">
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+          aria-label="Fechar"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/general/global.js?v=3.8"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+  <script src="assets/js/index/calendary.js?v=3.8" type="module"></script>
+  <script src="assets/js/index/editionfields.js?v=3.8"></script>
+  <script src="assets/js/general/sidebar.js?v=3.8"></script>
+  <script src="assets/js/index/auth-filter.js?v=3.8"></script>
+  <script src="assets/js/index/index.js?v=3.8"></script>
+  <script src="assets/js/index/lancamento-lote.js?v=3.8"></script>
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const valorInput = document.getElementById('valor');
+
+      valorInput.addEventListener('input', function (e) {
+        let valor = e.target.value;
+
+        // Remove tudo que não for número
+        valor = valor.replace(/\D/g, '');
+
+        // Converte pra decimal e formata
+        const valorFormatado = (Number(valor) / 100).toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+
+        e.target.value = valorFormatado;
+      });
+    });
+
+  </script>
+
+</body>
+
+</html>

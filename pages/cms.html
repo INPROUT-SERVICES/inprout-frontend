@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Controle de Estoque - CMA</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <link rel="stylesheet" href="../assets/css/root.css" />
+  <link rel="stylesheet" href="../assets/css/global.css" />
+  <link rel="stylesheet" href="../assets/css/cms.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg">
+    <div class="container-fluid">
+      <button class="btn toggle-sidebar" id="menu-toggle">
+        <i class="bi bi-grid fs-5"></i>
+      </button>
+      <link rel="icon" href="../assets/imgs/login/logo.png" type="image/png">
+      <a href="../index.html">
+        <!-- <img src="../assets/imgs/login/logo.png" alt="Logo Inprout" class="logo-navbar mx-3">-->
+      </a>
+
+      <div class="dropdown ms-auto">
+        <a class="btn dropdown-toggle user-dropdown" href="#" role="button" data-bs-toggle="dropdown">
+          <i class="bi bi-person-circle"></i> <span id="nomeUsuario">Olá, Usuário</span>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalMinhaConta">Minha
+              Conta</button></li>
+          <li><a class="dropdown-item" href="#" id="logoutBtn">Sair</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div id="sidebar-container"></div>
+
+  <div class="container-fluid my-4">
+
+    <div id="gerenciar-pane">
+
+      <div class="cms-panel-header">
+
+        <div class="cms-panel-top">
+          <div class="cms-title-wrapper">
+            <div class="cms-icon-bg">
+              <i class="bi bi-box-seam"></i>
+            </div>
+            <div>
+              <h4 class="cms-title">Estoque de Materiais</h4>
+              <p class="cms-subtitle">Gerencie o inventário físico e custos</p>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <div class="form-check d-flex align-items-center me-3 border px-3 rounded bg-light" style="height: 40px;">
+              <input class="form-check-input me-2" type="checkbox" id="checkSelecionarTodos" style="cursor: pointer;">
+              <label class="form-check-label small fw-bold text-muted mb-0" for="checkSelecionarTodos"
+                style="cursor: pointer;">Selecionar Tudo</label>
+            </div>
+
+            <button type="button" id="btnNovoMaterial" class="btn btn-primary d-flex align-items-center shadow-sm">
+              <i class="bi bi-plus-lg me-2"></i> Novo Material
+            </button>
+          </div>
+        </div>
+
+        <div class="cms-panel-actions">
+
+          <div class="search-container-modern">
+            <i class="bi bi-search search-icon-modern"></i>
+            <input type="search" class="search-input-modern" id="inputBuscaMaterial"
+              placeholder="Buscar código, descrição, modelo...">
+          </div>
+
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle bg-white" type="button" data-bs-toggle="dropdown"
+              aria-expanded="false" data-bs-auto-close="outside">
+              <i class="bi bi-funnel"></i> Filtros
+            </button>
+            <div class="dropdown-menu dropdown-menu-end p-3 shadow border-0" style="width: 280px;">
+              <div class="mb-2">
+                <label for="materiais_selectCondicaoFiltro" class="form-label small fw-bold">Saldo Físico:</label>
+                <select class="form-select form-select-sm" id="materiais_selectCondicaoFiltro">
+                  <option value="maior">Maior que</option>
+                  <option value="menor">Menor que</option>
+                  <option value="igual">Igual a</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <input type="number" class="form-control form-control-sm" id="materiais_inputValorFiltro"
+                  placeholder="Valor">
+              </div>
+              <hr class="my-2">
+              <div class="mb-3">
+                <label class="form-label small fw-bold">Unidade:</label>
+                <div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="materiais_checkUnitPC" value="PÇ">
+                    <label class="form-check-label small" for="materiais_checkUnitPC">PÇ</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="materiais_checkUnitMT" value="MT">
+                    <label class="form-check-label small" for="materiais_checkUnitMT">MT</label>
+                  </div>
+                </div>
+              </div>
+              <div class="d-flex justify-content-between">
+                <button class="btn btn-sm btn-light" type="button" id="materiais_btnLimparFiltro">Limpar</button>
+                <button class="btn btn-sm btn-primary" type="button" id="materiais_btnAplicarFiltro">Aplicar</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="importar-materiais-container" class="d-none gap-2 ms-auto">
+            <button class="btn btn-outline-success btn-sm" id="btnBaixarTemplateMaterial" title="Baixar Modelo">
+              <i class="bi bi-file-earmark-spreadsheet"></i> Modelo
+            </button>
+            <button class="btn btn-outline-dark btn-sm" id="btnImportarLegadoMaterial" title="Importar Excel">
+              <i class="bi bi-upload"></i> Importar
+            </button>
+            <input type="file" id="import-legado-material-input" accept=".xlsx" hidden>
+          </div>
+
+        </div>
+      </div>
+
+      <div id="loader-materiais" class="text-center py-5" style="display: none;">
+        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div>
+        <p class="mt-2 text-muted small">Sincronizando estoque...</p>
+      </div>
+
+      <div id="materiais-container" class="materials-grid-container">
+      </div>
+
+      <div class="pagination-controls mt-2 border-top pt-3">
+        <div>
+          <label for="rowsPerPage" class="form-label me-2 text-muted small">Exibir:</label>
+          <select id="rowsPerPage" class="form-select form-select-sm d-inline-block border-0 bg-light"
+            style="width: auto;">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">Todos</option>
+          </select>
+        </div>
+        <div id="pagination-info" class="text-muted small"></div>
+        <div>
+          <button class="btn btn-sm btn-light" id="btnPrimeiraPagina"><i class="bi bi-chevron-bar-left"></i></button>
+          <button class="btn btn-sm btn-light" id="btnPaginaAnterior"><i class="bi bi-chevron-left"></i></button>
+          <button class="btn btn-sm btn-light" id="btnProximaPagina"><i class="bi bi-chevron-right"></i></button>
+          <button class="btn btn-sm btn-light" id="btnUltimaPagina"><i class="bi bi-chevron-bar-right"></i></button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="floatingActionBar" class="floating-action-bar">
+    <span class="fab-count">0 selecionados</span>
+    <div class="fab-divider"></div>
+
+    <button class="btn-fab success" id="btnSolicitarMaterialLote">
+      <i class="bi bi-cart-plus-fill"></i> Solicitar Materiais
+    </button>
+
+    <div class="fab-divider"></div>
+
+    <button class="btn-fab" id="btnCancelarSelecao">
+      <i class="bi bi-x-lg"></i> Cancelar
+    </button>
+  </div>
+
+  <div class="modal fade" id="modalSolicitarLote" tabindex="-1" aria-labelledby="modalSolicitarLoteLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title" id="modalSolicitarLoteLabel">
+            <i class="bi bi-cart-check me-2"></i>Nova Solicitação
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formSolicitarLote">
+
+            <div class="row g-3 mb-4 p-3 bg-light rounded border">
+              <div class="col-md-6">
+                <label for="solicitacaoOs" class="form-label fw-bold">Ordem de Serviço (OS)</label>
+                <select class="form-select" id="solicitacaoOs" required>
+                  <option value="">Carregando OSs...</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="solicitacaoLpu" class="form-label fw-bold">Item LPU / Etapa</label>
+                <select class="form-select" id="solicitacaoLpu" required disabled>
+                  <option value="">Selecione uma OS primeiro</option>
+                </select>
+              </div>
+            </div>
+
+            <h6 class="mb-3 border-bottom pb-2">Itens Selecionados</h6>
+            <div class="table-responsive custom-scroll" style="max-height: 250px;">
+              <table class="table table-hover align-middle">
+                <thead class="table-light sticky-top">
+                  <tr>
+                    <th style="width: 40%">Material</th>
+                    <th style="width: 15%">Unid.</th>
+                    <th style="width: 15%">Saldo Atual</th>
+                    <th style="width: 20%">Qtd. Solicitar</th>
+                    <th style="width: 10%"></th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyItensSolicitacao">
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-3">
+              <label for="solicitacaoObservacao" class="form-label">Observações Gerais</label>
+              <textarea class="form-control" id="solicitacaoObservacao" rows="2" placeholder="Opcional"></textarea>
+            </div>
+
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success" form="formSolicitarLote" id="btnConfirmarSolicitacao">
+            <i class="bi bi-send-check me-1"></i> Confirmar Solicitação
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalDetalhesMaterial" tabindex="-1" aria-labelledby="modalDetalhesMaterialLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalDetalhesMaterialLabel">Detalhes do Material</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <form id="formEditarMaterial">
+          <input type="hidden" id="editMaterialId">
+
+          <div class="modal-body">
+            <ul class="nav nav-tabs" id="materialTab" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="detalhes-tab" data-bs-toggle="tab" data-bs-target="#detalhes-pane"
+                  type="button" role="tab">Informações Gerais</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="historico-tab" data-bs-toggle="tab" data-bs-target="#historico-pane"
+                  type="button" role="tab">Histórico de Entradas</button>
+              </li>
+            </ul>
+
+            <div class="tab-content pt-3" id="materialTabContent">
+              <div class="tab-pane fade show active" id="detalhes-pane" role="tabpanel">
+
+                <div id="view-mode-fields">
+                  <p><strong>Código:</strong> <span data-field="codigo"></span></p>
+                  <p><strong>Descrição:</strong> <span data-field="descricao"></span></p>
+                  <p><strong>Modelo:</strong> <span data-field="modelo"></span></p>
+                  <p><strong>Nº de Série:</strong> <span data-field="numeroDeSerie"></span></p>
+                  <p><strong>Unidade:</strong> <span data-field="unidadeMedida"></span></p>
+                  <p><strong>Empresa:</strong> <span data-field="empresa"></span></p>
+                  <p><strong>Quantidade em Estoque:</strong> <span data-field="saldoFisico"></span></p>
+                  <p><strong>Custo Médio Ponderado:</strong> <span data-field="custoMedioPonderado"></span></p>
+                  <p><strong>Custo Total em Estoque:</strong> <span data-field="custoTotal"></span></p>
+                  <p><strong>Observações:</strong> <span data-field="observacoes"></span></p>
+                </div>
+
+                <div id="edit-mode-fields" class="row g-3 d-none">
+                  <div class="col-md-6">
+                    <label for="materialCodigoEditar" class="form-label">Código</label>
+                    <input type="text" class="form-control" id="materialCodigoEditar" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="materialDescricaoEditar" class="form-label">Descrição</label>
+                    <input type="text" class="form-control" id="materialDescricaoEditar" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="materialModeloEditar" class="form-label">Modelo</label>
+                    <input type="text" class="form-control" id="materialModeloEditar">
+                  </div>
+                  <div class="col-md-6">
+                    <label for="materialNumeroDeSerieEditar" class="form-label">Nº de Série</label>
+                    <input type="text" class="form-control" id="materialNumeroDeSerieEditar">
+                  </div>
+                  <div class="col-md-6">
+                    <label for="materialSaldoEditar" class="form-label">Quantidade em Estoque</label>
+                    <input type="number" class="form-control" id="materialSaldoEditar" step="0.01" min="0">
+                  </div>
+                  <div class="col-md-12">
+                    <label for="materialObservacoesEditar" class="form-label">Observações</label>
+                    <textarea class="form-control" rows="3" id="materialObservacoesEditar"></textarea>
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="tab-pane fade" id="historico-pane" role="tabpanel">
+                <div class="table-responsive" style="max-height: 300px;">
+                  <table class="table table-sm table-striped">
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Quantidade</th>
+                        <th>Custo Unitário</th>
+                        <th>Observações</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbody-historico-entradas">
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer justify-content-between">
+            <div id="footer-actions-left">
+              <button type="button" class="btn btn-danger btn-excluir-modal btn-view-mode"
+                style="display: none;">Excluir Material</button>
+            </div>
+
+            <div id="footer-actions-right">
+              <button type="button" class="btn btn-secondary btn-view-mode" data-bs-dismiss="modal">Fechar</button>
+              <button type="button" class="btn btn-primary btn-view-mode" id="btnEditarMaterialModal"
+                style="display: none;">
+                <i class="bi bi-pencil"></i> Editar
+              </button>
+              <button type="button" class="btn btn-success btn-view-mode btn-registrar-entrada-modal"
+                style="display: none;">
+                <i class="bi bi-plus-circle"></i> Registrar Nova Entrada
+              </button>
+
+              <button type="button" class="btn btn-secondary btn-edit-mode" id="btnCancelarEdicao"
+                style="display: none;">
+                <i class="bi bi-x-circle"></i> Cancelar
+              </button>
+              <button type="submit" class="btn btn-success btn-edit-mode" id="btnSalvarEdicaoMaterial"
+                style="display: none;">
+                <i class="bi bi-check-circle"></i> Salvar Alterações
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalNovaEntrada" tabindex="-1" aria-labelledby="modalNovaEntradaLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalNovaEntradaLabel">Registrar Nova Entrada</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formNovaEntrada">
+            <input type="hidden" id="entradaMaterialId">
+            <div class="mb-3">
+              <label for="entradaQuantidade" class="form-label">Quantidade</label>
+              <input type="number" class="form-control" id="entradaQuantidade" required min="0.01" step="0.01">
+            </div>
+            <div class="mb-3">
+              <label for="entradaCustoUnitario" class="form-label">Custo Unitário (R$)</label>
+              <input type="text" class="form-control" id="entradaCustoUnitario" required>
+            </div>
+            <div class="mb-3">
+              <label for="entradaObservacoes" class="form-label">Observações</label>
+              <textarea class="form-control" id="entradaObservacoes" rows="3"
+                placeholder="Ex: Nota Fiscal 123"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" form="formNovaEntrada" id="btnSalvarEntrada">Salvar
+            Entrada</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalMaterial" tabindex="-1" aria-labelledby="modalMaterialLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalMaterialLabel">Novo Material</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formMaterial">
+            <div class="mb-3">
+              <label for="materialCodigo" class="form-label">Código</label>
+              <input type="text" class="form-control" id="materialCodigo" required>
+            </div>
+            <div class="mb-3">
+              <label for="materialDescricao" class="form-label">Descrição</label>
+              <input type="text" class="form-control" id="materialDescricao" required>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="materialModelo" class="form-label">Modelo</label>
+                <input type="text" class="form-control" id="materialModelo">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="materialNumeroDeSerie" class="form-label">Nº de Série</label>
+                <input type="text" class="form-control" id="materialNumeroDeSerie">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="materialUnidade" class="form-label">Unidade de Medida</label>
+                <select class="form-select" id="materialUnidade" required>
+                  <option value="">Selecione...</option>
+                  <option value="PÇ">PÇ</option>
+                  <option value="MT">MT</option>
+                  <option value="LT">LT</option>
+                </select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="materialSaldo" class="form-label">Quantidade Inicial</label>
+                <input type="number" class="form-control" id="materialSaldo" required min="0" step="1">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="materialCustoUnitario" class="form-label">Custo Unitário Inicial (R$)</label>
+              <input type="text" class="form-control" id="materialCustoUnitario" required>
+            </div>
+            <div class="mb-3">
+              <label for="materialEmpresa" class="form-label">Empresa</label>
+              <select class="form-select" id="materialEmpresa" required>
+                <option value="">Selecione...</option>
+                <option value="INPROUT">INPROUT</option>
+                <option value="CLIENTE">CLIENTE</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="materialObservacoes" class="form-label">Observações</label>
+              <textarea class="form-control" id="materialObservacoes" rows="2"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" form="formMaterial" id="btnSalvarMaterial">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalExcluir" tabindex="-1" aria-labelledby="modalExcluirLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalExcluirLabel">Confirmar Exclusão</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Você tem certeza que deseja excluir o material <strong id="nomeMaterialExcluir"></strong>?</p>
+          <p class="text-danger">Esta ação não poderá ser desfeita.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-danger" id="btnConfirmarExclusao">Sim, Excluir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalProgressoImportacao" data-bs-backdrop="static" data-bs-keyboard="false"
+    tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-upload me-2"></i>Importando Legado CMA</h5>
+        </div>
+        <div class="modal-body">
+          <p id="textoProgressoImportacao" class="text-center mb-2">Iniciando...</p>
+          <div class="progress" role="progressbar" style="height: 20px;">
+            <div id="barraProgressoImportacao"
+              class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%">0%</div>
+          </div>
+          <div id="avisosImportacaoContainer" class="mt-3 d-none">
+            <h6>Log de Importação:</h6>
+            <ul id="listaAvisosImportacao" class="list-group"
+              style="font-size: 0.8rem; max-height: 150px; overflow-y: auto;"></ul>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btnFecharProgresso" data-bs-dismiss="modal"
+            disabled>Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toastMensagem" class="toast align-items-center border-0" role="alert" aria-live="assertive"
+      aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="toastTexto"></div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+          aria-label="Fechar"></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay-loader" class="overlay-loader d-none">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalMinhaConta" tabindex="-1" aria-labelledby="modalMinhaContaLabel">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalMinhaContaLabel">
+            <i class="bi bi-person-circle me-2"></i> Minha Conta
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-3">
+            <i class="bi bi-person-circle" style="font-size: 4rem; color: #198754;"></i>
+            <h5 class="mt-2" id="nomeUsuarioModal">Nome do Usuário</h5>
+            <p class="text-muted" id="emailUsuarioModal">email@dominio.com</p>
+            <div id="userInfoDetalhes" class="mt-2"></div>
+          </div>
+          <div class="d-grid gap-2">
+            <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
+              data-bs-target="#alterarEmail" aria-expanded="false">
+              <i class="bi bi-envelope"></i> Alterar E-mail
+            </button>
+            <div class="collapse mt-2" id="alterarEmail">
+              <form id="formAlterarEmail">
+                <div class="mb-2">
+                  <label class="form-label">Novo E-mail</label>
+                  <input type="email" class="form-control" id="novoEmail" placeholder="Digite seu novo e-mail">
+                </div>
+              </form>
+            </div>
+            <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
+              data-bs-target="#alterarSenha" aria-expanded="false">
+              <i class="bi bi-shield-lock"></i> Alterar Senha
+            </button>
+            <div class="collapse mt-2" id="alterarSenha">
+              <form id="formAlterarSenha">
+                <div class="mb-2">
+                  <label class="form-label">Nova Senha</label>
+                  <input type="password" class="form-control" id="novaSenha" placeholder="Digite sua nova senha">
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">Confirmar Nova Senha</label>
+                  <input type="password" class="form-control" id="confirmarSenha" placeholder="Confirme sua nova senha">
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle"></i> Cancelar
+          </button>
+          <button type="button" class="btn btn-success" id="btnSalvarAlteracoes">
+            <i class="bi bi-check-circle"></i> Salvar Alterações
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script src="../assets/js/general/global.js?v=3.8"></script>
+  <script src="../assets/js/general/sidebar.js?v=3.8"></script>
+  <script src="../assets/js/cms/cms.js?v=3.8"></script>
+</body>
+
+</html>

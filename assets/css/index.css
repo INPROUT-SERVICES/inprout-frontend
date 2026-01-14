@@ -1,0 +1,1106 @@
+/* ======== TOOLBAR ======== */
+.toolbar {
+  background-color: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e4e4e4;
+}
+
+/* Busca */
+.search-box {
+  min-width: 30%;
+  max-width: 40%;
+}
+
+.overlay-loader {
+  position: fixed;
+  /* Cobre a tela inteira, independente da rolagem */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.7);
+  /* Fundo branco semitransparente */
+  display: flex;
+  /* Usa flexbox para centralizar o spinner */
+  justify-content: center;
+  align-items: center;
+  z-index: 1040;
+  /* CORREÇÃO: Valor diminuído para ficar abaixo dos modais */
+  transition: opacity 0.3s ease;
+  /* Efeito suave de transição */
+}
+
+.search-box .form-control {
+  border-radius: 50px;
+  padding: 0.5rem 1rem;
+}
+
+.search-box .input-group-text {
+  background-color: var(--primary-color);
+  border-radius: 50px 0 0 50px;
+  border: none;
+}
+
+/* Botões Dropdown */
+.btn-dropdown {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 0.5rem 1.2rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s ease-in-out;
+}
+
+/* ========================================================== */
+/* ======== ESTILOS PARA MODAL DE LANÇAMENTO EM LOTE ======== */
+/* ========================================================== */
+
+/* 1. Estilizando a caixa de seleção das LPUs */
+#lpuChecklistContainerLote {
+  background-color: #f5fdf7;
+  /* Um tom de verde bem claro, mais suave que o branco puro */
+  border: 1px solid #d6f5e3;
+  /* Borda sutil no tom verde do tema */
+  border-radius: 8px;
+  /* Bordas arredondadas */
+  padding: 0.5rem;
+  max-height: 180px;
+  /* Aumentando um pouco a altura máxima */
+}
+
+/* Estilo para cada item (checkbox) da lista de LPU */
+#lpuChecklistContainerLote .form-check {
+  padding: 0.6rem 0.75rem;
+  transition: background-color 0.2s ease-in-out;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#lpuChecklistContainerLote .form-check:hover {
+  background-color: #e9f5ee;
+  /* Destaque suave ao passar o mouse */
+}
+
+#lpuChecklistContainerLote .form-check {
+  /* Aumentamos o padding, especialmente na esquerda/direita, para o texto respirar */
+  padding: 0.6rem 2rem;
+  /* Adicionamos uma pequena margem inferior para separar melhor as linhas */
+  margin-bottom: 4px;
+  transition: background-color 0.2s ease-in-out;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Melhorando a barra de rolagem para combinar com o tema */
+#lpuChecklistContainerLote::-webkit-scrollbar {
+  width: 8px;
+}
+
+#lpuChecklistContainerLote::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 8px;
+}
+
+#lpuChecklistContainerLote::-webkit-scrollbar-thumb {
+  background-color: #b8d8c5;
+  /* Cor do tema para a barra de rolagem */
+  border-radius: 8px;
+}
+
+
+/* 2. Estilizando o botão "Avançar" */
+#btnAvancarParaPreenchimentoLote {
+  background-color: var(--accent-color);
+  /* Cor de destaque principal do sistema */
+  color: white;
+  border: none;
+  font-weight: 500;
+  padding: 0.6rem 1.5rem;
+  border-radius: 50px;
+  /* Mesmo arredondamento dos outros botões */
+  transition: all 0.2s ease-in-out;
+}
+
+/* Efeito ao passar o mouse */
+#btnAvancarParaPreenchimentoLote:not(:disabled):hover {
+  background-color: #5ca98c;
+  /* Cor mais escura para o hover, igual ao .btn-dropdown */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Aparência do botão quando desabilitado */
+#btnAvancarParaPreenchimentoLote:disabled {
+  background-color: var(--secondary-color);
+  /* Cor secundária para estado desabilitado */
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-dropdown:hover {
+  background-color: #5ca98c;
+}
+
+/* Dropdown menu */
+.dropdown-menu {
+  border-radius: 12px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+  border: none;
+}
+
+.dropdown-item {
+  font-size: 0.9rem;
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #333;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f1f8f4;
+}
+
+.dropdown-item.active {
+  background-color: var(--accent-color);
+  font-weight: 600;
+}
+
+/* ======== VISÃO GERAL ======== */
+.overview-banner {
+  background-color: white;
+  border-left: 6px solid var(--accent-color);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #ddd;
+}
+
+.overview-banner .icon {
+  font-size: 1.6rem;
+  color: var(--accent-color);
+}
+
+.overview-banner h1 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+}
+
+/* ======== CARDS ======== */
+.dashboard-cards {
+  margin-top: 0.5rem;
+}
+
+.dashboard-cards .card {
+  flex: 1 1 calc(16.666% - 8px);
+  /* 6 cards na linha */
+  min-width: 180px;
+  max-width: calc(16.666% - 8px);
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.03);
+  height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  transition: transform 0.2s ease-in-out;
+}
+
+.dashboard-cards .card:hover {
+  transform: translateY(-2px);
+}
+
+.dashboard-cards .card h5 {
+  font-size: 0.75rem;
+  margin-bottom: 0.2rem;
+  color: var(--text-color);
+  line-height: 1.1;
+  text-align: center;
+}
+
+.dashboard-cards .card p {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-color);
+  text-align: center;
+}
+
+/* ======== CORES DOS CARDS ======== */
+.card.bg-success {
+  background-color: var(--card-success) !important;
+  color: var(--text-color) !important;
+}
+
+.card.bg-warning {
+  background-color: var(--card-warning) !important;
+  color: var(--text-color) !important;
+}
+
+.card.bg-secondary {
+  background-color: var(--card-secondary) !important;
+  color: var(--text-color) !important;
+}
+
+/* ======== MODAL E FORM ======== */
+.section-title {
+  font-weight: 600;
+  color: #4a665a;
+  border-bottom: 1px solid #cde7d8;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+  margin-top: 20px;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+
+.modal-content {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  background-color: #d6f5e3;
+  border-bottom: 1px solid #b8e2c9;
+}
+
+.modal-footer {
+  background-color: #f9f9f9;
+  border-top: 1px solid #ddd;
+}
+
+label {
+  font-weight: 500;
+  color: #444;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  transition: all 0.3s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #5ca98c;
+  box-shadow: 0 0 0 0.15rem rgba(92, 169, 140, 0.25);
+}
+
+textarea {
+  resize: none;
+}
+
+/* Botões */
+.btn-success {
+  background-color: #6cc1a2;
+  border: none;
+}
+
+.btn-success:hover {
+  background-color: #58a68a;
+}
+
+.btn-secondary {
+  background-color: #ccc;
+  border: none;
+}
+
+.btn-secondary:hover {
+  background-color: #b0b0b0;
+}
+
+/* ===== Scroll do Modal  ===== */
+.modal-body {
+  max-height: 75vh;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 8px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background-color: #b8d8c5;
+  border-radius: 8px;
+}
+
+.etapas-scroll {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  position: relative;
+  scroll-behavior: smooth;
+}
+
+.etapas-scroll::after {
+  content: "";
+  position: sticky;
+  right: 0;
+  width: 40px;
+  background: linear-gradient(to right, transparent, #f5fdf7);
+  pointer-events: none;
+}
+
+.etapas-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.etapas-scroll::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 8px;
+}
+
+.etapas-scroll::-webkit-scrollbar-thumb {
+  background-color: #b8d8c5;
+  border-radius: 8px;
+}
+
+.etapa-card {
+  min-width: 240px;
+  flex: 0 0 auto;
+  padding: 1rem;
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.etapa-card h6 {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #4a665a;
+}
+
+.etapa-card label {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.scroll-indicator {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #a5cbb7;
+  font-size: 1.5rem;
+  pointer-events: none;
+  animation: pulse 1.5s infinite;
+}
+
+.input-group select.form-select {
+  max-width: 80px;
+}
+
+label.form-label.d-flex {
+  margin-bottom: 0.25rem;
+  /* ou 0.5rem, ajuste conforme o necessário */
+}
+
+.form-label .form-check {
+  margin-left: 0.5rem;
+}
+
+.input-group input {
+  border-radius: 50px;
+  width: 50rem;
+}
+
+.input-group-text {
+  background-color: var(--primary-color);
+  border: 1px solid var(--secondary-color);
+}
+
+/* ================================================================== */
+/* ======== ESTILOS PARA O MODAL DE DETALHES DO HISTÓRICO ========= */
+/* ================================================================== */
+
+/* Separa as seções dentro do modal com um espaçamento */
+#modalHistoricoDetalhes .detalhes-secao {
+  margin-bottom: 1.5rem;
+}
+
+/* Estiliza os títulos de cada seção (ex: "Itens Solicitados") */
+#modalHistoricoDetalhes .detalhes-titulo-secao {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--bs-border-color-translucent);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Melhora a aparência da lista de "Dados Gerais" */
+#modalHistoricoDetalhes dl dt {
+  /* O rótulo (ex: "Status") */
+  font-weight: 500;
+  color: var(--bs-secondary-color);
+  font-size: 0.9rem;
+}
+
+#modalHistoricoDetalhes dl dd {
+  /* O valor (ex: "Aprovado") */
+  font-weight: 500;
+}
+
+/* Melhora a lista de itens solicitados */
+#modalHistoricoDetalhes .list-group-item {
+  background-color: transparent;
+  padding-left: 0;
+  border-color: var(--bs-border-color-translucent);
+}
+
+/* Personaliza a caixa de observação */
+#modalHistoricoDetalhes .alert-warning {
+  background-color: var(--bs-warning-bg-subtle);
+  color: var(--bs-warning-text-emphasis);
+  border: 1px solid rgba(var(--bs-warning-rgb), 0.3);
+}
+
+#collapseDashboardCards.collapsing {
+
+  transition: height 0.3s ease-out, opacity 0.2s ease-in-out;
+}
+
+.nav-tabs {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #6c757d;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: -2px;
+}
+
+.nav-tabs .nav-link:hover:not(.active) {
+  border-bottom-color: #e9ecef;
+  color: #343a40;
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+  border-bottom: 3px solid var(--inprout-green-dark, #2a8a65);
+  background-color: transparent;
+  color: var(--inprout-green-dark, #2a8a65);
+  font-weight: 600;
+}
+
+/* Fundo verde para status "OK" */
+.status-ok {
+  background-color: #d1e7dd;
+  /* Verde sutil do Bootstrap */
+  color: #0f5132;
+}
+
+/* Fundo vermelho para status "NOK" */
+.status-nok {
+  background-color: #f8d7da;
+  /* Vermelho sutil do Bootstrap */
+  color: #58151c;
+}
+
+/* Fundo laranja/amarelo para status "N/A" */
+.status-na {
+  background-color: #fff3cd;
+  /* Amarelo sutil do Bootstrap */
+  color: #664d03;
+}
+
+/* Usamos seletores mais específicos para garantir que eles sejam aplicados */
+.modern-table tbody td.status-cell {
+  text-align: center;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+/* Fundo verde para status "OK" */
+.modern-table tbody td.status-ok {
+  background-color: #d1e7dd !important;
+  /* Verde sutil do Bootstrap */
+  color: #0f5132 !important;
+}
+
+/* Fundo vermelho para status "NOK" */
+.modern-table tbody td.status-nok {
+  background-color: #f8d7da !important;
+  /* Vermelho sutil do Bootstrap */
+  color: #58151c !important;
+}
+
+/* Fundo laranja/amarelo para status "N/A" */
+.modern-table tbody td.status-na {
+  background-color: #fff3cd !important;
+  /* Amarelo sutil do Bootstrap */
+  color: #664d03 !important;
+}
+
+.modern-table thead th {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid #e2e8e4;
+  position: sticky;
+  /* Mantém o cabeçalho fixo no topo ao rolar */
+  top: 0;
+  z-index: 10;
+}
+
+/* ========================================================== */
+/* ======== ESTILO MODAL DE CONFIRMAÇÃO (PROFISSIONAL) ======== */
+/* ========================================================== */
+
+#modalConfirmarSubmissao .modal-content {
+  border-radius: 12px;
+  border: 1px solid #d4d4d4;
+  /* Borda sutil para definição */
+}
+
+#modalConfirmarSubmissao .modal-header {
+  /* Usando o mesmo verde claro do seu modal principal para consistência */
+  background-color: #d6f5e3;
+  border-bottom: 1px solid #b8e2c9;
+}
+
+#modalConfirmarSubmissao .modal-header .modal-title i {
+  /* Usando a cor de acento do seu tema */
+  color: var(--accent-color, #5ca98c);
+}
+
+#modalConfirmarSubmissao .modal-body {
+  padding: 1.5rem;
+  /* Ajuste no espaçamento interno */
+}
+
+/* Estilo para a caixa de aviso/informação */
+#modalConfirmarSubmissao .alert {
+  padding: 0.8rem 1rem;
+  font-size: 0.85rem;
+  background-color: #f5fdf7;
+  /* Fundo verde muito sutil */
+  border-color: #d6f5e3;
+  color: #4a665a;
+  display: flex;
+  align-items: center;
+}
+
+#modalConfirmarSubmissao .alert i {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+#modalConfirmarSubmissao .modal-footer {
+  background-color: #f9f9f9;
+  border-top: 1px solid #ddd;
+}
+
+/* ======================================== */
+/* ======== CORES DOS CARDS DO DASHBOARD ======== */
+/* ======================================== */
+
+/* Cor Padrão (Azulada/Secundária) */
+.card-stat.card-planejamento {
+  background-color: var(--card-secondary) !important;
+  border-left: 5px solid #889ca3;
+}
+
+/* Cor de Alerta (Amarela) */
+.card-stat.card-alerta {
+  background-color: var(--card-warning) !important;
+  border-left: 5px solid #d1b154;
+}
+
+/* Cor de Perigo/Ação Urgente (Laranja/Vermelho do seu root) */
+.card-stat.card-perigo {
+  background-color: #ffab91 !important;
+  /* Um tom de laranja/vermelho claro */
+  border-left: 5px solid var(--bs-orange);
+}
+
+.card-stat.card-perigo p,
+.card-stat.card-perigo h5 {
+  color: #b95000 !important;
+  font-weight: 600;
+}
+
+
+/* Cor de Sucesso (Verde) */
+.card-stat.card-sucesso {
+  background-color: var(--card-success) !important;
+  border-left: 5px solid #6b9b6d;
+}
+
+/* Cor de Informação (Azul do seu tema) */
+.card-stat.card-info {
+  background-color: #bbdefb !important;
+  /* Um azul claro para diferenciar */
+  border-left: 5px solid #64b5f6;
+}
+
+/* Estilos para o novo layout do label da LPU no modal de lote */
+#lpuChecklistContainerLote .form-check-label {
+  width: 100%;
+  /* Faz o label ocupar todo o espaço */
+  display: flex;
+}
+
+.lpu-label-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 1rem;
+  /* Espaço entre a parte principal e os detalhes */
+}
+
+.lpu-label-main {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1;
+  /* Permite que a descrição cresça */
+}
+
+.lpu-label-details {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: #6c757d;
+  /* text-secondary */
+  white-space: nowrap;
+  flex-shrink: 0;
+  /* Impede que os detalhes quebrem a linha */
+}
+
+/* Adicionado para o loader localizado */
+.content-loader-container {
+  position: relative;
+  min-height: 400px;
+  /* Garante uma altura mínima para o loader ser visível */
+}
+
+/* Regra específica para o loader dentro do novo container */
+.content-loader-container .overlay-loader {
+  position: absolute;
+  /* Faz o loader ficar contido no container */
+  border-radius: 0.5rem;
+  /* Opcional: para arredondar as bordas */
+  z-index: 1052;
+  /* Garante que o loader fique por cima do conteúdo do modal */
+}
+
+@media (max-width: 768px) {
+  .overview-banner h1 {
+    font-size: 1rem;
+  }
+
+  .dashboard-cards {
+    flex-direction: column;
+  }
+
+  .dashboard-cards .card {
+    max-width: 100%;
+  }
+
+  .table {
+    font-size: 0.8rem;
+  }
+
+  .section-title {
+    font-size: 0.85rem;
+  }
+
+  label {
+    font-size: 0.9rem;
+  }
+
+  .modal-content {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 992px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  .btn-dropdown {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ======== ESTILOS RESPONSIVOS PARA O DROPDOWN DE FILTROS ======== */
+
+.filtros-dropdown {
+  width: 550px;
+  /* Largura padrão para telas maiores */
+  max-width: 90vw;
+  /* Garante que não ultrapasse a largura da tela */
+}
+
+.filtros-dropdown .dropdown-item {
+  flex: 1 1 45%;
+  /* Permite que os botões de período ocupem o espaço */
+}
+
+/* Garante que o corpo do modal sirva como limite para o loader */
+#modalAdicionar .modal-body {
+  position: relative;
+}
+
+/* Regra específica para o loader DENTRO do modal */
+#modalAdicionar .overlay-loader {
+  position: absolute;
+  /* Fica contido dentro do modal-body */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  /* Fundo branco mais opaco */
+  z-index: 1056;
+  /* z-index maior que os elementos do formulário */
+  border-radius: 0 0 12px 12px;
+  /* Arredonda os cantos inferiores */
+}
+
+/* Estilos para os Mini KPIs acima das abas */
+.mini-kpi-card {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  min-width: 160px;
+  height: 50px;
+  /* Altura fixa para alinhar com as abas */
+  transition: all 0.2s ease;
+}
+
+.mini-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+}
+
+.mini-kpi-card .icon-wrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.mini-kpi-card .kpi-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #6c757d;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.mini-kpi-card .kpi-value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #212529;
+  line-height: 1;
+}
+
+/* Ajuste para as abas não terem borda inferior dupla */
+.nav-tabs {
+  border-bottom: 1px solid #dee2e6;
+  width: auto;
+  /* Permite que as abas ocupem apenas o espaço necessário */
+}
+
+/* Cartão de Detalhes do Material (aparece após seleção) */
+.material-info-card {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-left: 4px solid var(--accent-color);
+  /* Verde do seu tema */
+  border-radius: 6px;
+  padding: 10px 15px;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  display: none;
+  /* Oculto por padrão */
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.material-info-card.show {
+  display: block;
+}
+
+.material-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px 16px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #6c757d;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.info-value {
+  font-weight: 500;
+  color: #212529;
+}
+
+/* Ajuste do Choices.js para parecer com form-control do Bootstrap */
+.choices__inner {
+  background-color: #fff;
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+  min-height: 38px;
+  padding: 3.5px 12px;
+  /* Ajuste fino vertical */
+}
+
+.choices__input {
+  background-color: transparent;
+  margin-bottom: 0;
+}
+
+/* Foco (Verde do seu tema) */
+.is-focused .choices__inner {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 0.25rem rgba(125, 167, 138, 0.25);
+}
+
+/* Ajuste na lista dropdown */
+.choices__list--dropdown {
+  z-index: 1060;
+  /* Garante que fique acima de outras coisas no modal */
+}
+
+/* Animação suave */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Para telas de tablet e menores (abaixo de 768px) */
+@media (max-width: 768px) {
+  .filtros-dropdown {
+    width: 320px;
+    /* Uma largura mais adequada para telas menores */
+  }
+
+  /* Faz com que as seções de Status e OS fiquem uma em cima da outra */
+  .filtros-dropdown li.d-flex {
+    flex-direction: column;
+  }
+}
+
+/* Para telas de celular (abaixo de 400px) */
+@media (max-width: 400px) {
+  .filtros-dropdown {
+    width: 90vw;
+    /* Ocupa quase toda a largura da tela */
+  }
+
+  .filtros-dropdown .dropdown-item {
+    flex-basis: 100%;
+    /* Um botão por linha */
+  }
+}
+
+/* Barra flutuante de ações em lote */
+#acoes-lote-doc {
+  position: fixed;
+  bottom: 30px;
+  /* Distância do fundo da tela */
+  left: 50%;
+  transform: translateX(-50%) translateY(150%);
+  /* Começa escondida para baixo */
+  z-index: 1050;
+  /* Acima de tabelas, abaixo de modais */
+
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 50px;
+  /* Bordas bem arredondadas (estilo pílula) */
+  padding: 12px 24px;
+
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  /* Sombra suave para elevação */
+
+  display: flex;
+  /* Garante alinhamento flex */
+  align-items: center;
+  gap: 15px;
+
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* Animação suave de entrada */
+  min-width: 320px;
+  justify-content: space-between;
+}
+
+/* Classe para mostrar a barra (sobrescreve o d-none do Bootstrap via JS) */
+#acoes-lote-doc.d-flex {
+  transform: translateX(-50%) translateY(0) !important;
+}
+
+/* Estilo do contador */
+#contador-selecao-doc {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #0d6efd;
+  /* Azul Bootstrap */
+}
+
+/* Ícone de check */
+#acoes-lote-doc .bi-check-all {
+  font-size: 1.3rem;
+  vertical-align: middle;
+}
+
+/* ======================================== */
+/* ======== MODAL ANO NOVO (PREMIUM) ======== */
+/* ======================================== */
+
+.modal-ano-novo-content {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border: 1px solid #ffd700;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+  border-radius: 20px;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(to right, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine 3s infinite linear;
+  background-size: 200% auto;
+}
+
+.letter-spacing-2 {
+  letter-spacing: 2px;
+  opacity: 0.8;
+}
+
+/* Animação do texto dourado */
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* --- Fogos de Artifício CSS Puros --- */
+.firework {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0.5rem;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, #ff0 10%, #0000 0) 50% 0% / 20% 20%, 
+              radial-gradient(circle, #ff0 10%, #0000 0) 0% 50% / 20% 20%, 
+              radial-gradient(circle, #ff0 10%, #0000 0) 50% 100% / 20% 20%, 
+              radial-gradient(circle, #ff0 10%, #0000 0) 100% 50% / 20% 20%, 
+              radial-gradient(circle, #ff0 10%, #0000 0) 100% 0% / 20% 20%, 
+              radial-gradient(circle, #ff0 10%, #0000 0) 0% 100% / 20% 20%, 
+              radial-gradient(circle, #ff0 10%, #0000 0) 100% 100% / 20% 20%, 
+              radial-gradient(circle, #ff0 10%, #0000 0) 0% 0% / 20% 20%;
+  background-repeat: no-repeat;
+  animation: firework 2s infinite;
+  opacity: 0;
+}
+
+.firework:nth-child(2) {
+  transform: translate(-50%, -50%) rotate(45deg);
+  animation-delay: 0.5s;
+}
+
+.firework:nth-child(3) {
+  transform: translate(-30%, -60%) scale(0.8);
+  animation-delay: 1s;
+}
+
+/* Garante que o Modal de Ano Novo fique acima de qualquer loader (z-index > 1056) */
+#modalAnoNovo {
+  z-index: 11000 !important;
+}
+
+/* Opcional: Se quiser que o fundo escuro (backdrop) também cubra o loader */
+.modal-backdrop {
+    z-index: 10999 !important; /* Apenas se não houver outros modais abertos simultaneamente */
+}
+
+@keyframes firework {
+  0% { 
+    width: 0.5rem; 
+    opacity: 1; 
+  }
+  50% { 
+    width: 100%; 
+    opacity: 1; 
+  }
+  100% { 
+    width: 100%; 
+    opacity: 0; 
+  }
+}
+
+#modalMinhaConta {
+  /* Garante que o Minha Conta fique acima de loaders e sidebars */
+  z-index: 1060 !important;
+}

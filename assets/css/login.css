@@ -1,0 +1,153 @@
+:root {
+    --login-bg-color: #f8f9fa;
+    --form-bg-color: #ffffff;
+    --input-border-color: #ced4da;
+    --input-focus-border-color: var(--accent-color);
+    --btn-login-bg-color: var(--accent-color);
+    --btn-login-hover-bg-color: #5ca98c;
+    --text-primary-color: #212529;
+    --text-secondary-color: #6c757d;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--login-bg-color);
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.login-container {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Coluna da Esquerda - Branding (Apenas Gradiente) */
+.login-branding {
+    flex-basis: 40%;
+    /* Gradiente mais forte e diagonal usando as cores da marca */
+    background-image: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+/* Coluna da Direita - Formulário */
+.login-form-wrapper {
+    flex-basis: 60%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background-color: var(--form-bg-color);
+}
+
+.login-form-container {
+    width: 100%;
+    max-width: 420px;
+}
+
+/* Estilos para a logo e títulos */
+.login-logo {
+    max-width: 200px;
+    margin-bottom: 2rem;
+}
+
+.login-form-container {
+    text-align: center; /* Centraliza a logo e os títulos */
+}
+
+form {
+    text-align: left; /* Alinha os campos do formulário à esquerda */
+}
+
+.form-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.form-subtitle {
+    font-size: 1rem;
+    color: var(--text-secondary-color);
+    margin-bottom: 2.5rem;
+}
+
+/* Campos do Formulário (sem alterações) */
+.form-floating > .form-control {
+    height: calc(3.5rem + 2px);
+    line-height: 1.25;
+}
+
+.form-floating > label {
+    padding: 1rem 0.75rem;
+    color: var(--text-secondary-color);
+}
+
+.form-control:focus {
+    border-color: var(--input-focus-border-color);
+    box-shadow: 0 0 0 0.25rem rgba(125, 167, 138, 0.25);
+}
+
+.input-group .form-floating {
+    flex-grow: 1;
+}
+
+#togglePassword {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-color: var(--input-border-color);
+}
+
+.form-check-label {
+    font-size: 0.9rem;
+}
+
+/* Botão de Login (sem alterações) */
+.btn-login {
+    background-color: var(--btn-login-bg-color);
+    color: white;
+    font-weight: 600;
+    padding: 0.85rem 1.5rem;
+    border-radius: 0.5rem;
+    border: none;
+    transition: background-color 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-login:hover {
+    background-color: var(--btn-login-hover-bg-color);
+    color: white;
+}
+
+.btn-login:disabled .spinner-border {
+    display: inline-block !important;
+}
+
+.btn-login:disabled .btn-text {
+    display: none;
+}
+
+/* Alertas de Mensagem (sem alterações) */
+.alert {
+    padding: 0.8rem 1rem;
+    font-size: 0.9rem;
+    text-align: left;
+}
+.alert-success { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
+.alert-error { background-color: #f8d7da; color: #842029; border-color: #f5c2c7; }
+
+/* Responsividade */
+@media (max-width: 820px) {
+    .login-branding {
+        display: none; /* Esconde a coluna do gradiente em telas pequenas */
+    }
+    .login-form-wrapper {
+        flex-basis: 100%;
+    }
+}

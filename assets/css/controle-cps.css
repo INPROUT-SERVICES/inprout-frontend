@@ -1,0 +1,236 @@
+/* ==========================================================
+ * CSS UNIFICADO PARA A PÁGINA DE CONTROLE DE PAGAMENTO (CPS)
+ * ========================================================== */
+
+/* --- 1. ESTILOS GERAIS DA PÁGINA (De gestao.css) --- */
+body {
+    overflow-y: auto !important;
+    height: auto !important;
+    display: block !important;
+    background-color: #f8f9fa;
+}
+
+/* --- 2. ESTILOS DAS ABAS --- */
+.nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 1rem;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6c757d;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: -1px;
+}
+
+.nav-tabs .nav-link:hover:not(.active) {
+    border-bottom-color: #e9ecef;
+    color: #343a40;
+}
+
+.nav-tabs .nav-link.active {
+    border-bottom: 3px solid var(--accent-color, #7da78a);
+    background-color: transparent;
+    color: var(--accent-color, #7da78a);
+    font-weight: 600;
+}
+
+/* --- 3. ESTILOS DE GRID E CARDS (Dashboard e Segmentos) --- */
+
+/* Grid de Segmentos */
+.segment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Tamanho mínimo compacto */
+    gap: 0.5rem;
+}
+
+/* Cards de Segmento (Brancos) */
+.segment-card {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 0.75rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    text-align: center;
+    transition: transform 0.2s ease-in-out;
+    border: 1px solid #f0f0f0;
+}
+
+.segment-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-color);
+}
+
+.segment-card i {
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    margin-bottom: 0.3rem;
+    display: block;
+}
+
+.segment-card div {
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #555;
+}
+
+.segment-card span {
+    font-weight: 700;
+    color: var(--text-color);
+    display: block;
+    font-size: 0.9rem;
+    margin-top: 2px;
+}
+
+/* Barra de Total Geral (Verde) */
+.kpi-total.compact {
+    background-color: var(--card-success);
+    border-radius: 8px;
+    padding: 0.5rem;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    color: #155724;
+}
+
+.kpi-total .kpi-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+/* --- 4. ESTILOS DE TABELA --- */
+.card {
+    border: none;
+    border-radius: 0.75rem;
+}
+
+.card-header {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.card-title-modern {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #343a40;
+    display: flex;
+    align-items: center;
+}
+
+.table-responsive.custom-scroll {
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+    position: relative;
+    border: 1px solid #ccc;
+    border-radius: 0 0 12px 12px;
+    background-color: #fff;
+}
+
+.modern-table thead th {
+    background-color: var(--primary-color, #cce3d3);
+    color: var(--text-color, #333);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid #e2e8e4;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.modern-table tbody td {
+    color: #444;
+    padding: 0.65rem 1rem;
+    border-top: 1px solid #ececec;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 0.85rem;
+}
+
+.modern-table tbody tr:hover { background-color: #e6f3ec; }
+.modern-table tbody tr:nth-child(even) { background-color: #f9f9f9; }
+.modern-table tbody tr.table-warning { background-color: #fff8e1 !important; color: #664d03; }
+.modern-table tbody tr.table-info { background-color: #e0f7fa !important; color: #004d40; }
+
+/* --- 5. BOTÕES DE AÇÃO --- */
+.btn-acao-lote {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 50px;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    background-color: transparent;
+    border: 1px solid var(--btn-color-borda);
+    color: var(--btn-color-borda);
+}
+.btn-acao-lote:hover {
+    background-color: var(--btn-color-fundo-hover);
+    color: var(--btn-color-texto-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.btn-lote-success { --btn-color-borda: #198754; --btn-color-fundo-hover: #198754; --btn-color-texto-hover: white; }
+.btn-lote-danger { --btn-color-borda: #dc3545; --btn-color-fundo-hover: #dc3545; --btn-color-texto-hover: white; }
+
+/* --- 6. ESTILOS DE MODAL --- */
+.modal-content {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+}
+.modal-header { background-color: #d6f5e3; border-bottom: 1px solid #b8e2c9; }
+.modal-header .modal-title { fontWeight: 600; color: #333; }
+.modal-footer { background-color: #f9f9f9; border-top: 1px solid #ddd; }
+.modal-body { max-height: 75vh; overflow-y: auto; }
+
+/* --- 7. BADGES DE STATUS --- */
+.badge.text-bg-primary { background-color: var(--card-secondary, #b0bec5) !important; color: var(--text-color, #333) !important; }
+.badge.text-bg-info { background-color: #bbdefb !important; color: var(--text-color, #333) !important; }
+.badge.text-bg-warning { background-color: var(--card-warning, #ffe082) !important; color: var(--text-color, #333) !important; }
+.badge.text-bg-success { background-color: var(--card-success, #a5d6a7) !important; color: var(--text-color, #333) !important; }
+.badge.text-bg-danger { background-color: #ffab91 !important; color: #b95000 !important; font-weight: 600; }
+
+/* --- 8. LOADER --- */
+.content-loader-container { position: relative; min-height: 300px; }
+.content-loader-container .overlay-loader {
+    position: absolute; z-index: 1040; border-radius: 0 0 0.75rem 0.75rem;
+    background: rgba(255, 255, 255, 0.7); top: 0; left: 0; width: 100%; height: 100%;
+}
+
+/* --- 9. ESTILIZAÇÃO DOS FILTROS (Choices.js) --- */
+.choices__inner {
+    min-height: 38px !important;
+    background-color: #fff !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 0.5rem !important;
+    padding: 3.5px 12px !important;
+    font-size: 0.875rem !important;
+    display: flex; align-items: center;
+}
+.is-focused .choices__inner, .is-open .choices__inner {
+    border-color: var(--accent-color, #7da78a) !important;
+    box-shadow: 0 0 0 0.2rem rgba(125, 167, 138, 0.25) !important;
+}
+.choices__list--dropdown {
+    border: 1px solid #dee2e6 !important;
+    border-radius: 0.5rem !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    margin-top: 5px !important; z-index: 1050 !important;
+}
+.choices__list--dropdown .choices__item--selectable.is-highlighted {
+    background-color: #e6f3ec !important;
+    color: #155724 !important;
+}
+/* Seta do Select */
+.choices[data-type*="select-one"]::after {
+    border-color: #6c757d transparent transparent transparent; right: 15px;
+}
+.choices.is-open[data-type*="select-one"]::after {
+    border-color: transparent transparent #6c757d transparent; margin-top: -7.5px;
+}

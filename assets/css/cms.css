@@ -1,0 +1,456 @@
+/* ===============================================
+ * ESTILOS GERAIS DA PÁGINA
+ * =============================================== */
+
+/* CORREÇÃO DE SCROLL TRAVADO */
+html, body {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    background-color: #f4f6f9; /* Fundo levemente cinza para destacar os cards brancos */
+}
+
+/* Container Principal (ID adicionado no HTML) */
+#conteudo-principal {
+    height: auto !important;
+    overflow: visible !important;
+    padding-bottom: 80px; /* Espaço para a barra flutuante não cobrir conteúdo */
+}
+
+/* ===============================================
+ * NOVO CABEÇALHO MODERNO (Painel Glass/Clean)
+ * =============================================== */
+
+.cms-panel-header {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); /* Sombra suave */
+    margin-bottom: 1.5rem;
+    border: 1px solid #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Linha superior: Título e Botão Principal */
+.cms-panel-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding-bottom: 1rem;
+    border-bottom: 1px dashed #eee;
+}
+
+.cms-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.cms-icon-bg {
+    width: 48px;
+    height: 48px;
+    background: #e8f5e9; /* Fundo verde claro */
+    color: #2e7d32;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.cms-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+
+.cms-subtitle {
+    font-size: 0.9rem;
+    color: #888;
+    margin: 0;
+}
+
+/* Linha inferior: Filtros e Busca */
+.cms-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.search-container-modern {
+    flex-grow: 1;
+    max-width: 450px;
+    position: relative;
+}
+
+.search-input-modern {
+    width: 100%;
+    padding: 12px 15px 12px 45px;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    background: #f8f9fa;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+}
+
+.search-input-modern:focus {
+    background: #fff;
+    border-color: #4cae8c;
+    box-shadow: 0 0 0 4px rgba(76, 174, 140, 0.1);
+    outline: none;
+}
+
+.search-icon-modern {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+    font-size: 1.1rem;
+}
+
+/* ================================================================== */
+/* ====== CARDS DE MATERIAL (GRID SYSTEM - Tamanho Médio) ====== */
+/* ================================================================== */
+
+.materials-grid-container {
+    display: grid;
+    /* Aumentado de 280px para 300px para acomodar melhor o conteúdo (+7%) */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+    gap: 20px;
+    padding: 0 0 30px 0;
+    min-height: 200px;
+    height: auto !important;
+}
+
+.material-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e5e5e5;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    cursor: default;
+}
+
+/* Estilo quando selecionado */
+.material-card.selected {
+    border-color: #0d6efd;
+    background-color: #f4f9ff;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+
+.material-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+    border-color: #a5d6a7; /* Verde suave */
+}
+
+/* Checkbox Flutuante */
+.card-check-wrapper {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+}
+
+.card-check-input {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    margin: 0;
+    border: 1px solid #ccc;
+}
+
+/* CABEÇALHO DO CARD */
+.card-header {
+    background: #fff;
+    /* Padding left maior para não ficar em cima do checkbox */
+    padding: 10px 15px 10px 45px; 
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.material-code {
+    font-weight: 700;
+    color: #444;
+    font-size: 0.85rem;
+    background: #f1f3f5;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+
+/* Badge de Empresa */
+.empresa-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin-left: auto;
+    margin-right: 8px;
+}
+.empresa-inprout { color: #0d6efd; background: #e7f1ff; }
+.empresa-cliente { color: #fd7e14; background: #fff4e6; }
+
+.material-unit {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: 600;
+    border: 1px solid #eee;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* CORPO DO CARD */
+.card-body {
+    padding: 16px; /* Aumentado de 12px para 16px (+Conforto) */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.material-title {
+    font-size: 1.05rem; /* Aumentado de 0.95rem */
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 15px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    height: 2.8em; /* Altura ajustada */
+}
+
+/* Stats (Saldo e Custo) */
+.card-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end; /* Alinha pela base dos números */
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #999;
+    text-transform: uppercase;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 1.2rem; /* Aumentado para destaque */
+    font-weight: 700;
+    color: #333;
+    line-height: 1;
+}
+
+/* Cores de Status */
+.saldo-ok { color: #2ecc71; }
+.saldo-baixo { color: #e74c3c; }
+.saldo-zerado { color: #95a5a6; }
+
+/* RODAPÉ DE AÇÕES */
+.card-actions {
+    padding: 10px 15px;
+    background: #fff;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.btn-card {
+    padding: 8px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.2s;
+}
+
+/* Cores dos botões */
+.btn-card.entry { 
+    background: #e8f5e9; 
+    color: #2e7d32; 
+    flex: 2; /* Maior destaque */
+}
+.btn-card.entry:hover { 
+    background: #c8e6c9; 
+    transform: translateY(-1px);
+}
+
+.btn-card.details { 
+    background: #f3f4f6; 
+    color: #4b5563; 
+    flex: 1;
+}
+.btn-card.details:hover { 
+    background: #e5e7eb; 
+    color: #1f2937;
+}
+
+.btn-card.delete { 
+    background: #fff1f2; 
+    color: #be123c; 
+    flex: 0 0 40px; /* Largura fixa pequena */
+}
+.btn-card.delete:hover { 
+    background: #fecdd3; 
+}
+
+/* ================================================================== */
+/* ====== BARRA FLUTUANTE DE AÇÕES EM LOTE (FAB) ====== */
+/* ================================================================== */
+.floating-action-bar {
+    position: fixed;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%) translateY(120px); /* Escondido */
+    background: #212529;
+    color: white;
+    padding: 12px 25px;
+    border-radius: 50px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    z-index: 1050;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.floating-action-bar.visible {
+    transform: translateX(-50%) translateY(0);
+}
+
+.fab-count {
+    font-weight: 700;
+    background: #0d6efd;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    color: #fff;
+}
+
+.fab-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255,255,255,0.2);
+}
+
+.btn-fab {
+    background: transparent;
+    border: none;
+    color: #ddd;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+}
+
+.btn-fab:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+.btn-fab.danger {
+    color: #ff8787;
+}
+
+.btn-fab.danger:hover {
+    background: rgba(220, 53, 69, 0.2);
+    color: #ffc9c9;
+}
+
+/* ================================================================== */
+/* ====== ESTILOS LEGADOS / UTILITÁRIOS ====== */
+/* ================================================================== */
+
+/* Paginação */
+.pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    font-size: 0.9rem;
+    border-top: 1px solid #eee;
+    margin-top: 10px;
+}
+
+/* Tabelas internas (modais) */
+.table-responsive.custom-scroll {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 8px;
+}
+.table-responsive.custom-scroll::-webkit-scrollbar { width: 6px; }
+.table-responsive.custom-scroll::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 4px; }
+
+.table { width: 100%; border-collapse: collapse; }
+
+/* Adicione junto aos estilos do .btn-fab */
+.btn-fab.success {
+    background: #198754; /* Verde Bootstrap */
+    color: white;
+}
+
+.btn-fab.success:hover {
+    background: #157347;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(25, 135, 84, 0.3);
+}
+
+#modalSolicitarLote .table-responsive.custom-scroll thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 5; 
+    border-bottom: 2px solid #dee2e6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.choices__list--dropdown, 
+.choices__list[aria-expanded] {
+    z-index: 1055 !important; /* Acima de modais (1050) e headers */
+}
+
+/* Garante que o container do select não corte o dropdown */
+.choices {
+    overflow: visible !important;
+}

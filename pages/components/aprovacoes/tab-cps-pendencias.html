@@ -1,0 +1,98 @@
+<div class="content-loader-container">
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1">Mês Ref.</label>
+                    <select class="form-select form-select-sm" id="cps-filtro-mes-ref"></select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1">Segmento</label>
+                    <select class="form-select form-select-sm" id="cps-filtro-segmento">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1">Prestador</label>
+                    <select class="form-select form-select-sm" id="cps-filtro-prestador">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-sm btn-primary w-100" id="btn-atualizar-cps">
+                        <i class="bi bi-funnel-fill me-1"></i> Atualizar Lista
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="cps-acoes-lote-coord-container"
+        class="alert alert-info d-flex align-items-center justify-content-between p-2 mb-2 d-none">
+        <span><i class="bi bi-check-circle-fill me-2"></i>Coordenador: Itens selecionados.</span>
+        <div>
+            <button class="btn btn-sm btn-success me-2" id="btn-fechar-selecionados-cps"><i class="bi bi-check-lg"></i>
+                Fechar (<span id="contador-fechar-cps">0</span>)</button>
+            <button class="btn btn-sm btn-danger" id="btn-recusar-selecionados-cps-coord"><i class="bi bi-x-lg"></i>
+                Recusar (<span id="contador-recusar-cps-coord">0</span>)</button>
+        </div>
+    </div>
+
+    <div id="cps-acoes-lote-controller-container"
+        class="alert alert-warning d-flex align-items-center justify-content-between p-2 mb-2 d-none">
+        <span><i class="bi bi-exclamation-triangle-fill me-2"></i>Controller: Pagamento/Devolução.</span>
+        <div>
+            <button class="btn btn-sm btn-success me-2" id="btn-pagar-selecionados-cps"><i class="bi bi-cash-stack"></i>
+                Pagar (<span id="contador-pagamento-cps">0</span>)</button>
+            <button class="btn btn-sm btn-danger" id="btn-recusar-selecionados-cps-controller"><i
+                    class="bi bi-arrow-counterclockwise"></i> Devolver (<span
+                    id="contador-recusar-cps-controller">0</span>)</button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white p-3 border-bottom d-flex align-items-center flex-wrap gap-2">
+            <h5 class="mb-0 card-title-modern text-nowrap me-3"><i class="bi bi-receipt me-2"></i>Gestão de CPS</h5>
+
+            <div class="kpi-header-wrapper d-none d-md-flex ms-auto gap-2">
+                <div class="card-kpi-header card-kpi-info">
+                    <span class="kpi-title">Total CPS</span>
+                    <span class="kpi-value kpi-cps-total-mes-value">R$ 0,00</span>
+                </div>
+
+                <div class="card-kpi-header" style="border-left: 4px solid #ffc107; background-color: #fff3cd;">
+                    <span class="kpi-title">Total Adiantado</span>
+                    <span class="kpi-value kpi-cps-total-adiantado-value">R$ 0,00</span>
+                </div>
+
+                <div class="card-kpi-header" style="border-left: 4px solid #0d6efd; background-color: #cfe2ff;">
+                    <span class="kpi-title">Total Confirmado</span>
+                    <span class="kpi-value kpi-cps-total-confirmado-value">R$ 0,00</span>
+                </div>
+
+                <div class="card-kpi-header" style="border-left: 4px solid #dc3545; background-color: #f8d7da;">
+                    <span class="kpi-title">Total Pendente</span>
+                    <span class="kpi-value kpi-cps-total-pendente-value">R$ 0,00</span>
+                </div>
+
+                <div class="card-kpi-header card-kpi-success">
+                    <span class="kpi-title">Total Pago</span>
+                    <span class="kpi-value kpi-cps-total-pago-value">R$ 0,00</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="mb-3 position-relative">
+                <input type="text" class="form-control ps-5" id="input-busca-cps-pendencias"
+                    placeholder="Pesquisar por OS, Projeto, Prestador, Valor...">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+            </div>
+            <div class="accordion" id="accordionPendenciasCPS"></div>
+        </div>
+    </div>
+
+    <div class="overlay-loader d-none">
+        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div>
+    </div>
+</div>

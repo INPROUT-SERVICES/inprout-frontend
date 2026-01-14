@@ -1,0 +1,523 @@
+/* Habilita o scroll vertical especificamente para a página de registros */
+body {
+    overflow-y: auto !important;
+    /* Permite a rolagem vertical */
+    height: auto !important;
+    /* Remove a altura fixa para o conteúdo poder crescer */
+    display: block !important;
+    /* Retorna ao comportamento de display padrão */
+}
+
+/* Estilos específicos que permanecem necessários para a página de registros */
+
+.os-row {
+    cursor: pointer;
+    background-color: #f8f9fa;
+    /* Um cinza bem claro para diferenciar a linha pai */
+}
+
+.os-row:hover {
+    background-color: #e9ecef;
+    /* Um tom mais escuro ao passar o mouse */
+}
+
+/* Ajuste fino nos botões para alinhamento com o padrão global, se necessário */
+.btn {
+    font-size: 0.9rem;
+    /* Alinhando com o tamanho de fonte de outros botões */
+    border-radius: 50px;
+    /* Padronizando o arredondamento */
+    padding: 0.5rem 1.2rem;
+}
+
+.search-box {
+    max-width: 80rem;
+}
+
+/* Estilos para as colunas de status (OK, NOK, N/A) */
+.status-cell {
+    text-align: center;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+.status-ok {
+    background-color: #d1e7dd !important;
+    color: #0f5132 !important;
+}
+
+.status-nok {
+    background-color: #f8d7da !important;
+    color: #58151c !important;
+}
+
+.status-na {
+    background-color: #fff3cd !important;
+    color: #664d03 !important;
+}
+
+/* Cor de fundo para as colunas de faturamento */
+.faturamento-col {
+    background-color: #f5f5f5;
+    /* Cinza bem claro */
+}
+
+/* Estilos para a barra de paginação */
+.pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* ESTILOS PARA O MODAL DE IMPORTAÇÃO */
+
+#modalProgressoImportacao .modal-header {
+    background-color: #e6f7ff;
+    border-bottom: 1px solid #b3d9ff;
+    color: #1a578b;
+    padding: 1rem 1.5rem;
+}
+
+#modalProgressoImportacao .modal-header .modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+#modalProgressoImportacao .modal-header .modal-title i {
+    color: #007bff;
+    margin-right: 0.75rem;
+    font-size: 1.5rem;
+}
+
+#modalProgressoImportacao .modal-body {
+    padding: 2rem 1.5rem;
+    text-align: center;
+}
+
+#modalProgressoImportacao #textoProgressoImportacao {
+    font-size: 1.1rem;
+    color: #333;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+}
+
+#modalProgressoImportacao .progress {
+    height: 30px;
+    font-size: 1rem;
+    border-radius: 8px;
+    background-color: #e9ecef;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .1);
+}
+
+#barraProgressoImportacao {
+    background-color: #28a745;
+    color: #fff;
+    line-height: 30px;
+    border-radius: 8px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, .2);
+}
+
+#errosImportacaoContainer {
+    margin-top: 2rem;
+    text-align: left;
+    border-top: 1px solid #eee;
+    padding-top: 1.5rem;
+}
+
+#errosImportacaoContainer h6 {
+    font-weight: 600;
+    color: #dc3545;
+    margin-bottom: 1rem;
+    font-size: 1.05rem;
+}
+
+#listaErrosImportacao {
+    background-color: #fcebeb;
+    border: 1px solid #f5c6cb;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 0;
+}
+
+#listaErrosImportacao .list-group-item {
+    background-color: transparent;
+    border-bottom: 1px solid #f8d7da;
+    color: #721c24;
+    padding: 0.75rem 1rem;
+}
+
+#listaErrosImportacao .list-group-item:last-child {
+    border-bottom: none;
+}
+
+#modalProgressoImportacao .modal-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    padding: 1rem 1.5rem;
+}
+
+#btnCancelarImportacao,
+#btnFecharProgressoImportacao {
+    font-weight: 500;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.95rem;
+    border-radius: 0.3rem;
+}
+
+/* --- ESTILOS ATUALIZADOS PARA O ACORDEÃO E CABEÇALHO --- */
+
+.accordion-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem !important;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+    background-color: #fff;
+}
+
+.accordion-header .accordion-button {
+    background-color: #f8f9fa;
+    padding: 0.5rem 1rem;
+    /* Padding reduzido para ficar mais compacto */
+    font-weight: 500;
+    color: #212529;
+    box-shadow: none;
+    /* Remove sombra padrão do bootstrap */
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.accordion-header .accordion-button:not(.collapsed) {
+    background-color: #e9ecef;
+    color: #000;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .125);
+}
+
+.accordion-header .accordion-button::after {
+    width: 1rem;
+    height: 1rem;
+    background-size: 1rem;
+    margin-left: 0.5rem;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* Garante que Título fique na esquerda e KPIs na direita */
+    width: 100%;
+    padding-right: 0.5rem;
+    gap: 1rem;
+}
+
+/* Bloco do Título (OS e Projeto) */
+.header-title-wrapper {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+    text-align: left;
+    min-width: 120px;
+    /* Tamanho mínimo para não esmagar */
+}
+
+.header-title-project {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.header-title-os {
+    font-size: 1.1rem;
+    /* Levemente maior para destaque */
+    font-weight: 700;
+    color: #212529;
+}
+
+/* Bloco dos KPIs (Valores Financeiros) */
+.header-kpi-wrapper {
+    display: flex;
+    align-items: center;
+    /* Centraliza verticalmente */
+    gap: 1.5rem;
+    /* Espaço entre cada grupo de valor */
+    margin-left: auto;
+    /* Empurra tudo para a direita */
+    flex-wrap: nowrap;
+    /* CRUCIAL: Impede quebra de linha */
+}
+
+/* Cada item individual de KPI */
+.header-kpi {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    /* Alinha texto à direita */
+    justify-content: center;
+}
+
+.kpi-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 0;
+    line-height: 1;
+    white-space: nowrap;
+    /* Impede quebra do texto do label */
+}
+
+.kpi-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #333;
+    line-height: 1.2;
+    white-space: nowrap;
+    /* Impede quebra do valor */
+}
+
+/* Ajuste específico para o botão de edição (lápis) dentro do valor */
+.kpi-value .btn-sm {
+    padding: 0 0.2rem;
+    font-size: 0.8rem;
+    margin-left: 4px;
+}
+
+/* Badge "Itens Pendentes" */
+.header-badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+    border-radius: 10px;
+    white-space: nowrap;
+    background-color: #0d6efd;
+    color: white;
+    margin-left: 0.5rem;
+    align-self: center;
+}
+
+.kpi-value {
+    /* Fonte ajustada */
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #212529;
+    line-height: 1.1;
+}
+
+.text-warning {
+    color: #d39e00 !important;
+}
+
+.kpi-percentage {
+    font-weight: 800;
+    color: #198754;
+    /* Verde */
+}
+
+.header-badge {
+    margin-left: 1rem;
+    font-size: 0.8rem;
+    padding: .3em .6em;
+}
+
+.accordion-body {
+    padding: 0;
+    background-color: #fff;
+}
+
+.accordion-body .table-responsive {
+    border: none;
+    box-shadow: none;
+    max-height: 400px;
+}
+
+.accordion-body .modern-table {
+    margin-bottom: 0;
+}
+
+/* Cabeçalho da tabela INTERNA - agora com fundo verde */
+.accordion-body .modern-table th {
+    font-size: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    background-color: var(--primary-color);
+    /* Verde claro do seu tema */
+    color: var(--text-color);
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.accordion-body .modern-table td {
+    font-size: 0.8rem;
+    padding: 0.6rem 0.8rem;
+}
+
+#barraProgressoImportacao {
+    background-color: #28a745;
+    color: #fff;
+    line-height: 30px;
+    border-radius: 8px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, .2);
+    /* --- LINHA ADICIONADA --- */
+    transition: width 0.5s ease-in-out;
+    /* Anima a mudança da largura suavemente */
+}
+
+@media (max-width: 1200px) {
+
+    /* Em telas médias, reduz ainda mais o gap */
+    .header-kpi-wrapper {
+        gap: 0.5rem;
+    }
+
+    .header-title-wrapper {
+        max-width: 120px;
+        /* Limita a largura do título da OS */
+        overflow: hidden;
+    }
+
+    .header-title-os {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 992px) {
+
+    /* Em telas menores (tablets), permite scroll horizontal no cabeçalho para não quebrar */
+    .header-content {
+        overflow-x: auto;
+        padding-bottom: 5px;
+        /* Espaço para scrollbar se necessário */
+    }
+
+    .header-kpi-wrapper {
+        margin-left: 1rem;
+        /* Remove o auto para ficar fixo ao lado do título */
+    }
+}
+
+/* ========================================================== */
+/* ======== CUSTOMIZAÇÃO DO SWEETALERT2 (MODAL) - V2 ======== */
+/* ========================================================== */
+
+/* 1. Container Principal - Usando "body" antes para forçar a prioridade */
+body .swal2-popup {
+    font-family: 'Inter', sans-serif !important;
+    border-radius: 12px !important;
+    padding: 2rem !important;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid #e2e8e4 !important;
+    background: #fff !important;
+    display: flex !important;
+    flex-direction: column;
+}
+
+/* 2. Título */
+body .swal2-title {
+    color: #4a665a !important; /* Verde escuro do tema */
+    font-size: 1.4rem !important;
+    font-weight: 600 !important;
+    padding-bottom: 1rem !important;
+    width: 100% !important;
+}
+
+/* 3. Conteúdo HTML (Labels e Textos) */
+body .swal2-html-container {
+    color: #333 !important;
+    font-size: 0.95rem !important;
+    margin: 0 !important;
+    text-align: left !important;
+    width: 100% !important;
+}
+
+/* 4. Inputs dentro do SweetAlert */
+body .swal2-popup .form-control {
+    border-radius: 8px !important;
+    border: 1px solid #ccc !important;
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.9rem !important;
+    box-shadow: none !important;
+    transition: all 0.3s ease;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    display: block !important;
+    margin-bottom: 0 !important; /* O modal já dá espaçamento via HTML */
+}
+
+body .swal2-popup .form-control:focus {
+    border-color: #5ca98c !important;
+    box-shadow: 0 0 0 0.2rem rgba(92, 169, 140, 0.25) !important;
+}
+
+/* 5. Botão de Confirmar (Salvar) */
+body .swal2-confirm {
+    background-color: #7da78a !important; /* Verde acento */
+    color: white !important;
+    border-radius: 50px !important;
+    padding: 0.6rem 1.5rem !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+    border: none !important;
+    outline: none !important;
+}
+
+body .swal2-confirm:hover {
+    background-color: #5ca98c !important; /* Verde um pouco mais escuro */
+    transform: translateY(-1px);
+}
+
+/* 6. Botão de Cancelar */
+body .swal2-cancel {
+    background-color: #e9ecef !important; /* Cinza claro */
+    color: #333 !important;
+    border-radius: 50px !important;
+    padding: 0.6rem 1.5rem !important;
+    font-weight: 500 !important;
+    font-size: 0.9rem !important;
+    border: 1px solid #ced4da !important;
+    margin-right: 10px !important;
+}
+
+body .swal2-cancel:hover {
+    background-color: #dde0e3 !important;
+}
+
+/* 7. Container dos Botões */
+body .swal2-actions {
+    margin-top: 1.5rem !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+    justify-content: flex-end !important; /* Alinha botões à direita */
+}
+
+/* Ajustes para o SweetAlert ficar igual ao tema */
+div:where(.swal2-container) div:where(.swal2-popup) {
+    border-radius: 12px !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
+div:where(.swal2-container) button:where(.swal2-styled).swal2-deny {
+    background-color: #198754 !important; /* Verde Inprout */
+}
+
+div:where(.swal2-container) button:where(.swal2-styled).swal2-deny:hover {
+    background-color: #157347 !important; /* Verde mais escuro */
+}
+
+div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm {
+    background-color: #6c757d !important; /* Cinza */
+}
+
+div:where(.swal2-icon).swal2-question {
+    border-color: #198754 !important;
+    color: #198754 !important;
+}

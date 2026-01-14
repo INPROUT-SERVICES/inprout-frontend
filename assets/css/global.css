@@ -1,0 +1,381 @@
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* ======== GERAL ======== */
+body {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--text-color);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+h1 {
+  font-size: 1.8rem;
+}
+
+h2 {
+  font-size: 1.5rem;
+}
+
+h3 {
+  font-size: 1.3rem;
+}
+
+table,
+.btn,
+.nav-link,
+.navbar-text {
+  font-size: 0.9rem;
+}
+
+
+html,
+body {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar {
+  position: fixed;
+  top: 60px;
+  left: -260px;
+  width: 240px;
+  height: 100%;
+  background-color: #f5fdf7;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  z-index: 1045;   
+  border-radius: 0 12px 12px 0;
+  padding: 1rem;
+}
+
+.sidebar.active {
+  left: 0;
+}
+
+.sidebar ul {
+  padding: 0;
+  list-style: none;
+}
+
+.sidebar li {
+  margin-bottom: 1rem;
+}
+
+.sidebar a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #4a665a;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.3s;
+}
+
+.sidebar a:hover {
+  background-color: #e1f3eb;
+  color: #5ca98c;
+}
+
+.sidebar i {
+  color: #5ca98c;
+  font-size: 1.1rem;
+}
+
+/* Navbar Top */
+.navbar {
+  padding: 0.8rem 1.5rem;
+  background-color: #f7fcfa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 0 0 12px 12px;
+}
+
+.toggle-sidebar {
+  background: transparent;
+  border: none;
+  color: #4a665a;
+  font-size: 1.3rem;
+
+}
+
+.logo-navbar {
+  height: 3.5rem;
+  width: auto;
+  object-fit: contain;
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.3rem;
+  margin-left: 0.5rem;
+  color: #4a665a !important;
+}
+
+.user-dropdown {
+  font-size: 0.9rem;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.user-dropdown:hover {
+  background-color: #e1f3eb;
+  color: #5ca98c;
+}
+
+
+.dropdown-menu {
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.user-dropdown i {
+  color: #5ca98c;
+  font-size: 1.2rem;
+}
+
+.dropdown-menu {
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* ======== TABELA ======== */
+.table,
+.modern-table {
+  min-width: 1400px;
+  font-size: 0.9rem;
+  border-collapse: collapse;
+  background-color: #fff;
+}
+
+.table th,
+.table td,
+.modern-table th,
+.modern-table td {
+  white-space: nowrap;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  vertical-align: middle;
+  border-right: 1px solid #ddd;
+}
+
+.modern-table th,
+.modern-table td {
+  font-size: 0.85rem;
+  color: #333;
+}
+
+.ocultar-forcado {
+  display: none !important;
+}
+
+.modern-table thead th {
+  background-color: #eef4ee;
+  font-weight: 600;
+  color: #222;
+}
+
+.table thead {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.table thead,
+.modern-table thead {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.table tbody tr:hover,
+.modern-table tbody tr:hover {
+  background-color: #e7f0ea;
+}
+
+.modern-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.modern-table {
+  width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
+}
+
+table th:first-child {
+  border-top-left-radius: 8px;
+}
+
+table th:last-child {
+  border-top-right-radius: 8px;
+}
+
+table th:last-child,
+table td:last-child {
+  border-right: none;
+}
+
+/* ======== SCROLL DA TABELA ======== */
+.table-responsive,
+.custom-scroll {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background-color: white;
+  padding: 0;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
+}
+
+.custom-scroll {
+  max-height: calc(100vh - 340px);
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.container-fluid {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.container-fluid.my-4 {
+  margin-top: 0.5rem !important;
+}
+
+table input[type="checkbox"] {
+  transform: scale(1.2);
+  cursor: pointer;
+}
+
+tr.selected {
+  background-color: #d1e7dd !important;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.overlay-loader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.7);
+  z-index: 999; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s ease;
+}
+
+.content-loader-container {
+    position: relative;
+    min-height: 200px; /* Garante uma altura mínima para o loader ser visível */
+}
+
+/* Define a altura máxima e a barra de rolagem para a lista de opções */
+.choices__list--dropdown .choices__list {
+  max-height: 220px;
+  /* Você pode ajustar esta altura como preferir */
+  overflow-y: auto;
+}
+
+/* Melhora a aparência do campo de seleção principal */
+.choices__inner {
+  background-color: #fff;
+  border-radius: 8px !important;
+  /* Mantém o padrão do seu projeto */
+  border: 1px solid #ccc !important;
+  padding: 0.375rem 0.75rem !important;
+  min-height: auto;
+  /* Ajusta a altura mínima */
+  font-size: 0.9rem;
+  /* Alinha com o tamanho da fonte dos outros inputs */
+}
+
+/* Estiliza o campo quando está focado/ativo */
+.is-focused .choices__inner {
+  border-color: #5ca98c !important;
+  box-shadow: 0 0 0 0.15rem rgba(92, 169, 140, 0.25) !important;
+}
+
+/* Melhora a aparência da barra de rolagem dentro do dropdown */
+.choices__list--dropdown .choices__list::-webkit-scrollbar {
+  width: 8px;
+  background-color: #f0f0f0;
+}
+
+.choices__list--dropdown .choices__list::-webkit-scrollbar-thumb {
+  background-color: #b8d8c5;
+  /* Cor verde do seu tema */
+  border-radius: 8px;
+}
+
+.detalhe-diario-cell {
+  max-width: 750px; /* Aumenta a largura máxima em 2.5x (de 300px para 750px) */
+  white-space: nowrap !important; /* Força o texto a ficar em uma única linha */
+  overflow: hidden; /* Esconde o conteúdo que transborda */
+  text-overflow: ellipsis; /* Adiciona "..." no final do texto truncado */
+  text-align: left !important; /* Mantém o alinhamento à esquerda */
+  cursor: pointer; /* Mantém o cursor de ponteiro para indicar que é clicável */
+}
+
+.detalhe-diario-cell {
+  cursor: pointer;
+}
+
+
+@keyframes pulse {
+  0% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.4;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    overflow: auto;
+  }
+}
+
+/* 1. O Fundo Escuro (Backdrop) fica acima de tudo (sidebar, loaders, etc) */
+.modal-backdrop {
+  z-index: 20000 !important; /* Valor bem alto para garantir */
+}
+
+/* 2. O Modal em si fica ACIMA do Fundo Escuro */
+.modal {
+  z-index: 20001 !important; /* 20000 + 1 */
+}
+
+/* 3. Dropdowns e Tooltips dentro de modais precisam ser ainda maiores */
+.tooltip, .popover, .dropdown-menu {
+  z-index: 20002 !important;
+}
+
+/* Garante que o Toast (notificações) fique acima até dos modais se necessário */
+.toast-container {
+    z-index: 20005 !important;
+}

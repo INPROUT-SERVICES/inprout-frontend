@@ -1,0 +1,30 @@
+<div class="content-loader-container">
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 card-title-modern" id="titulo-tabela">
+                    <i class="bi bi-clock-history me-2"></i> Pendências de Aprovação
+                </h5>
+                <div id="acoes-lote-container" class="d-none">
+                    <button class="btn-acao-lote btn-lote-success" id="btn-aprovar-selecionados">
+                        <i class="bi bi-check-lg"></i> Aprovar (<span id="contador-aprovacao">0</span>)
+                    </button>
+                    <button class="btn-acao-lote btn-lote-danger" id="btn-recusar-selecionados">
+                        <i class="bi bi-x-lg"></i> Recusar (<span id="contador-recusa">0</span>)
+                    </button>
+                    <button class="btn-acao-lote btn-lote-warning" id="btn-solicitar-prazo-selecionados">
+                        <i class="bi bi-calendar-plus"></i> Solicitar Prazo (<span id="contador-prazo">0</span>)
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="accordion" id="accordion-pendencias"></div>
+        </div>
+    </div>
+    <div class="overlay-loader d-none">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+    </div>
+</div>

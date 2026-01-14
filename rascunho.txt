@@ -1,0 +1,51 @@
+private String equipe;
+
+    private String vistoria;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
+
+    private LocalDate planoVistoria;
+
+    private String desmobilizacao;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
+
+    private LocalDate planoDesmobilizacao;
+
+    private String instalacao;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
+
+    private LocalDate planoInstalacao;
+
+    private String ativacao;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
+
+    private LocalDate planoAtivacao;
+
+    private String documentacao;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
+
+    private LocalDate planoDocumentacao;
+
+    private String etapaGeral;
+
+    private String etapaDetalhada;
+
+    private String status;
+
+    private String detalheDiario;
+
+    private String codigoPrestador;
+
+    private String prestador;
+
+    private BigDecimal valor;
+
+    private String coordenador;
+
+    private String situacao;
+
+    private LocalDateTime ultUpdate;

@@ -1,0 +1,361 @@
+/* =================================================================== */
+/* CSS ESPECÍFICO PARA A PÁGINA DE GESTÃO DE APROVAÇÕES
+/* =================================================================== */
+
+/* --- 1. CONFIGURAÇÕES GERAIS --- */
+body {
+    background-color: #f8f9fa;
+    /* Garante rolagem correta mesmo se houver conflito com outros CSS */
+    overflow-y: auto !important;
+    height: auto !important;
+}
+
+/* --- 2. NAVEGAÇÃO POR ABAS (TABS) --- */
+.nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6c757d;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: -2px;
+}
+
+.nav-tabs .nav-link:hover:not(.active) {
+    border-bottom-color: #e9ecef;
+    color: #343a40;
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+    border-bottom: 3px solid var(--inprout-green-dark, #2a8a65);
+    background-color: transparent;
+    color: var(--inprout-green-dark, #2a8a65);
+    font-weight: 600;
+}
+
+/* Correção de Scroll: Aumentada a especificidade para vencer o controle-cps.css */
+.tab-content .custom-scroll,
+.custom-scroll {
+    max-height: calc(100vh - 280px) !important; /* Ajuste fino para telas menores */
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #fff;
+}
+
+/* Oculta abas inativas para evitar conflitos de layout */
+.tab-pane:not(.active) {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Garante que o container de conteúdo não tenha margens fantasmas */
+.tab-content {
+    width: 100%;
+    position: relative;
+    clear: both;
+}
+
+/* --- 3. LAYOUT E CARDS --- */
+.card {
+    border: none;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Sutil sombra padrão */
+}
+
+/* Remove padding de cards vazios para evitar espaços fantasmas */
+.card-body:empty {
+    padding: 0 !important;
+    display: none !important;
+}
+
+.card-header {
+    border-bottom: 1px solid #f0f0f0;
+    background-color: #fff;
+}
+
+.card-title-modern {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #343a40;
+    display: flex;
+    align-items: center;
+}
+
+/* --- 4. DASHBOARD CARDS (Visão Geral) --- */
+.dashboard-cards .card-stat {
+    flex: 1 1 calc(25% - 8px);
+    min-width: 180px;
+    transition: transform 0.2s;
+}
+
+.dashboard-cards .card-stat:hover {
+    transform: translateY(-2px);
+}
+
+/* Variações de cores */
+.card-stat.card-planejamento { background-color: var(--card-secondary) !important; border-left: 5px solid #889ca3; }
+.card-stat.card-alerta { background-color: var(--card-warning) !important; border-left: 5px solid #d1b154; }
+.card-stat.card-perigo { background-color: #ffab91 !important; border-left: 5px solid var(--bs-orange); }
+.card-stat.card-perigo p, .card-stat.card-perigo h5 { color: #b95000 !important; font-weight: 600; }
+.card-stat.card-sucesso { background-color: var(--card-success) !important; border-left: 5px solid #6b9b6d; }
+.card-stat.card-info { background-color: #bbdefb !important; border-left: 5px solid #64b5f6; }
+
+
+/* --- 5. TABELAS MODERNAS --- */
+.modern-table {
+    font-size: 0.9rem;
+    background-color: #fff;
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.modern-table thead th {
+    background-color: var(--primary-color, #198754);
+    color: #fff; /* Força texto branco no cabeçalho */
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid #e2e8e4;
+    white-space: nowrap;
+}
+
+.modern-table tbody td {
+    color: #444;
+    padding: 0.65rem 1rem;
+    border-top: 1px solid #ececec;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.modern-table tbody tr:nth-child(even) { background-color: #f9f9f9; }
+.modern-table tbody tr:hover { background-color: #e6f3ec; }
+
+/* Correção para tabelas dentro de abas não estourarem */
+.tab-pane .table-responsive,
+.tab-pane .modern-table {
+    min-width: 100% !important;
+    max-width: none !important;
+}
+
+/* --- 6. BOTÕES DE AÇÃO EM LOTE --- */
+.btn-acao-lote {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 50px;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    background-color: transparent;
+    border: 1px solid var(--btn-color-borda);
+    color: var(--btn-color-borda);
+}
+
+.btn-acao-lote:hover {
+    background-color: var(--btn-color-fundo-hover);
+    color: var(--btn-color-texto-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Variações de botões */
+.btn-lote-success { --btn-color-borda: #198754; --btn-color-fundo-hover: #198754; --btn-color-texto-hover: white; }
+.btn-lote-danger { --btn-color-borda: #dc3545; --btn-color-fundo-hover: #dc3545; --btn-color-texto-hover: white; }
+.btn-lote-warning { --btn-color-borda: #ffc107; --btn-color-fundo-hover: #ffc107; --btn-color-texto-hover: #212529; }
+
+
+/* --- 7. ACORDEÃO (Accordion) --- */
+.accordion-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem !important;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+    background-color: #fff;
+}
+
+.accordion-header .accordion-button {
+    background-color: #f8f9fa;
+    padding: 0.8rem 1.2rem;
+    font-weight: 500;
+    color: #212529;
+    box-shadow: none;
+}
+
+.accordion-header .accordion-button:not(.collapsed) {
+    background-color: #e9ecef;
+    color: #000;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .125);
+}
+
+.accordion-button-vencido { background-color: #f8d7da !important; color: #58151c !important; }
+
+/* Estilização interna do header do acordeão */
+.header-content { display: flex; align-items: center; gap: 1rem; width: 100%; padding-right: 1rem; }
+.header-title-wrapper { display: flex; flex-direction: column; line-height: 1.2; text-align: left; }
+.header-title-project { font-size: 0.75rem; font-weight: 600; color: #6c757d; text-transform: uppercase; }
+.header-title-os { font-size: 1rem; font-weight: 700; color: #212529; }
+.header-badge { margin-left: 1rem; font-size: 0.75rem; padding: 0.4em 0.8em; border-radius: 50rem; }
+
+/* KPIs no Header do Acordeão (Atividades) */
+.header-kpi-wrapper { display: flex; align-items: center; gap: 1.5rem; margin-left: auto; }
+.kpi-group { display: flex; gap: 1.2rem; align-items: flex-end; }
+.kpi-divider { width: 1px; height: 30px; background-color: #cfd8dc; margin: 0 0.5rem; align-self: center; }
+.header-kpi { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.kpi-label { font-size: 0.65rem; text-transform: uppercase; color: #6c757d; font-weight: 600; margin-bottom: 2px; }
+.kpi-value { font-size: 0.95rem; font-weight: 700; color: #343a40; }
+.kpi-forecast-group .kpi-label, .kpi-forecast-group .kpi-value { color: #0d6efd; }
+
+.accordion-body { padding: 0; background-color: #fff; }
+.accordion-body .table { margin-bottom: 0; }
+
+
+/* --- 8. CONTAINER DE CARREGAMENTO E LOADER --- */
+.content-loader-container {
+    position: relative;
+    /* Ajustado para auto para evitar problemas de layout, 
+       mas mantemos a estrutura relativa para o loader funcionar */
+    min-height: auto !important;
+    height: auto;
+    width: 100%;
+}
+
+.content-loader-container .overlay-loader {
+    position: absolute;
+    z-index: 1040; /* Abaixo do Modal (1050), acima do conteúdo */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    backdrop-filter: blur(2px);
+}
+
+
+/* --- 9. ABAS COM SCROLL HORIZONTAL (Wrapper) --- */
+.tabs-wrapper-scroll {
+    background-color: #fff;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+    padding: 0 5px;
+    position: relative;
+    min-height: 75px;
+    height: auto; 
+    display: flex;
+    align-items: center;
+}
+
+.tabs-scroll-container {
+    flex-grow: 1;
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    margin: 0 35px; /* Espaço para as setas */
+    white-space: nowrap;
+}
+.tabs-scroll-container::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+.tabs-wrapper-scroll .nav-tabs {
+    border-bottom: none;
+    display: flex;
+    flex-wrap: nowrap;
+    margin-bottom: 0;
+    padding-top: 15px;
+    padding-bottom: 10px;
+}
+
+/* Botões de Scroll Lateral */
+.btn-scroll-tab {
+    z-index: 10;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    color: var(--accent-color, #2a8a65);
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+.btn-scroll-tab:hover {
+    background-color: var(--accent-color, #2a8a65);
+    color: #fff;
+}
+.btn-scroll-tab.left { left: 5px; }
+.btn-scroll-tab.right { right: 5px; }
+
+
+/* --- 10. CARDS KPI NO HEADER DA ABA (Estilo Index) --- */
+.kpi-header-wrapper {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-left: auto;
+    margin-right: 1rem;
+}
+
+.card-kpi-header {
+    min-width: 120px;
+    padding: 0.5rem 0.8rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border: 1px solid #eee;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.card-kpi-header .kpi-title { font-size: 0.7rem; color: #6c757d; font-weight: 600; text-transform: uppercase; }
+.card-kpi-header .kpi-value { font-size: 1rem; font-weight: 700; color: #212529; }
+
+.card-kpi-info { border-left: 4px solid #64b5f6; background-color: #e3f2fd; }
+.card-kpi-success { border-left: 4px solid #81c784; background-color: #e8f5e9; }
+
+
+/* --- 11. AJUSTES RESPONSIVOS (MOBILE) --- */
+@media (max-width: 768px) {
+    .modern-table thead { display: none; }
+    .modern-table tbody tr, .modern-table tbody td { display: block; width: 100%; }
+    .modern-table tbody tr { margin-bottom: 1rem; border: 1px solid #e9ecef; border-radius: 0.5rem; }
+    .modern-table td { text-align: right; padding-left: 50%; position: relative; border-bottom: 1px solid #f0f0f0; }
+    .modern-table td::before {
+        content: attr(data-label);
+        position: absolute; left: 1rem; width: 45%; text-align: left; font-weight: 600; color: #6c757d; font-size: 0.75rem;
+    }
+    
+    .kpi-header-wrapper { display: none !important; } /* Esconde KPIs complexos no mobile */
+}
+
+/* --- 12. UTILITÁRIOS ESPECÍFICOS --- */
+.text-danger-emphasis { color: #dc3545 !important; font-weight: 700 !important; }
+
+.detalhe-diario-truncate {
+    max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; color: #495057;
+}
+.detalhe-diario-truncate:hover { color: var(--primary-color); text-decoration: underline; }
+
+/* Ajuste de margem quando o dashboard superior está oculto (ex: Documentista ou via JS) */
+body:has(.overview-card[style*="display: none"]) .container-fluid.my-4 {
+    margin-top: 10px !important;
+}
+
+.table-primary-light {
+    background-color: #e7f1ff !important;
+}

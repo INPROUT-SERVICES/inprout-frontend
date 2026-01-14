@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sistema de Controle de Atividades</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_green.css">
+    <link rel="stylesheet" href="../assets/css/root.css" />
+    <link rel="stylesheet" href="../assets/css/global.css" />
+    <link rel="stylesheet" href="../assets/css/indexDB/indexDB.css" />
+
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <button class="btn toggle-sidebar" id="menu-toggle">
+                <i class="bi bi-grid fs-5"></i>
+            </button>
+            <link rel="icon" href="../assets/imgs/login/logo.png" type="image/png">
+            <a href="../index.html">
+                <img src="../assets/imgs/login/logo.png" alt="Logo Inprout" class="logo-navbar mx-3">
+            </a>
+
+            <div class="dropdown ms-auto">
+                <a class="btn dropdown-toggle user-dropdown" href="#" role="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-person-circle"></i> <span id="nomeUsuario">Olá, Usuário</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><button type="button" class="dropdown-item" data-bs-toggle="modal"
+                            data-bs-target="#modalMinhaConta">Minha
+                            Conta</button></li>
+                    <li><a class="dropdown-item" href="#" id="logoutBtn">Sair</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div id="sidebar-container"></div>
+
+    <div class="container-fluid my-4">
+
+        <div class="segment-grid">
+            <div class="segment-card filter-card" data-filter="etapas">
+                <i class="bi bi-list-check"></i><br>
+                Etapas de atividade
+            </div>
+            <div class="segment-card filter-card" data-filter="prestadores">
+                <i class="bi bi-people"></i><br>
+                Prestadores de serviço
+            </div>
+            <div class="segment-card filter-card" data-filter="lpu">
+                <i class="bi bi-journal-text"></i><br>
+                LPU
+            </div>
+            <div class="segment-card filter-card" data-filter="gate">
+                <i class="bi bi-calendar-check"></i><br>
+                GATES
+            </div>
+            <div class="segment-card filter-card" data-filter="geral">
+                <i class="bi bi-gear-fill"></i><br>
+                Geral
+            </div>
+        </div>
+
+
+    </div>
+
+    <div id="conteudo-etapas" class="conteudo-filtro d-none">
+
+        <div class="bloco-etapas-header d-flex justify-content-between align-items-center">
+            <h4 class="titulo-etapas mb-0">Etapas de atividade</h4>
+
+            <div id="acoes-etapas" class="d-flex gap-2 flex-wrap justify-content-end">
+                <button type="button" class="btn btn-outline--success btn-adicionar-etapa" data-bs-toggle="modal"
+                    data-bs-target="#modalAdicionarEtapa">
+                    <i class="bi bi-plus-circle me-1"></i> Adicionar etapa
+                </button>
+                <button type="button" class="btn btn-outline--success btn-adicionar-etapa" data-bs-toggle="modal"
+                    data-bs-target="#modalAdicionarEtapaDetalhada">
+                    <i class="bi bi-plus-circle me-1"></i> Adicionar etapa detalhada
+                </button>
+                <button type="button" class="btn btn-outline--orange btn-adicionar-etapa" data-bs-toggle="modal"
+                    data-bs-target="#modalEditarEtapaDetalhada">
+                    <i class="bi bi-pencil me-1"></i> Editar etapa detalhada
+                </button>
+            </div>
+
+        </div>
+
+
+        <div class="px-4">
+            <div class="table-responsive custom-scroll">
+                <table class="table modern-table align-middle">
+                    <thead id="thead-etapas"></thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <div id="conteudo-prestadores" class="conteudo-filtro d-none">
+        <div id="acoes-prestadores" class="bloco-etapas-header d-flex justify-content-between align-items-center">
+            <h4 class="titulo-etapas mb-0">Prestadores de Serviço</h4>
+
+            <div class="d-flex gap-2 flex-wrap justify-content-end">
+                <button type="button" class="btn btn-outline--success btn-adicionar-etapa" data-bs-toggle="modal"
+                    data-bs-target="#modalAdicionarPrestador">
+                    <i class="bi bi-plus-circle me-1"></i> Adicionar novo
+                </button>
+                <button type="button" class="btn btn-outline--orange btn-adicionar-etapa" data-bs-toggle="modal"
+                    data-bs-target="#modalEditarPrestador">
+                    <i class="bi bi-pencil me-1"></i> Editar prestador
+                </button>
+                <button type="button" class="btn btn-outline--danger btn-adicionar-etapa" data-bs-toggle="modal"
+                    data-bs-target="#modalDesativarPrestador">
+                    <i class="bi bi-x-circle me-1"></i> Desativar prestador
+                </button>
+                <button type="button" class="btn btn-outline--success btn-adicionar-etapa" data-bs-toggle="modal"
+                    data-bs-target="#modalAtivarPrestador">
+                    <i class="bi bi-check-circle me-1"></i> Ativar prestador
+                </button>
+            </div>
+        </div>
+
+        <div class="px-4 mt-3">
+            <div class="table-responsive custom-scroll">
+                <table class="table modern-table align-middle">
+                    <thead id="thead-prestadores"></thead>
+                    <tbody id="tbody-prestadores"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="conteudo-lpu" class="conteudo-filtro d-none">
+        <div id="acoes-lpu" class="bloco-etapas-header d-flex justify-content-between align-items-center">
+            <h4 class="titulo-etapas mb-0">LPU</h4>
+
+            <div class="d-flex gap-2 flex-wrap justify-content-end">
+                <button type="button" class="btn btn-outline--success btn-adicionar-etapa" data-bs-toggle="modal"
+                    data-bs-target="#modalCriarLPU">
+                    <i class="bi bi-plus-circle me-1"></i> Criar LPU
+                </button>
+                <button type="button" class="btn btn-outline--orange btn-adicionar-etapa" data-bs-toggle="modal"
+                    data-bs-target="#modalAlterarLPU">
+                    <i class="bi bi-pencil me-1"></i> Alterar LPU
+                </button>
+                <button type="button" class="btn btn-outline--danger btn-adicionar-etapa" data-bs-toggle="modal"
+                    data-bs-target="#modalDesativarLPU">
+                    <i class="bi bi-x-circle me-1"></i> Desativar LPU
+                </button>
+                <button type="button" class="btn btn-outline--success btn-adicionar-etapa" data-bs-toggle="modal"
+                    data-bs-target="#modalAtivarLPU">
+                    <i class="bi bi-check-circle me-1"></i> Ativar LPU
+                </button>
+            </div>
+
+        </div>
+
+        <div class="px-4 mt-3">
+            <div class="table-responsive custom-scroll">
+                <table class="table modern-table align-middle">
+                    <thead id="thead-lpu">
+                    </thead>
+                    <tbody id="tbody-lpu">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="conteudo-gate" class="conteudo-filtro d-none">
+        <div id="acoes-gate" class="bloco-etapas-header d-flex justify-content-between align-items-center">
+            <h4 class="titulo-etapas mb-0">GATEs de Faturamento</h4>
+
+            <div class="d-flex gap-2 flex-wrap justify-content-end">
+                <button type="button" class="btn btn-outline--success btn-adicionar-etapa" data-bs-toggle="modal"
+                    data-bs-target="#modalCriarGate">
+                    <i class="bi bi-plus-circle me-1"></i> Criar novo GATE
+                </button>
+            </div>
+        </div>
+
+        <div class="px-4 mt-3">
+            <div class="table-responsive custom-scroll">
+                <table class="table modern-table align-middle mb-0">
+                    <thead id="thead-gate">
+                        <tr>
+                            <th>Nome do GATE</th>
+                            <th>Data Início</th>
+                            <th>Data Fim</th>
+                            <th>Valor Faturado</th>
+                            <th style="width: 100px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-gate">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <div id="conteudo-geral" class="conteudo-filtro d-none">
+        <div class="bloco-etapas-header d-flex justify-content-between align-items-center mb-4">
+            <h4 class="titulo-etapas mb-0">Configurações Gerais</h4>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="list-group settings-menu shadow-sm border-0">
+                    <button type="button"
+                        class="list-group-item list-group-item-action active d-flex align-items-center gap-2 py-3"
+                        onclick="alternarSubsecao('docs')">
+                        <i class="bi bi-file-earmark-text"></i> Tipos de Documentação
+                    </button>
+                    <button type="button"
+                        class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-3"
+                        onclick="alternarSubsecao('bancos')">
+                        <i class="bi bi-bank"></i> Lista de Bancos
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-md-9">
+
+                <div id="subsecao-docs" class="subsecao-geral">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="text-secondary fw-bold mb-0">Tipos de Documentação</h5>
+                        <button type="button" class="btn btn-outline--success btn-adicionar-etapa"
+                            onclick="abrirModalTipoDoc()">
+                            <i class="bi bi-plus-circle me-1"></i> Novo Tipo
+                        </button>
+                    </div>
+                    <div class="table-responsive custom-scroll bg-white rounded-3 shadow-sm p-0">
+                        <table class="table modern-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Nome do Documento</th>
+                                    <th style="width: 120px;">Valor Padrão</th>
+                                    <th>Documentistas</th>
+                                    <th style="width: 100px;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-tipos-doc"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="subsecao-bancos" class="subsecao-geral d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="text-secondary fw-bold mb-0">Bancos Cadastrados</h5>
+                        <button type="button" class="btn btn-outline--success btn-adicionar-etapa"
+                            onclick="abrirModalBanco()">
+                            <i class="bi bi-plus-circle me-1"></i> Novo Banco
+                        </button>
+                    </div>
+                    <div class="table-responsive custom-scroll bg-white rounded-3 shadow-sm p-0">
+                        <table class="table modern-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 100px;">Código</th>
+                                    <th>Nome do Banco</th>
+                                    <th style="width: 100px;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-bancos"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalBanco" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold">Gerenciar Banco</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="formBanco">
+                        <input type="hidden" id="bancoId">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-medium small text-uppercase text-secondary">Código do Banco
+                                (COMPE)</label>
+                            <input type="text" class="form-control" id="bancoCodigo" placeholder="Ex: 001" maxlength="5"
+                                required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-medium small text-uppercase text-secondary">Nome do
+                                Banco</label>
+                            <input type="text" class="form-control" id="bancoNome" placeholder="Ex: Banco do Brasil"
+                                required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-link text-secondary text-decoration-none"
+                        data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary px-4" onclick="salvarBanco()">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalExcluirBanco" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Excluir Banco
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja excluir o banco <strong id="nomeBancoExcluir"></strong>?</p>
+                    <p class="text-danger small mb-0">Esta ação não pode ser desfeita.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmarDeletarBanco()">Sim, Excluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalExcluirTipoDoc" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Excluir Tipo de Documentação
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja excluir o tipo <strong id="nomeTipoDocExcluir"></strong>?</p>
+                    <p class="text-muted small">Verifique se não há lançamentos utilizando este tipo antes de excluir.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmarDeletarTipoDoc()">Sim,
+                        Excluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalTipoDoc" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+
+                <div class="modal-header bg-white border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-primary" id="modalTipoDocLabel">Tipo de Documentação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <form id="formTipoDoc">
+                        <input type="hidden" id="tipoDocId">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-uppercase text-secondary">Nome do
+                                Documento</label>
+                            <input type="text" class="form-control" id="tipoDocNome"
+                                placeholder="Ex: Relatório Fotográfico" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-uppercase text-secondary">Valor Padrão
+                                (R$)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted">R$</span>
+                                <input type="number" step="0.01" class="form-control" id="tipoDocValorPadrao"
+                                    placeholder="0,00">
+                            </div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label fw-bold small text-uppercase text-secondary mb-2">
+                                Configuração por Documentista
+                            </label>
+
+                            <div class="mdoc-header-row">
+                                <div class="mdoc-col-check">Ativo</div>
+                                <div class="mdoc-col-nome">Documentista</div>
+                                <div class="mdoc-col-valor">Valor (R$)</div>
+                            </div>
+
+                            <div class="mdoc-body-scroll" id="listaDocumentistasConfig">
+                            </div>
+
+                            <div class="form-text mt-2 small text-end">
+                                <i class="bi bi-info-circle me-1"></i> Se desmarcado, o documentista não vê este tipo.
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer border-top-0 pt-0 pb-4 pe-4">
+                    <button type="button" class="btn btn-light text-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary px-4" onclick="salvarTipoDoc()">
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="toastMensagem" class="toast align-items-center border-0 text-bg-success" role="alert"
+            aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toastTexto">
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                    aria-label="Fechar"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalCriarGate" tabindex="-1" aria-labelledby="modalCriarGateLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formCriarGate">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalCriarGateLabel"><i class="bi bi-plus-circle me-2"></i>Novo GATE
+                            de Faturamento</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="gateNome" class="form-label">Nome do GATE</label>
+                            <input type="text" class="form-control" id="gateNome" placeholder="Ex: SETEMBRO/24"
+                                required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="gateDataInicio" class="form-label">Data de Início</label>
+                            <input type="text" class="form-control" id="gateDataInicio"
+                                placeholder="Selecione a data inicial..." required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="gateDataFim" class="form-label">Data Final</label>
+                            <input type="text" class="form-control" id="gateDataFim"
+                                placeholder="Selecione a data final..." required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success" id="btnSalvarGate">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalExcluirGate" tabindex="-1" aria-labelledby="modalExcluirGateLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger" id="modalExcluirGateLabel"><i
+                            class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Exclusão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Você tem certeza que deseja excluir o GATE <strong id="nomeGateExcluir"></strong>?</p>
+                    <p class="text-danger small">Esta ação não pode ser desfeita. Exclua apenas se tiver certeza de que
+                        não há faturamentos vinculados.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmarExclusaoGate">Sim, Excluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal fade" id="modalMinhaConta" tabindex="-1" aria-labelledby="modalMinhaContaLabel">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalMinhaContaLabel">
+                        <i class="bi bi-person-circle me-2"></i> Minha Conta
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <i class="bi bi-person-circle" style="font-size: 4rem; color: #198754;"></i>
+                        <h5 class="mt-2" id="nomeUsuarioModal">Nome do Usuário</h5>
+                        <p class="text-muted" id="emailUsuarioModal">email@dominio.com</p>
+                        <div id="userInfoDetalhes" class="mt-2"></div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#alterarEmail" aria-expanded="false">
+                            <i class="bi bi-envelope"></i> Alterar E-mail
+                        </button>
+
+                        <div class="collapse mt-2" id="alterarEmail">
+                            <form id="formAlterarEmail">
+                                <div class="mb-2">
+                                    <label class="form-label">Novo E-mail</label>
+                                    <input type="email" class="form-control" id="novoEmail"
+                                        placeholder="Digite seu novo e-mail">
+                                </div>
+                            </form>
+                        </div>
+
+                        <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#alterarSenha" aria-expanded="false">
+                            <i class="bi bi-shield-lock"></i> Alterar Senha
+                        </button>
+
+                        <div class="collapse mt-2" id="alterarSenha">
+                            <form id="formAlterarSenha">
+                                <div class="mb-2">
+                                    <label class="form-label">Nova Senha</label>
+                                    <input type="password" class="form-control" id="novaSenha"
+                                        placeholder="Digite sua nova senha">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Confirmar Nova Senha</label>
+                                    <input type="password" class="form-control" id="confirmarSenha"
+                                        placeholder="Confirme sua nova senha">
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnSalvarAlteracoes">
+                        <i class="bi bi-check-circle"></i> Salvar Alterações
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAdicionarEtapa" tabindex="-1" aria-labelledby="modalAdicionarEtapaLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalAdicionarEtapaLabel">
+                        <i class="bi bi-plus-circle"></i> Adicionar Nova Etapa
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <form id="formAdicionarEtapa">
+
+                        <div class="mb-3 d-flex align-items-center gap-2">
+                            <div>
+                                <label for="indiceEtapa" class="form-label">Etapa</label>
+                                <input type="text" class="form-control" id="indiceEtapa" maxlength="2"
+                                    style="width: 80px;" pattern="\d{2}" required readonly>
+                            </div>
+                            <div class="flex-grow-1">
+                                <label for="nomeEtapa" class="form-label">Nome da Etapa</label>
+                                <input type="text" class="form-control" id="nomeEtapa" placeholder="Nome da etapa"
+                                    required>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="submit" form="formAdicionarEtapa" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Salvar
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAdicionarEtapaDetalhada" tabindex="-1"
+        aria-labelledby="modalAdicionarEtapaDetalhadaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalAdicionarEtapaDetalhadaLabel">
+                        <i class="bi bi-plus-circle"></i> Adicionar nova etapa detalhada
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <form id="formAdicionarEtapaDetalhada">
+                        <div class="mb-3">
+                            <label for="etapaSelecionada" class="form-label">Etapa</label>
+                            <select id="etapaSelecionada" class="form-select" required>
+                                <option value="">Selecione a etapa</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3 d-flex align-items-center gap-2">
+                            <div>
+                                <label for="indiceEtapaDetalhada" class="form-label" aria-disabled="true">Índice</label>
+                                <input type="text" class="form-control" id="indiceEtapaDetalhada" maxlength="5"
+                                    style="width: 100px;" required readonly>
+                            </div>
+                            <div class="flex-grow-1">
+                                <label for="nomeEtapaDetalhada" class="form-label">Nome da Etapa Detalhada</label>
+                                <input type="text" class="form-control" id="nomeEtapaDetalhada"
+                                    placeholder="Nome da etapa detalhada" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="statusEtapaDetalhada" class="form-label">Status</label>
+                            <select id="statusEtapaDetalhada" class="form-select" multiple required>
+                                <option value="TRABALHADO">Trabalhado</option>
+                                <option value="TRABALHO_PARCIAL">Trabalho parcial</option>
+                                <option value="NAO_TRABALHADO">Não trabalhado</option>
+                            </select>
+                            <small class="form-text text-muted">Segure Ctrl (Windows) ou Command (Mac) para selecionar
+                                mais de um.</small>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="submit" form="formAdicionarEtapaDetalhada" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Salvar
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalEditarEtapaDetalhada" tabindex="-1"
+        aria-labelledby="modalEditarEtapaDetalhadaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEditarEtapaDetalhadaLabel">
+                        <i class="bi bi-pencil"></i> Editar Etapas Detalhadas
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="etapaSelecionadaEditar" class="form-label">Selecionar Etapa</label>
+                        <select id="etapaSelecionadaEditar" class="form-select">
+                            <option value="">Selecione a etapa</option>
+                        </select>
+                    </div>
+
+                    <div id="listaEtapasDetalhadasEditar" class="d-grid gap-3">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Fechar
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnSalvarEdicoesEtapasDetalhadas">
+                        <i class="bi bi-check-circle"></i> Salvar Alterações
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAdicionarPrestador" tabindex="-1" aria-labelledby="modalAdicionarPrestadorLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formAdicionarPrestador">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalAdicionarPrestadorLabel">
+                            <i class="bi bi-plus-circle"></i> Adicionar Prestador
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Código</label>
+                            <input type="text" class="form-control" id="codigoPrestador" required>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Nome do Prestador</label>
+                            <input type="text" class="form-control" id="nomePrestador" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Razão Social</label>
+                            <input type="text" class="form-control" id="razaoSocial">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Cidade</label>
+                            <input type="text" class="form-control" id="cidadePrestador">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">UF</label>
+                            <input type="text" class="form-control" id="ufPrestador" maxlength="2">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Regional</label>
+                            <input type="text" class="form-control" id="regionalPrestador">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">RG</label>
+                            <input type="text" class="form-control" id="rgPrestador">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">CPF</label>
+                            <input type="text" class="form-control" id="cpfPrestador">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">CNPJ</label>
+                            <input type="text" class="form-control" id="cnpjPrestador">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Instituição Financeira</label>
+                            <select class="form-select" id="selectBancoCadastro">
+                                <option value="">Selecione o banco...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Agência</label>
+                            <input type="text" class="form-control" id="agenciaPrestador">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Conta</label>
+                            <input type="text" class="form-control" id="contaPrestador">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo de Conta</label>
+                            <input type="text" class="form-control" id="tipoConta">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Telefone</label>
+                            <input type="text" class="form-control" id="telefonePrestador">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">E-mail</label>
+                            <input type="email" class="form-control" id="emailPrestador">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tipo de Chave PIX</label>
+                            <select class="form-select" id="tipoChavePix">
+                                <option value="">Selecione</option>
+                                <option value="CPF">CPF</option>
+                                <option value="CNPJ">CNPJ</option>
+                                <option value="EMAIL">E-mail</option>
+                                <option value="TELEFONE">Telefone</option>
+                                <option value="ALEATORIA">Chave Aleatória</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Chave PIX</label>
+                            <input type="text" class="form-control" id="chavePix">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Observações</label>
+                            <textarea class="form-control" rows="3" id="observacoesPrestador"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Salvar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalEditarPrestador" tabindex="-1" aria-labelledby="modalEditarPrestadorLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formEditarPrestador">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalEditarPrestadorLabel">
+                            <i class="bi bi-pencil"></i> Editar Prestador
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="mb-4">
+                            <label for="selectPrestadorEditar" class="form-label">Buscar prestador para editar</label>
+                            <select class="form-select" id="selectPrestadorEditar">
+                                <option value="">Selecione o prestador</option>
+                            </select>
+                        </div>
+
+                        <div id="formCamposPrestador" class="row g-3 d-none">
+
+                            <div class="col-md-4">
+                                <label class="form-label">Código</label>
+                                <input type="text" class="form-control" id="codigoPrestador_Editar" readonly>
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Nome do Prestador</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#nomePrestador_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="nomePrestador_Editar" required disabled>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Razão Social</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#razaoSocial_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="razaoSocial_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Cidade</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#cidadePrestador_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="cidadePrestador_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>UF</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#ufPrestador_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="ufPrestador_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Regional</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#regionalPrestador_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="regionalPrestador_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>RG</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#rgPrestador_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="rgPrestador_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>CPF</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#cpfPrestador_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="cpfPrestador_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>CNPJ</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#cnpjPrestador_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="cnpjPrestador_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-5">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Instituição Financeira</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#selectBancoEditar">
+                                    </div>
+                                </label>
+                                <select class="form-select" id="selectBancoEditar" disabled>
+                                    <option value="">Selecione o banco...</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Agência</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#agenciaPrestador_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="agenciaPrestador_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Conta</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#contaPrestador_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="contaPrestador_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Tipo de Conta</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#tipoConta_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="tipoConta_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Telefone</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#telefonePrestador_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="telefonePrestador_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>E-mail</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#emailPrestador_Editar">
+                                    </div>
+                                </label>
+                                <input type="email" class="form-control" id="emailPrestador_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Tipo de Chave PIX</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#tipoChavePix_Editar">
+                                    </div>
+                                </label>
+                                <select class="form-select" id="tipoChavePix_Editar" disabled>
+                                    <option value="">Selecione</option>
+                                    <option value="CPF">CPF</option>
+                                    <option value="CNPJ">CNPJ</option>
+                                    <option value="EMAIL">E-mail</option>
+                                    <option value="TELEFONE">Telefone</option>
+                                    <option value="ALEATORIA">Aleatória</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Chave PIX</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#chavePix_Editar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="chavePix_Editar" disabled>
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Observações</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#observacoesPrestador_Editar">
+                                    </div>
+                                </label>
+                                <textarea class="form-control" rows="3" id="observacoesPrestador_Editar"
+                                    disabled></textarea>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success" id="btnSalvarEdicaoPrestador" disabled>
+                            <i class="bi bi-check-circle"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalDesativarPrestador" tabindex="-1" aria-labelledby="modalDesativarPrestadorLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formDesativarPrestador">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalDesativarPrestadorLabel">
+                            <i class="bi bi-x-circle"></i> Desativar Prestador
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="selectPrestadorDesativar" class="form-label">Selecione o prestador</label>
+                            <select class="form-select" id="selectPrestadorDesativar" required>
+                                <option value="">Digite o nome ou código</option>
+                            </select>
+                        </div>
+
+                        <div class="alert alert-warning mt-3 d-none" id="avisoPrestadorSelecionado">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            Você está prestes a desativar este prestador. Ao prosseguir, não será mais possível
+                            utiliza-lo para atividades mas ainda será visível para todas já realizadas.
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-danger" id="btnConfirmarDesativar" disabled>
+                            <i class="bi bi-check-circle"></i> Confirmar desativação
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAtivarPrestador" tabindex="-1" aria-labelledby="modalAtivarPrestadorLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formAtivarPrestador">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalAtivarPrestadorLabel">
+                            <i class="bi bi-check-circle-fill"></i> Ativar Prestador
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="selectPrestadorAtivar" class="form-label">Selecione o prestador
+                                desativado</label>
+                            <select class="form-select" id="selectPrestadorAtivar" required>
+                                <option value="">Selecione um prestador inativo</option>
+                            </select>
+                        </div>
+
+                        <div class="alert alert-info mt-3 d-none" id="avisoPrestadorSelecionadoAtivar">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            Você está prestes a reativar este prestador. Ele voltará a ficar disponível para novas
+                            atividades.
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success" id="btnConfirmarAtivar" disabled>
+                            <i class="bi bi-check-circle"></i> Confirmar ativação
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal fade" id="modalCriarLPU" tabindex="-1" aria-labelledby="modalCriarLPULabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formCriarLPU">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalCriarLPULabel">
+                            <i class="bi bi-plus-circle"></i> Adicionar Nova LPU
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="lpuContratoAssociado" class="form-label">Contrato Associado</label>
+                                <select class="form-select" id="lpuContratoAssociado" required>
+                                    <option value="" selected disabled>Selecione um contrato</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="lpuCodigo" class="form-label">Código LPU</label>
+                                <input type="text" class="form-control" id="lpuCodigo" placeholder="Ex: 20" required>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="lpuNome" class="form-label">Nome LPU</label>
+                                <input type="text" class="form-control" id="lpuNome" placeholder="Ex: Vistoria"
+                                    required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="lpuUnidade" class="form-label">Unidade</label>
+                                <select class="form-select" id="lpuUnidade" aria-label="Selecione a unidade" required>
+                                    <option selected disabled>Selecione...</option>
+                                    <option value="/Kg">/Kg</option>
+                                    <option value="/Km">/Km</option>
+                                    <option value="Antena">Antena</option>
+                                    <option value="Circuito">Circuito</option>
+                                    <option value="Enlace">Enlace</option>
+                                    <option value="Escola">Escola</option>
+                                    <option value="Metro">Metro</option>
+                                    <option value="Metro²">Metro²</option>
+                                    <option value="Peça">Peça</option>
+                                    <option value="Site">Site</option>
+                                    <option value="Unidade">Unidade</option>
+                                    <option value="Visita">Visita</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="lpuValorSemImposto" class="form-label">Valor sem Imposto</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="text" class="form-control" id="lpuValorSemImposto" placeholder="0,00"
+                                        required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="lpuValorComImposto" class="form-label">Valor com Imposto</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="text" class="form-control" id="lpuValorComImposto" placeholder="0,00"
+                                        required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success" form="formCriarLPU">
+                            <i class="bi bi-check-circle"></i> Salvar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAlterarLPU" tabindex="-1" aria-labelledby="modalAlterarLPULabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formAlterarLPU">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalAlterarLPULabel">
+                            <i class="bi bi-pencil"></i> Alterar LPU
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="mb-4">
+                            <label for="selectLPUAlterar" class="form-label">Buscar LPU para Alterar</label>
+                            <select class="form-select" id="selectLPUAlterar" required>
+                                <option value="" selected disabled>Selecione uma LPU</option>
+                            </select>
+                        </div>
+
+                        <div id="formCamposLPU" class="row g-3 d-none">
+
+                            <div class="col-12">
+                                <label for="lpuContratoAssociadoAlterar" class="form-label">Contrato Associado</label>
+                                <select class="form-select" id="lpuContratoAssociadoAlterar" required disabled>
+                                    <option value="" disabled>Selecione um contrato</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Código LPU</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#lpuCodigoAlterar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="lpuCodigoAlterar" name="codigoLpu" required
+                                    disabled>
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Nome LPU</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#lpuNomeAlterar">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="lpuNomeAlterar" name="nomeLpu" required
+                                    disabled>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Unidade</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#lpuUnidadeAlterar">
+                                    </div>
+                                </label>
+                                <select class="form-select" id="lpuUnidadeAlterar" name="unidade" required disabled>
+                                    <option selected disabled value="">Selecione...</option>
+                                    <option value="/Kg">/Kg</option>
+                                    <option value="/Km">/Km</option>
+                                    <option value="Antena">Antena</option>
+                                    <option value="Circuito">Circuito</option>
+                                    <option value="Enlace">Enlace</option>
+                                    <option value="Escola">Escola</option>
+                                    <option value="Metro">Metro</option>
+                                    <option value="Metro²">Metro²</option>
+                                    <option value="Peça">Peça</option>
+                                    <option value="Site">Site</option>
+                                    <option value="Unidade">Unidade</option>
+                                    <option value="Visita">Visita</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Valor sem Imposto</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#lpuValorSemImpostoAlterar">
+                                    </div>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="text" class="form-control" id="lpuValorSemImpostoAlterar"
+                                        name="valorSemImposto" placeholder="0,00" required disabled>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Valor com Imposto</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#lpuValorComImpostoAlterar">
+                                    </div>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="text" class="form-control" id="lpuValorComImpostoAlterar"
+                                        name="valorComImposto" placeholder="0,00" required disabled>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success" id="btnSalvarAlteracaoLPU" form="formAlterarLPU"
+                            disabled>
+                            <i class="bi bi-check-circle"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalDesativarLPU" tabindex="-1" aria-labelledby="modalDesativarLPULabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formDesativarLPU">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalDesativarLPULabel">
+                            <i class="bi bi-x-circle"></i> Desativar LPU
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="selectLPUDesativar" class="form-label">Buscar LPU</label>
+                            <select class="form-select" id="selectLPUDesativar" required>
+                                <option value="" selected disabled>Digite ou selecione a LPU para desativar</option>
+                            </select>
+                        </div>
+
+                        <div id="infoLPUDesativar" class="d-none">
+                            <div class="alert alert-danger mt-3">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                <strong>Atenção!</strong> Você está prestes a desativar a LPU abaixo. Verifique os dados
+                                antes de confirmar.
+                            </div>
+
+                            <div class="row g-3 mt-2">
+                                <div class="col-12">
+                                    <label class="form-label">Contrato Associado</label>
+                                    <input type="text" class="form-control" id="lpuContratoAssociadoDesativar" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Código LPU</label>
+                                    <input type="text" class="form-control" id="lpuCodigoDesativar" readonly>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label">Nome LPU</label>
+                                    <input type="text" class="form-control" id="lpuNomeDesativar" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Unidade</label>
+                                    <input type="text" class="form-control" id="lpuUnidadeDesativar" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Valor sem Imposto</label>
+                                    <input type="text" class="form-control" id="lpuValorSemImpostoDesativar" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Valor com Imposto</label>
+                                    <input type="text" class="form-control" id="lpuValorComImpostoDesativar" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-danger" id="btnConfirmarDesativacaoLPU"
+                            form="formDesativarLPU" disabled>
+                            <i class="bi bi-check-circle"></i> Confirmar desativação
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAtivarLPU" tabindex="-1" aria-labelledby="modalReativarLPULabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formReativarLPU">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-success" id="modalReativarLPULabel">
+                            <i class="bi bi-check-circle"></i> Reativar LPU
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="selectLPUReativar" class="form-label">Buscar LPU Inativa</label>
+                            <select class="form-select" id="selectLPUReativar" required>
+                                <option value="" selected disabled>Digite ou selecione a LPU para reativar</option>
+                            </select>
+                        </div>
+
+                        <div id="infoLPUReativar" class="d-none">
+                            <div class="alert alert-success mt-3">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                <strong>Atenção!</strong> Você está prestes a reativar a LPU abaixo. Verifique os
+                                dados antes de confirmar.
+                            </div>
+
+                            <div class="row g-3 mt-2">
+                                <div class="col-12">
+                                    <label class="form-label">Contrato Associado</label>
+                                    <input type="text" class="form-control" id="lpuContratoAssociadoReativar" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Código LPU</label>
+                                    <input type="text" class="form-control" id="lpuCodigoReativar" readonly>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label">Nome LPU</label>
+                                    <input type="text" class="form-control" id="lpuNomeReativar" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Unidade</label>
+                                    <input type="text" class="form-control" id="lpuUnidadeReativar" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Valor sem Imposto</label>
+                                    <input type="text" class="form-control" id="lpuValorSemImpostoReativar" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Valor com Imposto</label>
+                                    <input type="text" class="form-control" id="lpuValorComImpostoReativar" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success" id="btnConfirmarReativacaoLPU"
+                            form="formReativarLPU" disabled>
+                            <i class="bi bi-check-circle"></i> Confirmar ativação
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="overlay-loader" class="overlay-loader d-none">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+    </div>
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+
+    <script src="../assets/js/general/global.js?v=3.8"></script>
+    <script src="../assets/js/general/sidebar.js?v=3.8"></script>
+    <script src="https://unpkg.com/imask"></script>
+    <script src="../assets/js/indexDB/etapas.js?v=3.8"></script>
+    <script src="../assets/js/indexDB/prestadores.js?v=3.8"></script>
+    <script src="../assets/js/indexDB/lpus.js?v=3.8"></script>
+    <script src="../assets/js/indexDB/gate.js?v=3.8"></script>
+    <script src="../assets/js/indexDB/geral.js?v=3.8"></script>
+
+
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const cpfInput = document.getElementById('cpfPrestador');
+            const cnpjInput = document.getElementById('cnpjPrestador');
+            const rgInput = document.getElementById('rgPrestador');
+
+            if (cpfInput) {
+                IMask(cpfInput, {
+                    mask: '000.000.000-00'
+                });
+            }
+
+            if (cnpjInput) {
+                IMask(cnpjInput, {
+                    mask: '00.000.000/0000-00'
+                });
+            }
+
+            if (rgInput) {
+                IMask(rgInput, {
+                    mask: '00.000.000-0' // você pode ajustar conforme o padrão que você usa aí
+                });
+            }
+        });
+
+        const telefoneInput = document.getElementById('telefonePrestador');
+
+        if (telefoneInput) {
+            IMask(telefoneInput, {
+                mask: [
+                    {
+                        mask: '(00) 0000-0000'
+                    },
+                    {
+                        mask: '(00) 00000-0000'
+                    }
+                ],
+                dispatch: function (appended, dynamicMasked) {
+                    const number = (dynamicMasked.value + appended).replace(/\D/g, '');
+                    return number.length > 10 ? dynamicMasked.compiledMasks[1] : dynamicMasked.compiledMasks[0];
+                }
+            });
+        }
+
+    </script>
+
+</body>
+
+</html>

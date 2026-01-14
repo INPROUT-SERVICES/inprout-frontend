@@ -1,0 +1,455 @@
+/* --- APROVAÇÕES DE MATERIAIS - ULTRA MODERN UI 2026 --- */
+
+:root {
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+    --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.04);
+    --shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.08);
+    --primary-gradient: linear-gradient(135deg, #2a8a65 0%, #3db588 100%);
+    --danger-gradient: linear-gradient(135deg, #dc3545 0%, #ff6b6b 100%);
+    --radius-xl: 16px;
+    --radius-pill: 50px;
+}
+
+/* =========================================
+   1. TOOLBAR & PESQUISA
+   ========================================= */
+.materiais-toolbar-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 4px;
+}
+
+.search-glass-container {
+    background: white;
+    padding: 6px;
+    border-radius: var(--radius-pill);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border: 1px solid #f0f0f0;
+    transition: all 0.3s ease;
+    max-width: 450px;
+}
+
+.search-glass-container:focus-within {
+    box-shadow: 0 4px 20px rgba(42, 138, 101, 0.15);
+    border-color: #a3bfa8;
+    transform: translateY(-1px);
+}
+
+.input-group-modern {
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+}
+
+.search-icon-gradient {
+    font-size: 1.1rem;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-right: 10px;
+}
+
+.form-control-clean {
+    border: none;
+    outline: none;
+    width: 100%;
+    background: transparent;
+    font-size: 0.95rem;
+    color: #495057;
+    padding: 8px 0;
+}
+
+.form-control-clean::placeholder { color: #adb5bd; font-weight: 400; }
+
+.btn-refresh-glass {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid #e9ecef;
+    background: white;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: var(--shadow-soft);
+}
+
+.btn-refresh-glass:hover {
+    background: var(--primary-gradient);
+    color: white;
+    border-color: transparent;
+    transform: rotate(180deg) scale(1.1);
+    box-shadow: 0 10px 20px rgba(42, 138, 101, 0.3);
+}
+
+/* =========================================
+   2. BARRA DE AÇÕES FLUTUANTE (WHITE PILL)
+   ========================================= */
+.actions-group-modern {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    /* ADICIONADO: Opacity 0 e pointer-events none para esconder totalmente no início */
+    transform: translateX(-50%) translateY(150%);
+    opacity: 0;
+    pointer-events: none;
+    
+    background: #ffffff;
+    padding: 12px 24px;
+    border-radius: 50px;
+    
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid #f0f0f0;
+    z-index: 1060;
+    
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.actions-group-modern.show {
+    /* Mostra a barra */
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: all;
+}
+
+.selection-info {
+    font-weight: 600;
+    color: #495057;
+    padding-right: 15px;
+    border-right: 1px solid #dee2e6;
+    font-size: 0.95rem;
+}
+
+/* =========================================
+   3. CARDS DO ACORDEÃO (ESTADOS)
+   ========================================= */
+.custom-accordion-modern .accordion-item {
+    border: none;
+    background: white;
+    border-radius: var(--radius-xl);
+    margin-bottom: 18px;
+    box-shadow: var(--shadow-soft);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    position: relative;
+}
+
+.custom-accordion-modern .accordion-item:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
+}
+
+/* Barra lateral indicadora */
+.custom-accordion-modern .accordion-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #e9ecef;
+    transition: background 0.3s;
+    z-index: 2;
+}
+.custom-accordion-modern .accordion-item:hover::before { background: var(--accent-color); }
+
+/* ESTADO 1: HEADER PADRÃO */
+.pedido-header {
+    background: #ffffff;
+    padding: 20px 25px;
+    cursor: pointer;
+    border-bottom: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+/* ESTADO 2: ABERTO (Cinza Escuro) */
+.pedido-header:not(.collapsed) {
+    background-color: #e2e6ea; /* CONTRASTE FORTE */
+    border-bottom: 1px solid #d1d5db;
+    color: #212529;
+}
+
+/* ESTADO 3: SELECIONADO (Borda Verde + Fundo Verde Claro) */
+.pedido-item-dom.selected-card {
+    border: 2px solid #2a8a65 !important;
+    transform: scale(1.01);
+    z-index: 5;
+}
+.pedido-item-dom.selected-card .pedido-header {
+    background-color: #e8f5e9 !important; /* Verde bem claro */
+}
+
+/* Detalhes internos do Header */
+.user-name { font-weight: 700; color: #2d3436; font-size: 1.05rem; }
+.badge-os {
+    background: #eef4ee; color: #2a8a65; padding: 4px 10px;
+    border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid #cce3d3;
+}
+.form-check-input-custom {
+    width: 20px; height: 20px; border: 2px solid #ced4da; border-radius: 6px; cursor: pointer;
+}
+.form-check-input-custom:checked {
+    background-color: #2a8a65; border-color: #2a8a65;
+}
+
+/* =========================================
+   4. TABELA INTERNA MODERNIZADA (FLOATING ROWS)
+   ========================================= */
+.table-modern-2026 {
+    border-collapse: separate;
+    border-spacing: 0 12px;
+    margin-top: -10px;
+    width: 100%;
+}
+
+.table-modern-2026 thead th {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+    color: #a0aec0; font-weight: 600; border: none;
+    padding: 0 20px 10px 20px; background: transparent;
+}
+
+.table-modern-2026 tbody tr {
+    background: #ffffff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    transition: all 0.2s ease;
+}
+
+.table-modern-2026 tbody tr:hover {
+    transform: translateY(-2px) scale(1.005);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.05);
+    z-index: 10; position: relative;
+}
+
+/* Arredondamento das linhas */
+.table-modern-2026 tbody tr td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+.table-modern-2026 tbody tr td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+
+.table-modern-2026 tbody td {
+    padding: 16px 20px; vertical-align: middle; border: none;
+    color: #4a5568; background: #f8f9fa; /* Fundo levemente cinza */
+}
+.table-modern-2026 tbody tr:hover td { background: #ffffff; }
+
+/* Elementos da Tabela */
+.material-icon-box {
+    width: 42px; height: 42px; background: #e6fffa; color: #2a8a65;
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+}
+.text-item-title { font-weight: 700; color: #2d3748; font-size: 0.95rem; display: block; }
+.badge-unid { background: #edf2f7; color: #718096; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+.price-tag {
+    font-weight: 700; color: #2a8a65; background: rgba(42, 138, 101, 0.08);
+    padding: 6px 12px; border-radius: 8px; white-space: nowrap;
+}
+
+/* JUSTIFICATIVA (Box de Aviso) */
+.row-justificativa td {
+    background-color: transparent !important;
+    padding: 20px 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.justificativa-box {
+    background-color: #fff8e1; /* Amarelo aviso */
+    border-left: 4px solid #ffc107;
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: #856404; font-size: 0.9rem;
+    display: flex; align-items: flex-start; gap: 12px; margin-top: 10px;
+}
+
+/* =========================================
+   5. MODAIS
+   ========================================= */
+.modal-blur { backdrop-filter: blur(5px); }
+.modal-content-modern { border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+.modal-status-bar { height: 6px; width: 100%; }
+
+.modal-icon-circle {
+    width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; margin: 0 auto; font-size: 1.8rem;
+}
+.modal-icon-circle.sm { width: 40px; height: 40px; font-size: 1.2rem; margin: 0; }
+
+.btn-success-gradient {
+    background: var(--primary-gradient); border: none; color: white; font-weight: 600;
+    padding: 10px; border-radius: 10px; transition: all 0.3s;
+}
+.btn-success-gradient:hover {
+    transform: translateY(-2px); box-shadow: 0 8px 20px rgba(42, 138, 101, 0.3); color: white;
+}
+.btn-danger-gradient {
+    background: var(--danger-gradient); border: none; color: white; font-weight: 600;
+    padding: 8px 20px; border-radius: 10px;
+}
+.form-control-modern {
+    border: 1px solid #e9ecef; border-radius: 10px; padding: 12px; font-size: 0.9rem;
+}
+.form-control-modern:focus {
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1); border-color: #ff6b6b;
+}
+
+/* Animações */
+.fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.165, 0.84, 0.44, 1); }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.text-xs { font-size: 0.7rem; }
+.tracking-wide { letter-spacing: 0.05em; }
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .materiais-toolbar-wrapper { flex-direction: column; align-items: stretch; }
+    .search-glass-container { max-width: 100%; }
+    .actions-group-modern {
+        bottom: 20px; width: 90%; justify-content: space-between; padding: 10px 15px;
+    }
+}
+
+/* Card Principal da Solicitação */
+.pedido-item-dom {
+    border-radius: 10px;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid #f0f0f0;
+}
+
+.pedido-item-dom:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+}
+
+.pedido-item-dom.selected-card {
+    border: 1px solid #198754 !important;
+    background-color: #f8fff9 !important;
+}
+
+/* Header do Accordion */
+.pedido-header {
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    background-color: #fff;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.pedido-header:hover {
+    background-color: #fafafa;
+}
+
+.pedido-header .transition-icon {
+    transition: transform 0.2s;
+}
+
+.pedido-header:not(.collapsed) .transition-icon {
+    transform: rotate(180deg);
+}
+
+/* Estilos de Botões de Ação Individual (Novo) */
+.btn-icon-item {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.btn-action-approve {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+.btn-action-approve:hover {
+    background-color: #2e7d32;
+    color: white;
+    transform: scale(1.1);
+}
+
+.btn-action-reject {
+    background-color: #ffebee;
+    color: #c62828;
+}
+.btn-action-reject:hover {
+    background-color: #c62828;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Badges de Status Individual */
+.badge-status-item {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-approved {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-rejected {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+/* Checkbox Customizado */
+.form-check-input-custom {
+    width: 1.3em;
+    height: 1.3em;
+    cursor: pointer;
+    border-color: #ccc;
+}
+.form-check-input-custom:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+/* Barra Flutuante de Ações Globais */
+.actions-group-modern {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 12px 24px;
+    border-radius: 50px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    z-index: 1050;
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.actions-group-modern.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Loader / Estado vazio - Centralizado */
+.empty-state-modern {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 300px;
+    width: 100%;
+    text-align: center;
+}

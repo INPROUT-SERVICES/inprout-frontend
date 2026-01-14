@@ -1,0 +1,99 @@
+/* Estilo para destacar solicitações de adiantamento na fila do Assistant */
+.linha-adiantamento {
+    /* Um fundo amarelo claro para chamar a atenção */
+    background-color: var(--card-warning) !important; 
+    font-weight: 500;
+    color: #333;
+}
+
+/* Estilo para adiantamentos (na Visão de Adiantamentos) que ainda não foram finalizados */
+.linha-adiantamento-pendente {
+    /* Uma borda laranja/vermelha de destaque */
+    border-left: 5px solid var(--bs-orange) !important; 
+}
+
+/* Garante que o container da tabela possa ter uma altura mínima */
+.content-loader-container {
+    position: relative;
+    min-height: 400px; /* Altura mínima para o loader ser visível */
+}
+
+/* Garante que o loader cubra apenas o container da tabela */
+.content-loader-container .overlay-loader {
+    position: absolute;
+    border-radius: 0 0 0.5rem 0.5rem; /* Arredonda cantos inferiores */
+}
+
+/* Ajusta o tamanho da barra de rolagem da tabela */
+.custom-scroll {
+  max-height: calc(100vh - 280px); /* Ajuste de altura */
+}
+
+/* ========================================================== */
+/* INÍCIO DA CORREÇÃO DO DASHBOARD (Estilo CPS Negrito)
+/* ========================================================== */
+
+/* 1. Define o layout de 5 colunas */
+#dashboard-container-faturamento .card-stat.kpi-total {
+    flex-basis: calc(20% - 8px); 
+    flex-grow: 1; 
+    min-width: 160px;
+    padding: 0.75rem; /* Padding correto (copiado do cps.css) */
+    text-align: center; /* Garante alinhamento (copiado do cps.css) */
+}
+
+/* 2. Estilo do TÍTULO (copiado do cps.css + negrito) */
+/* Esta regra se aplica a TODOS os cards dentro deste dashboard */
+#dashboard-container-faturamento .kpi-label {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    margin-bottom: 0.1rem;
+    font-weight: 600; /* << APLICA O NEGRITO */
+}
+
+/* 3. Estilo do NÚMERO (copiado do cps.css) */
+/* Esta regra se aplica a TODOS os cards dentro deste dashboard */
+#dashboard-container-faturamento .kpi-value {
+    font-size: 1.5rem;
+    font-weight: bold; /* << APLICA O NEGRITO */
+    margin: 0;
+}
+
+/* 4. Correção de COR DE TEXTO (para sobrescrever gestao.css) */
+/* Garante que os cards de alerta, info e sucesso fiquem com texto escuro */
+#dashboard-container-faturamento .card-alerta .kpi-label,
+#dashboard-container-faturamento .card-alerta .kpi-value,
+#dashboard-container-faturamento .card-info .kpi-label,
+#dashboard-container-faturamento .card-info .kpi-value,
+#dashboard-container-faturamento .card-sucesso .kpi-label,
+#dashboard-container-faturamento .card-sucesso .kpi-value {
+    color: var(--text-color) !important;
+}
+
+/* Esta regra JÁ VEM do gestao.css, mas a re-declaramos para as classes novas */
+#dashboard-container-faturamento .card-perigo .kpi-label,
+#dashboard-container-faturamento .card-perigo .kpi-value {
+    color: #b95000 !important;
+    font-weight: 600; 
+}
+/* Garante que o número do card de perigo também fique BOLD */
+#dashboard-container-faturamento .card-perigo .kpi-value {
+     font-weight: bold !important;
+}
+
+
+/* 5. Responsividade (para 3 e 2 colunas) */
+@media (max-width: 992px) {
+    #dashboard-container-faturamento .card-stat.kpi-total {
+        flex-basis: calc(33.33% - 8px);
+    }
+}
+@media (max-width: 768px) {
+    #dashboard-container-faturamento .card-stat.kpi-total {
+        flex-basis: calc(50% - 8px);
+    }
+}
+    
+/* ========================================================== */
+/* FIM DA CORREÇÃO DO DASHBOARD 
+/* ========================================================== */
