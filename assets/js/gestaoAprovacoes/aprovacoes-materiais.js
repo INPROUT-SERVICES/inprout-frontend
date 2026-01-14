@@ -1,8 +1,3 @@
-// ==========================================================
-// LÓGICA DE APROVAÇÃO DE MATERIAIS - ULTRA MODERN UI 2026
-// (Sincronizado com Backend InproutMaterialsService)
-// ==========================================================
-
 // Define a URL do serviço de materiais (Porta 8081 conforme application.yaml)
 window.API_MATERIALS_URL = window.API_MATERIALS_URL || 'http://localhost:8081';
 var API_MATERIALS_URL = window.API_MATERIALS_URL;
@@ -23,6 +18,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
     window.rejeitarLoteMateriais = rejeitarLoteMateriais;
 
     window.togglePedidoInteiro = togglePedidoInteiro;
+    window.toggleItemIndividual = toggleItemIndividual; // Garantindo exposição
     window.filtrarMateriaisNaTela = filtrarMateriaisNaTela;
     window.renderizarCardsPedidos = renderizarCardsPedidos;
 
@@ -35,13 +31,18 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
     window.confirmarRejeicao = confirmarRejeicao;
 
     // =================================================================
-    // 1. INICIALIZAÇÃO E LISTENERS
+    // 1. INICIALIZAÇÃO E LISTENERS (CORRIGIDO)
     // =================================================================
-    document.addEventListener('DOMContentLoaded', () => {
-        // Injeta os Modais Dinâmicos se não existirem
+    function iniciarComponentes() {
         injetarModaisDinamicos();
         criarToolbarFlutuante();
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', iniciarComponentes);
+    } else {
+        iniciarComponentes(); // Executa imediatamente se o DOM já estiver pronto
+    }
 
     function criarToolbarFlutuante() {
         if (!document.querySelector('.actions-group-modern')) {
@@ -195,20 +196,15 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         lista.forEach((solicitacao, index) => {
             const pedidoId = solicitacao.id;
 
-            // --- 1. CORREÇÃO OS (STRING) ---
-            // Tenta pegar o campo 'os' (string) ou fallback para outros campos
+            // Correções de campos
             const osObj = solicitacao.os || {};
             const osReal = osObj.os || osObj.numero || osObj.numeroOS || osObj.id || 'N/A';
-
-            // --- 2. CORREÇÃO SOLICITANTE ---
-            // Usa o nome retornado pelo backend (se você aplicou as alterações Java)
             const solicitante = solicitacao.nomeSolicitante && solicitacao.nomeSolicitante !== 'null'
                 ? solicitacao.nomeSolicitante
                 : 'Solicitante Desconhecido';
 
             const dataStr = formatarDataHora(solicitacao.dataSolicitacao);
 
-            // --- 3. CORREÇÃO SEGMENTO ---
             let segmento = 'Geral';
             if (solicitacao.os && solicitacao.os.segmento && solicitacao.os.segmento.nome) {
                 segmento = solicitacao.os.segmento.nome;
@@ -227,6 +223,9 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
                 const custo = toNumber(mat.custoMedioPonderado);
                 const totalItem = qtd * custo;
                 const alertaEstoque = saldo < qtd;
+                
+                // --- CORREÇÃO: Definindo isItemSelected para usar no checkbox ---
+                const isItemSelected = selecionadosMateriais.includes(item.id);
 
                 // Status visual
                 let statusHtml = '';
@@ -255,10 +254,10 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
                             ${item.statusItem === 'PENDENTE' && podeAprovar ? `
                                 <div class="form-check d-flex justify-content-center">
                                     <input class="form-check-input check-item-filho" 
-                                        type="checkbox" 
-                                        value="${item.id}" 
-                                        ${isItemSelected ? 'checked' : ''}
-                                        onchange="toggleItemIndividual(this, ${pedidoId})">
+                                           type="checkbox" 
+                                           value="${item.id}" 
+                                           ${isItemSelected ? 'checked' : ''}
+                                           onchange="toggleItemIndividual(this, ${pedidoId})">
                                 </div>
                             ` : ''}
                         </td>
@@ -293,6 +292,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
             cardItem.setAttribute('data-search', `${osReal} ${solicitante}`.toLowerCase());
             cardItem.style.animationDelay = `${index * 0.05}s`;
 
+            // --- REMOVIDO OBJETO CONTRATADO DO CABEÇALHO ---
             cardItem.innerHTML = `
                 <div class="pedido-header collapsed" data-bs-toggle="collapse" data-bs-target="#collapse-${pedidoId}">
                     <div class="d-flex align-items-center w-100 gap-3">
@@ -337,7 +337,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
 
                 <div id="collapse-${pedidoId}" class="accordion-collapse collapse" data-bs-parent="#accordionMateriais">
                     <div class="accordion-body bg-white p-0">
-                        <div class="table-responsive p-3" style="overflow-x: visible;">
+                        <div class="table-responsive p-3" style="max-height: 500px; overflow-y: auto; overflow-x: auto;">
                             <table class="table-modern-2026">
                                 <thead>
                                     <tr>
@@ -358,7 +358,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
                                     ${linhasItens}
                                     ${solicitacao.justificativa ? `
                                         <tr class="row-justificativa">
-                                            <td colspan="8">
+                                            <td colspan="9">
                                                 <div class="justificativa-box">
                                                     <i class="bi bi-chat-quote-fill fs-5"></i>
                                                     <div>
@@ -453,9 +453,21 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         if (tipo === 'LOTE') {
             await enviarDecisaoLote('APROVAR', null);
         } else if (tipo === 'PEDIDO') {
-            // Pedido = Lote de 1
-            selecionadosMateriais = [idSolicitacao];
-            await enviarDecisaoLote('APROVAR', null);
+            // Pedido agora é tratado como lote de itens se for via botão "Aprovar Tudo"
+            // Mas aqui o backend pode esperar ids de itens. 
+            // Como "Aprovar Tudo" não preenche 'selecionadosMateriais' automaticamente,
+            // precisamos pegar os itens da solicitação. Mas para simplificar, 
+            // vamos assumir que o usuário clicou no botão do pedido.
+            // Para "PEDIDO", vamos buscar os itens pendentes dessa solicitação e aprovar em lote.
+            
+            const solicitacao = listaCompletaSolicitacoes.find(s => s.id === idSolicitacao);
+            if(solicitacao && solicitacao.itens) {
+                 const idsPendentes = solicitacao.itens
+                    .filter(i => i.statusItem === 'PENDENTE')
+                    .map(i => i.id);
+                 selecionadosMateriais = idsPendentes;
+                 await enviarDecisaoLote('APROVAR', null);
+            }
         } else if (tipo === 'ITEM') {
             await enviarDecisaoItem(idSolicitacao, idItem, 'APROVAR', null);
         }
@@ -478,8 +490,14 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         if (tipo === 'LOTE') {
             await enviarDecisaoLote('REJEITAR', motivo);
         } else if (tipo === 'PEDIDO') {
-            selecionadosMateriais = [idSolicitacao];
-            await enviarDecisaoLote('REJEITAR', motivo);
+            const solicitacao = listaCompletaSolicitacoes.find(s => s.id === idSolicitacao);
+            if(solicitacao && solicitacao.itens) {
+                 const idsPendentes = solicitacao.itens
+                    .filter(i => i.statusItem === 'PENDENTE')
+                    .map(i => i.id);
+                 selecionadosMateriais = idsPendentes;
+                 await enviarDecisaoLote('REJEITAR', motivo);
+            }
         } else if (tipo === 'ITEM') {
             await enviarDecisaoItem(idSolicitacao, idItem, 'REJEITAR', motivo);
         }
@@ -538,7 +556,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
             }
 
             const body = {
-                ids: selecionadosMateriais,
+                ids: selecionadosMateriais, // AGORA SÃO IDS DE ITENS
                 aprovadorId: usuarioId,
                 observacao: observacao
             };
@@ -568,22 +586,12 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
     // =================================================================
     // 7. UTILITÁRIOS E FILTROS
     // =================================================================
-    function togglePedidoInteiro(checkbox, id) {
-        const card = checkbox.closest('.pedido-item-dom');
-        if (checkbox.checked) {
-            if (!selecionadosMateriais.includes(id)) selecionadosMateriais.push(id);
-            if (card) card.classList.add('selected-card');
-        } else {
-            selecionadosMateriais = selecionadosMateriais.filter(x => x !== id);
-            if (card) card.classList.remove('selected-card');
-        }
-        atualizarUIGlobal();
-    }
 
-    window.toggleItemIndividual = function (checkbox, pedidoId) {
+    // --- Nova Lógica de Seleção: Item Individual ---
+    function toggleItemIndividual(checkbox, pedidoId) {
         const itemId = parseInt(checkbox.value);
         const card = checkbox.closest('.pedido-item-dom');
-
+        
         if (checkbox.checked) {
             if (!selecionadosMateriais.includes(itemId)) selecionadosMateriais.push(itemId);
         } else {
@@ -592,11 +600,10 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
 
         atualizarEstadoCheckboxPai(card, pedidoId);
         atualizarUIGlobal();
-    };
+    }
 
     // --- Atualiza Lógica de Seleção: Pedido Inteiro (Pai) ---
-    // Substitua a função togglePedidoInteiro existente por esta:
-    window.togglePedidoInteiro = function (checkbox, pedidoId) {
+    function togglePedidoInteiro(checkbox, pedidoId) {
         const card = checkbox.closest('.pedido-item-dom');
         const checkboxesFilhos = card.querySelectorAll('.check-item-filho');
         const isChecked = checkbox.checked;
@@ -604,7 +611,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         checkboxesFilhos.forEach(child => {
             child.checked = isChecked;
             const itemId = parseInt(child.value);
-
+            
             if (isChecked) {
                 if (!selecionadosMateriais.includes(itemId)) selecionadosMateriais.push(itemId);
             } else {
@@ -616,23 +623,27 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         else card.classList.remove('selected-card');
 
         atualizarUIGlobal();
-    };
+    }
 
     // --- Função Auxiliar Visual ---
     function atualizarEstadoCheckboxPai(card, pedidoId) {
         if (!card) return;
         const checkPai = card.querySelector('.check-pedido-pai');
         const filhos = Array.from(card.querySelectorAll('.check-item-filho'));
+        
+        if(filhos.length === 0) return;
+
         const todosMarcados = filhos.every(c => c.checked);
         const algumMarcado = filhos.some(c => c.checked);
 
         if (checkPai) {
             checkPai.checked = todosMarcados;
-            checkPai.indeterminate = someMarcado && !todosMarcados;
-
-            if (algumMarcado) card.classList.add('selected-card');
-            else card.classList.remove('selected-card');
+            // CORREÇÃO: "someMarcado" alterado para "algumMarcado"
+            checkPai.indeterminate = algumMarcado && !todosMarcados; 
         }
+        
+        if (algumMarcado) card.classList.add('selected-card');
+        else card.classList.remove('selected-card');
     }
 
     function atualizarUIGlobal() {
@@ -653,15 +664,11 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         });
     }
 
-    // Compatibilidade com código legado (caso seja chamado de fora)
+    // Compatibilidade com código legado
     function aprovarLoteMateriais() { prepararAprovacao(null, null, 'LOTE'); }
     function rejeitarLoteMateriais() { prepararRejeicao(null, null, 'LOTE'); }
     function confirmarAprovacaoLoteMateriais() { confirmarAprovacao(); }
     function confirmarRejeicaoLoteMateriais() { confirmarRejeicao(); }
-    function selecionarUnicoEExecutar(id, acao) {
-        if (acao === 'aprovar') prepararAprovacao(id, null, 'PEDIDO');
-        if (acao === 'rejeitar') prepararRejeicao(id, null, 'PEDIDO');
-    }
 
     function toNumber(v) { return Number(v) || 0; }
     function calcularTotal(itens) {
