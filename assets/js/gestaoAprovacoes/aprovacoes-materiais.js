@@ -195,21 +195,20 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         lista.forEach((solicitacao, index) => {
             const pedidoId = solicitacao.id;
 
-            // --- ADICIONE ESTE BLOCO PARA CORRIGIR O ERRO ---
-            // Extrai o objeto OS e define o número para exibição
+            // --- 1. CORREÇÃO OS (STRING) ---
+            // Tenta pegar o campo 'os' (string) ou fallback para outros campos
             const osObj = solicitacao.os || {};
-            const osReal = osObj.numero || osObj.os || osObj.numeroOS || osObj.id || 'N/A';
-            // ------------------------------------------------
+            const osReal = osObj.os || osObj.numero || osObj.numeroOS || osObj.id || 'N/A';
 
-            // 1. CORREÇÃO DO NOME DO SOLICITANTE
+            // --- 2. CORREÇÃO SOLICITANTE ---
+            // Usa o nome retornado pelo backend (se você aplicou as alterações Java)
             const solicitante = solicitacao.nomeSolicitante && solicitacao.nomeSolicitante !== 'null'
                 ? solicitacao.nomeSolicitante
                 : 'Solicitante Desconhecido';
 
             const dataStr = formatarDataHora(solicitacao.dataSolicitacao);
 
-            // 2. CORREÇÃO DO CAMPO VAZIO (SEGMENTO)
-            // O campo depois da data é o Segmento. Se não tiver, mostramos "Geral" ou "Sem Segmento"
+            // --- 3. CORREÇÃO SEGMENTO ---
             let segmento = 'Geral';
             if (solicitacao.os && solicitacao.os.segmento && solicitacao.os.segmento.nome) {
                 segmento = solicitacao.os.segmento.nome;
@@ -217,11 +216,10 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
                 segmento = solicitacao.os.segmentoDescricao;
             }
 
-            // 3. CORREÇÃO DO OBJETO LPU
-            // Agora usamos o campo 'nome' que virá corrigido do backend
+            // --- 4. CORREÇÃO OBJETO CONTRATADO ---
+            // Usa o campo lpu.nome que populamos com o Objeto Contratado no backend
             const lpuObj = solicitacao.lpu || {};
-            // O backend agora manda o nome correto no campo 'nome' ou 'nomeLpu' do DTO
-            const lpuDisplay = lpuObj.nome || lpuObj.nomeLpu || 'Contrato não informado';
+            const lpuDisplay = lpuObj.nome || lpuObj.nomeLpu || 'Objeto não informado';
 
             const totalValor = calcularTotal(solicitacao.itens);
             const totalItens = (solicitacao.itens || []).length;
