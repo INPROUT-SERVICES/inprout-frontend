@@ -51,11 +51,9 @@ const RegistrosIO = {
         const btnImportar = document.getElementById('btnImportar');
         const importFileInput = document.getElementById('importFile');
 
-        // Verificação de segurança se os elementos existem
         if (btnImportar && importFileInput) {
             const modalProgressoEl = document.getElementById('modalProgressoImportacao');
             const modalProgresso = modalProgressoEl ? new bootstrap.Modal(modalProgressoEl) : null;
-
             const textoProgresso = document.getElementById('textoProgressoImportacao');
             const barraProgresso = document.getElementById('barraProgressoImportacao');
             const errosContainer = document.getElementById('errosImportacaoContainer');
@@ -64,20 +62,17 @@ const RegistrosIO = {
             const btnCancelarImportacao = document.getElementById('btnCancelarImportacao');
             const importLegadoCheckbox = document.getElementById('importLegado');
 
-            // Botão "Cancelar" apenas visual (não interrompe o fetch real, mas fecha o modal)
             if (btnCancelarImportacao) {
                 btnCancelarImportacao.addEventListener('click', () => {
                     if (modalProgresso) modalProgresso.hide();
-                    importFileInput.value = ''; // Limpa para permitir tentar de novo
+                    importFileInput.value = '';
                 });
             }
 
-            // Clique no botão visual dispara o input file oculto
             btnImportar.addEventListener('click', () => {
                 importFileInput.click();
             });
 
-            // Evento de Seleção de Arquivo
             importFileInput.addEventListener('change', async (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -86,7 +81,6 @@ const RegistrosIO = {
                 const formData = new FormData();
                 formData.append('file', file);
 
-                // 1. Reset da UI do Modal
                 textoProgresso.textContent = 'Iniciando importação...';
                 barraProgresso.style.width = '0%';
                 barraProgresso.textContent = '0%';
@@ -101,8 +95,6 @@ const RegistrosIO = {
 
                 if (modalProgresso) modalProgresso.show();
 
-                // 2. Animação de progresso "fake" inicial para feedback visual
-                // (O usuário percebe que algo está acontecendo enquanto o arquivo sobe)
                 let fakeProgress = 0;
                 const progressInterval = setInterval(() => {
                     if (fakeProgress < 40) {
@@ -116,13 +108,12 @@ const RegistrosIO = {
                 }, 100);
 
                 try {
-                    // 3. Envio para o Backend
                     const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os/importar?legado=${isLegado}`, {
                         method: 'POST',
                         body: formData
                     });
 
-                    clearInterval(progressInterval); // Para a animação fake
+                    clearInterval(progressInterval);
 
                     if (!response.ok) {
                         let errorMsg = `Erro no servidor: ${response.status}`;
@@ -138,12 +129,10 @@ const RegistrosIO = {
 
                     const result = await response.json();
 
-                    // 4. Sucesso: Atualiza barra para 100%
                     barraProgresso.style.width = '100%';
                     barraProgresso.textContent = '100%';
                     textoProgresso.textContent = 'Processando resposta...';
 
-                    // 5. Verifica se houve Warnings (Avisos de negócio)
                     if (result.warnings && result.warnings.length > 0) {
                         errosContainer.classList.remove('d-none');
                         const tituloErro = errosContainer.querySelector('h6');
@@ -154,39 +143,27 @@ const RegistrosIO = {
                         ).join('');
                     }
 
-                    // 6. Atualiza a Tabela
-                    // Como estamos usando paginação no servidor, o jeito certo de ver 
-                    // os dados novos é recarregar a busca (resetando para a primeira página)
                     textoProgresso.textContent = 'Atualizando tabela...';
-
-                    // Pequeno delay para o usuário ver o "100%" antes de fechar/atualizar
                     await new Promise(r => setTimeout(r, 500));
-
-                    // Chama a API para buscar os dados atualizados
                     RegistrosApi.carregarDados(0, RegistrosState.termoBusca);
-
                     textoProgresso.textContent = 'Importação concluída com sucesso!';
                     RegistrosUtils.mostrarToast('Importação realizada com sucesso!', 'success');
 
                 } catch (error) {
                     console.error('Erro na importação:', error);
                     clearInterval(progressInterval);
-
                     textoProgresso.textContent = 'Falha na Importação';
                     barraProgresso.classList.remove('bg-success');
                     barraProgresso.classList.add('bg-danger');
                     barraProgresso.style.width = '100%';
-
                     errosContainer.classList.remove('d-none');
                     const tituloErro = errosContainer.querySelector('h6');
                     if (tituloErro) tituloErro.textContent = 'Ocorreu um erro:';
-
                     listaErros.innerHTML = `<li class="list-group-item list-group-item-danger">${error.message}</li>`;
                 } finally {
-                    // 7. Limpeza Final
                     btnFecharProgresso.disabled = false;
                     btnCancelarImportacao.classList.add('d-none');
-                    importFileInput.value = ''; // Reseta o input para permitir selecionar o mesmo arquivo novamente
+                    importFileInput.value = '';
                 }
             });
         }
@@ -198,33 +175,33 @@ const RegistrosIO = {
             const modalProgresso = new bootstrap.Modal(document.getElementById('modalProgressoExportacao'));
 
             btn.addEventListener('click', async () => {
-                // Limpeza preventiva
                 document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
                 document.body.classList.remove('modal-open');
                 document.body.style.overflow = 'auto';
 
                 const linhasNaTela = RegistrosState.todasAsLinhas || [];
                 const totalGeralBanco = RegistrosState.totalElementos || 0;
+                let tipoExportacaoSelecionada = '';
 
-                // --- NOVO DESIGN DO MODAL ---
                 const result = await Swal.fire({
                     title: '<span class="fw-bold text-dark">Exportar Relatório</span>',
-                    width: 700,
+                    width: 850,
                     padding: '2em',
                     html: `
                         <style>
-                            /* Estilos exclusivos para este modal */
                             .export-options-container {
                                 display: flex;
-                                gap: 20px;
+                                gap: 15px;
                                 justify-content: center;
                                 margin-top: 20px;
+                                flex-wrap: wrap;
                             }
                             .export-card {
                                 flex: 1;
+                                min-width: 200px;
                                 border: 2px solid #e9ecef;
                                 border-radius: 16px;
-                                padding: 25px 15px;
+                                padding: 20px 10px;
                                 cursor: pointer;
                                 transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
                                 background: white;
@@ -237,23 +214,19 @@ const RegistrosIO = {
                                 box-shadow: 0 10px 25px rgba(25, 135, 84, 0.15);
                             }
                             .export-card:hover .icon-box {
-                                background-color: #e8f5e9; /* Verde bem claro */
+                                background-color: #e8f5e9;
                                 color: #198754;
                             }
-                            .export-card.active {
-                                border-color: #198754;
-                                background-color: #f8fffb;
-                            }
                             .icon-box {
-                                width: 60px;
-                                height: 60px;
+                                width: 50px;
+                                height: 50px;
                                 background-color: #f8f9fa;
                                 border-radius: 50%;
                                 display: flex;
                                 align-items: center;
                                 justify-content: center;
                                 margin: 0 auto 15px;
-                                font-size: 1.8rem;
+                                font-size: 1.5rem;
                                 color: #6c757d;
                                 transition: all 0.3s;
                             }
@@ -261,75 +234,71 @@ const RegistrosIO = {
                                 font-weight: 700;
                                 color: #343a40;
                                 margin-bottom: 8px;
-                                font-size: 1.1rem;
+                                font-size: 1rem;
                             }
                             .export-desc {
-                                font-size: 0.85rem;
+                                font-size: 0.8rem;
                                 color: #6c757d;
                                 margin-bottom: 15px;
                                 line-height: 1.4;
-                                min-height: 40px; /* Alinha a altura das descrições */
+                                min-height: 45px;
                             }
                             .export-badge {
                                 background-color: #f1f3f5;
                                 color: #495057;
-                                padding: 6px 12px;
+                                padding: 4px 10px;
                                 border-radius: 30px;
-                                font-size: 0.8rem;
+                                font-size: 0.75rem;
                                 font-weight: 600;
-                                display: inline-flex;
-                                align-items: center;
-                                gap: 6px;
-                            }
-                            .export-card:hover .export-badge {
-                                background-color: #198754;
-                                color: white;
                             }
                         </style>
 
                         <p class="text-muted mb-4">Selecione o tipo de exportação desejada:</p>
                         
                         <div class="export-options-container">
-                            <div class="export-card" onclick="Swal.clickConfirm()">
-                                <div class="icon-box">
-                                    <i class="bi bi-funnel"></i>
-                                </div>
+                            <div class="export-card" onclick="window.tipoExportacaoTemp='VISTA_ATUAL'; Swal.clickConfirm()">
+                                <div class="icon-box"><i class="bi bi-funnel"></i></div>
                                 <h5 class="export-title">Vista Atual</h5>
-                                <p class="export-desc">Exporta apenas os registros filtrados e visíveis na tabela atual.</p>
-                                <span class="export-badge">
-                                    <i class="bi bi-list-check"></i> ${linhasNaTela.length} registros
-                                </span>
+                                <p class="export-desc">Apenas registros filtrados e visíveis agora.</p>
+                                <span class="export-badge"><i class="bi bi-list-check"></i> ${linhasNaTela.length} registros</span>
                             </div>
 
-                            <div class="export-card" onclick="Swal.clickDeny()">
-                                <div class="icon-box">
-                                    <i class="bi bi-database-down"></i>
-                                </div>
+                            <div class="export-card" onclick="window.tipoExportacaoTemp='COMPLETO'; Swal.clickConfirm()">
+                                <div class="icon-box"><i class="bi bi-database-down"></i></div>
                                 <h5 class="export-title">Base Completa</h5>
-                                <p class="export-desc">Baixa todos os registros do sistema, ignorando filtros de pesquisa.</p>
-                                <span class="export-badge">
-                                    <i class="bi bi-server"></i> ${totalGeralBanco} registros
-                                </span>
+                                <p class="export-desc">Todos os registros do banco de dados.</p>
+                                <span class="export-badge"><i class="bi bi-server"></i> ${totalGeralBanco} registros</span>
+                            </div>
+
+                            <div class="export-card" style="border-color: #ffc107;" onclick="window.tipoExportacaoTemp='FATURADOS_PENDENTES'; Swal.clickConfirm()">
+                                <div class="icon-box" style="color: #d39e00; background-color: #fff3cd;"><i class="bi bi-exclamation-triangle"></i></div>
+                                <h5 class="export-title">Fat. não Finalizado</h5>
+                                <p class="export-desc">Lançamentos faturados mas com pendências operacionais.</p>
+                                <span class="export-badge bg-warning text-dark border"><i class="bi bi-search"></i> Relatório Especial</span>
                             </div>
                         </div>
                     `,
-                    showConfirmButton: false, // Esconde botões padrões pois usamos os Cards
+                    showConfirmButton: false,
                     showDenyButton: false,
                     showCancelButton: true,
                     cancelButtonText: 'Cancelar',
                     buttonsStyling: false,
                     customClass: {
                         cancelButton: 'btn btn-outline-secondary px-4 mt-4 rounded-pill'
+                    },
+                    didOpen: () => {
+                        window.tipoExportacaoTemp = '';
                     }
                 });
 
-                if (!result.isConfirmed && !result.isDenied) return;
+                if (!result.isConfirmed && !result.isDenied && !window.tipoExportacaoTemp) return;
+
+                tipoExportacaoSelecionada = window.tipoExportacaoTemp;
 
                 modalProgresso.show();
                 const textoProgresso = document.getElementById('textoProgresso');
                 const barraProgresso = document.getElementById('barraProgresso');
 
-                // Função auxiliar para atualizar visual e texto ao mesmo tempo
                 const atualizarProgresso = (porcentagem, texto) => {
                     barraProgresso.style.width = `${porcentagem}%`;
                     barraProgresso.textContent = `${porcentagem}%`;
@@ -342,62 +311,35 @@ const RegistrosIO = {
                     try {
                         let linhasParaExportar = [];
 
-                        if (result.isConfirmed) {
-                            // --- OPÇÃO 1: APENAS TELA ---
+                        if (tipoExportacaoSelecionada === 'VISTA_ATUAL') {
                             linhasParaExportar = linhasNaTela;
-                        } else if (result.isDenied) {
-                            // --- OPÇÃO 2: BANCO COMPLETO ---
-                            atualizarProgresso(30, 'Baixando base completa do servidor...');
-
-                            // CORREÇÃO: Usar o endpoint /all em vez da paginação
-                            // Isso garante que receberemos a lista inteira, sem cortes do Spring Data
+                        } else if (tipoExportacaoSelecionada === 'COMPLETO') {
+                            atualizarProgresso(30, 'Baixando base completa...');
                             const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os/export/completo`);
                             if (!response.ok) throw new Error("Erro ao baixar dados completos.");
-
-                            // Quando usamos /all, o retorno é um Array direto, não um Page object com .content
                             const listaCompletaOS = await response.json();
+                            
+                            atualizarProgresso(50, 'Processando dados...');
+                            linhasParaExportar = RegistrosIO.processarListaParaExportacao(listaCompletaOS);
 
-                            atualizarProgresso(60, 'Processando dados...');
+                        } else if (tipoExportacaoSelecionada === 'FATURADOS_PENDENTES') {
+                            atualizarProgresso(30, 'Buscando registros faturados pendentes...');
+                            const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os/relatorios/faturados-nao-finalizados`);
+                            if (!response.ok) throw new Error("Erro ao gerar relatório especial.");
+                            const listaEspecialOS = await response.json();
 
-                            const userSegmentos = JSON.parse(localStorage.getItem('segmentos')) || [];
-                            const role = RegistrosState.userRole;
+                            if (!listaEspecialOS || listaEspecialOS.length === 0) {
+                                throw new Error("Nenhum registro encontrado para este critério.");
+                            }
 
-                            listaCompletaOS.forEach(os => {
-                                // Permissões
-                                if (['MANAGER', 'COORDINATOR'].includes(role)) {
-                                    if (!os.segmento || !userSegmentos.includes(os.segmento.id)) return;
-                                }
-
-                                if (os.detalhes && os.detalhes.length > 0) {
-                                    // Filtra excluídos
-                                    const detalhesAtivos = os.detalhes.filter(d => d.statusRegistro !== 'INATIVO');
-
-                                    detalhesAtivos.forEach(detalhe => {
-                                        let lancamentoParaExibir = detalhe.ultimoLancamento;
-                                        if (!lancamentoParaExibir && detalhe.lancamentos && detalhe.lancamentos.length > 0) {
-                                            const operacionais = detalhe.lancamentos.filter(l => l.situacaoAprovacao !== 'APROVADO_LEGADO');
-                                            if (operacionais.length > 0) {
-                                                lancamentoParaExibir = operacionais.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
-                                            } else {
-                                                lancamentoParaExibir = detalhe.lancamentos.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
-                                            }
-                                        }
-
-                                        linhasParaExportar.push({
-                                            os: os,
-                                            detalhe: detalhe,
-                                            ultimoLancamento: lancamentoParaExibir
-                                        });
-                                    });
-                                }
-                            });
+                            atualizarProgresso(50, 'Processando dados...');
+                            linhasParaExportar = RegistrosIO.processarListaParaExportacao(listaEspecialOS);
                         }
 
                         if (linhasParaExportar.length === 0) {
                             throw new Error("Nenhum dado encontrado para exportar.");
                         }
 
-                        // --- GERAÇÃO DO EXCEL ---
                         atualizarProgresso(80, 'Gerando arquivo Excel...');
 
                         const grupos = RegistrosRender.transformarEmGrupos(linhasParaExportar);
@@ -431,7 +373,13 @@ const RegistrosIO = {
                         const wb = XLSX.utils.book_new();
                         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([resumoHeaders, ...resumoRows]), "Resumo");
                         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([detalhesHeaders, ...detalhesRows]), "Detalhes");
-                        XLSX.writeFile(wb, "relatorio_registros.xlsx");
+
+                        let nomeArquivo = "relatorio_registros.xlsx";
+                        if (tipoExportacaoSelecionada === 'FATURADOS_PENDENTES') {
+                            nomeArquivo = `Relatorio_Faturados_Nao_Finalizados_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                        }
+
+                        XLSX.writeFile(wb, nomeArquivo);
 
                         atualizarProgresso(100, 'Concluído!');
                         RegistrosUtils.mostrarToast('Exportação concluída com sucesso!', 'success');
@@ -441,10 +389,46 @@ const RegistrosIO = {
                         RegistrosUtils.mostrarToast('Erro ao exportar: ' + e.message, 'error');
                     } finally {
                         setTimeout(() => modalProgresso.hide(), 1000);
+                        delete window.tipoExportacaoTemp;
                     }
                 }, 300);
             });
         }
+    },
+
+    processarListaParaExportacao: (listaOS) => {
+        const linhasProcessadas = [];
+        const userSegmentos = JSON.parse(localStorage.getItem('segmentos')) || [];
+        const role = RegistrosState.userRole;
+
+        listaOS.forEach(os => {
+            if (['MANAGER', 'COORDINATOR'].includes(role)) {
+                if (!os.segmento || !userSegmentos.includes(os.segmento.id)) return;
+            }
+
+            if (os.detalhes && os.detalhes.length > 0) {
+                const detalhesAtivos = os.detalhes.filter(d => d.statusRegistro !== 'INATIVO');
+
+                detalhesAtivos.forEach(detalhe => {
+                    let lancamentoParaExibir = detalhe.ultimoLancamento;
+                    if (!lancamentoParaExibir && detalhe.lancamentos && detalhe.lancamentos.length > 0) {
+                        const operacionais = detalhe.lancamentos.filter(l => l.situacaoAprovacao !== 'APROVADO_LEGADO');
+                        if (operacionais.length > 0) {
+                            lancamentoParaExibir = operacionais.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
+                        } else {
+                            lancamentoParaExibir = detalhe.lancamentos.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
+                        }
+                    }
+
+                    linhasProcessadas.push({
+                        os: os,
+                        detalhe: detalhe,
+                        ultimoLancamento: lancamentoParaExibir
+                    });
+                });
+            }
+        });
+        return linhasProcessadas;
     },
 
     setupImportacaoFinanceiro: () => {
