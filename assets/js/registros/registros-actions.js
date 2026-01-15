@@ -107,6 +107,40 @@ const RegistrosActions = {
                 const detalheId = btnHistorico.dataset.detalheId;
                 RegistrosActions.abrirModalHistorico(detalheId, modalHistorico);
             }
+
+            if (e.target.closest('.btn-finalizar-os')) {
+                e.stopPropagation(); // Evita abrir/fechar o accordion ao clicar no botão
+                e.preventDefault();
+
+                const btn = e.target.closest('.btn-finalizar-os');
+                const osId = btn.getAttribute('data-os-id');
+
+                if (!confirm('Deseja realmente finalizar todos os itens pendentes desta OS baseando-se no item mais recente finalizado?')) {
+                    return;
+                }
+
+                // Feedback visual
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
+                btn.disabled = true;
+
+                try {
+                    const sucesso = await RegistrosApi.finalizarOsRestante(osId);
+                    if (sucesso) {
+                        // Recarrega a tabela para atualizar status e sumir o botão
+                        RegistrosMain.carregarRegistros();
+                        // Toast ou Alert de sucesso
+                        alert('OS finalizada com sucesso!');
+                    } else {
+                        btn.innerHTML = originalHtml;
+                        btn.disabled = false;
+                    }
+                } catch (error) {
+                    console.error(error);
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }
+            }
         });
 
         // Configura os listeners internos do formulário de edição

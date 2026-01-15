@@ -64,6 +64,150 @@ const RegistrosRender = {
 
         const role = RegistrosState.userRole;
         const dadosOS = grupo.linhas[0].os || {};
+        const osIdReal = dadosOS.id; // ID da OS para a API
+
+        // Cálculos Financeiros (MANTIDOS ORIGINAIS)
+        const valorTotalOS = RegistrosUtils.get(grupo.linhas[0], 'os.detalhes', []).reduce((sum, d) => sum + (d.valorTotal || 0), 0);
+        const valorTotalCPS = grupo.linhas.flatMap(linha => RegistrosUtils.get(linha, 'detalhe.lancamentos', []))
+            .filter(lanc => ['APROVADO', 'APROVADO_CPS_LEGADO'].includes(lanc.situacaoAprovacao))
+            .reduce((sum, lanc) => sum + (lanc.valor || 0), 0);
+
+        const custoTotalMateriais = dadosOS.custoTotalMateriais || 0;
+        const valorCpsLegado = dadosOS.valorCpsLegado || 0;
+        const valorTransporte = dadosOS.transporte || 0;
+        const totalGasto = valorTotalCPS + custoTotalMateriais + valorCpsLegado + valorTransporte;
+        const percentual = valorTotalOS > 0 ? (totalGasto / valorTotalOS) * 100 : 0;
+
+        // HTML dos KPIs (MANTIDO ORIGINAL)
+        let kpisInternosHTML = '';
+        if (role !== 'MANAGER') {
+            kpisInternosHTML += `
+                <div class="header-kpi"><span class="kpi-label">Total OS</span><span class="kpi-value">${RegistrosUtils.formatarMoeda(valorTotalOS)}</span></div>`;
+            if (valorCpsLegado > 0) {
+                kpisInternosHTML += `<div class="header-kpi"><span class="kpi-label text-warning">Legado</span><span class="kpi-value text-warning">${RegistrosUtils.formatarMoeda(valorCpsLegado)}</span></div>`;
+            }
+            kpisInternosHTML += `
+                <div class="header-kpi"><span class="kpi-label">CPS</span><span class="kpi-value">${RegistrosUtils.formatarMoeda(valorTotalCPS)}</span></div>
+                <div class="header-kpi"><span class="kpi-label">Material</span><span class="kpi-value">${RegistrosUtils.formatarMoeda(custoTotalMateriais)}</span></div>
+                <div class="header-kpi"><span class="kpi-label">Transp.</span><span class="kpi-value">${RegistrosUtils.formatarMoeda(valorTransporte)}</span></div>
+                <div class="header-kpi"><span class="kpi-label">%</span><span class="kpi-value kpi-percentage">${percentual.toFixed(2)}%</span></div>`;
+        }
+
+        // --- LÓGICA DO BOTÃO "FINALIZAR OS" ---
+        let btnFinalizarOsHTML = '';
+        
+        // 1. Verifica permissão
+        if (['ADMIN', 'COORDINATOR', 'MANAGER'].includes(role)) {
+            let temFinalizado = false;
+            let temPendente = false;
+
+            // 2. Varre as linhas para checar as condições
+            grupo.linhas.forEach(linha => {
+                // Busca status do detalhe ou do ultimo lancamento
+                // A key 'ultimoLancamento.situacao' vem do dataMapping, mas no objeto cru geralmente fica dentro de detalhe ou calculado.
+                // Assumindo estrutura padrão do seu objeto 'linha':
+                const situacao = RegistrosUtils.get(linha, 'ultimoLancamento.situacao') || 'PENDENTE';
+                
+                if (situacao === 'FINALIZADO') {
+                    temFinalizado = true;
+                } else {
+                    temPendente = true; // Qualquer coisa diferente de finalizado conta como pendente para esta lógica
+                }
+            });
+
+            // 3. Se tiver OS DOIS (um pronto e um faltando), mostra o botão
+            if (temFinalizado && temPendente) {
+                btnFinalizarOsHTML = `
+                    <button class="btn btn-sm btn-success btn-finalizar-os ms-3" 
+                            data-os-id="${osIdReal}" 
+                            title="Replicar finalização para itens pendentes">
+                        <i class="bi bi-check-all"></i> Finalizar OS
+                    </button>
+                `;
+            }
+        }
+
+        // Definição de Colunas (MANTIDO)
+        const headersVisiveis = [...RegistrosRender.getHeaders()];
+        if (['ADMIN', 'ASSISTANT', 'MANAGER', 'COORDINATOR'].includes(role)) {
+            headersVisiveis.push("AÇÕES");
+        }
+        headersVisiveis.unshift("HISTÓRICO");
+
+        // Geração das Linhas (MANTIDO)
+        const bodyRowsHTML = grupo.linhas.map(linhaData => {
+            const cellsHTML = headersVisiveis.map(header => {
+                const detalheId = RegistrosUtils.get(linhaData, 'detalhe.id', '');
+
+                if (header === "HISTÓRICO") {
+                    const lancamentosCount = RegistrosUtils.get(linhaData, 'detalhe.lancamentos', []).length;
+                    const isDisabled = !detalheId || lancamentosCount <= 1;
+                    return `<td><button class="btn btn-sm btn-outline-info btn-historico" data-detalhe-id="${detalheId}" title="Ver Histórico" ${isDisabled ? 'disabled' : ''}><i class="bi bi-clock-history"></i></button></td>`;
+                }
+
+                if (header === "AÇÕES") {
+                    let btnEditar = '';
+                    if (['ADMIN', 'ASSISTANT', 'COORDINATOR', 'MANAGER'].includes(role)) {
+                        btnEditar = detalheId ? `<button class="btn btn-sm btn-outline-primary btn-edit-detalhe" data-id="${detalheId}" title="Editar"><i class="bi bi-pencil-fill"></i></button>` : '';
+                    }
+                    let btnExcluir = '';
+                    if (['ADMIN', 'ASSISTANT'].includes(role)) {
+                        btnExcluir = `<button class="btn btn-sm btn-outline-danger btn-delete-registro" data-id="${detalheId}" title="Excluir"><i class="bi bi-trash-fill"></i></button>`;
+                    }
+                    return `<td><div class="d-flex justify-content-center gap-2">${btnEditar} ${btnExcluir}</div></td>`;
+                }
+
+                const func = RegistrosRender.dataMapping[header];
+                const valor = func ? func(linhaData) : '-';
+                let classes = '';
+                if (["VISTORIA", "DESMOBILIZAÇÃO", "INSTALAÇÃO", "ATIVAÇÃO", "DOCUMENTAÇÃO"].includes(header)) {
+                    classes += ' status-cell';
+                    if (valor === 'OK') classes += ' status-ok'; else if (valor === 'NOK') classes += ' status-nok'; else if (valor === 'N/A') classes += ' status-na';
+                }
+                if (header === "DETALHE DIÁRIO") classes += ' detalhe-diario-cell';
+                return `<td class="${classes}">${valor}</td>`;
+            }).join('');
+            return `<tr>${cellsHTML}</tr>`;
+        }).join('');
+
+        // Inserção do Botão no Header HTML
+        const headerHTML = `
+        <h2 class="accordion-header" id="heading-${uniqueId}">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${uniqueId}">
+                <div class="header-content">
+                    <div class="header-title-wrapper">
+                        <span class="header-title-project">${grupo.projeto || 'SEM PROJETO'}</span>
+                        <span class="header-title-os">${grupo.os || 'SEM OS'}</span>
+                        ${btnFinalizarOsHTML} </div>
+                    <div class="header-kpi-wrapper">
+                        ${kpisInternosHTML}
+                        <span class="header-badge">${grupo.linhas.length} itens</span>
+                    </div>
+                </div>
+            </button>
+        </h2>`;
+
+        const bodyHTML = `
+        <div id="collapse-${uniqueId}" class="accordion-collapse collapse" data-bs-parent="#accordion-registros">
+            <div class="accordion-body">
+                <div class="table-responsive">
+                    <table class="table modern-table table-sm mb-0">
+                        <thead><tr>${headersVisiveis.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                        <tbody>${bodyRowsHTML}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+
+        return `<div class="accordion-item" id="accordion-item-${uniqueId}">${headerHTML}${bodyHTML}</div>`;
+    },
+
+    gerarHtmlParaGrupo: (grupo) => {
+        const uniqueId = grupo.id;
+        if (!grupo.linhas || grupo.linhas.length === 0) return '';
+
+        const role = RegistrosState.userRole;
+        const dadosOS = grupo.linhas[0].os || {};
 
         // Cálculos Financeiros
         const valorTotalOS = RegistrosUtils.get(grupo.linhas[0], 'os.detalhes', []).reduce((sum, d) => sum + (d.valorTotal || 0), 0);

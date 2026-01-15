@@ -18,6 +18,26 @@ const RegistrosApi = {
         }
     },
 
+    finalizarOsRestante: async (osId) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/os/${osId}/finalizar-restante`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) throw new Error('Erro ao finalizar itens restantes.');
+            return true;
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao processar solicitação.');
+            return false;
+        }
+    },
+
     // Função principal que carrega os dados
     carregarDados: async (pagina = 0, busca = '') => {
         const accordionContainer = document.getElementById('accordion-registros');
