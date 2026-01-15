@@ -2,464 +2,473 @@
 window.API_MATERIALS_URL = window.API_MATERIALS_URL || 'http://localhost:8081';
 var API_MATERIALS_URL = window.API_MATERIALS_URL;
 
-(function () {
-    'use strict';
+(function () { 'use strict';
 
-    // --- Estado Local ---
-    let selecionadosMateriais = [];
-    let listaCompletaSolicitacoes = [];
+// --- Estado Local ---
+let selecionadosMateriais = [];
+let listaCompletaSolicitacoes = [];
 
-    // Controle para ação individual (Item ou Pedido Específico)
-    let acaoIndividualAlvo = null; // { idSolicitacao, idItem (opcional), tipo: 'ITEM' | 'PEDIDO' | 'LOTE' }
+// Controle para ação individual (Item ou Pedido Específico)
+let acaoIndividualAlvo = null; // { idSolicitacao, idItem (opcional), tipo: 'ITEM' | 'PEDIDO' | 'LOTE' }
 
-    // --- Exposição Global das Funções ---
-    window.carregarDadosMateriais = carregarDadosMateriais;
-    window.aprovarLoteMateriais = aprovarLoteMateriais;
-    window.rejeitarLoteMateriais = rejeitarLoteMateriais;
+// --- Exposição Global das Funções ---
+window.carregarDadosMateriais = carregarDadosMateriais;
+window.aprovarLoteMateriais = aprovarLoteMateriais;
+window.rejeitarLoteMateriais = rejeitarLoteMateriais;
 
-    window.togglePedidoInteiro = togglePedidoInteiro;
-    window.toggleItemIndividual = toggleItemIndividual; // Garantindo exposição
-    window.filtrarMateriaisNaTela = filtrarMateriaisNaTela;
-    window.renderizarCardsPedidos = renderizarCardsPedidos;
+window.togglePedidoInteiro = togglePedidoInteiro;
+window.toggleItemIndividual = toggleItemIndividual; // Garantindo exposição
+window.filtrarMateriaisNaTela = filtrarMateriaisNaTela;
+window.renderizarCardsPedidos = renderizarCardsPedidos;
 
-    // Funções de Gatilho (Botões da UI)
-    window.prepararAprovacao = prepararAprovacao;
-    window.prepararRejeicao = prepararRejeicao;
+// Funções de Gatilho (Botões da UI)
+window.prepararAprovacao = prepararAprovacao;
+window.prepararRejeicao = prepararRejeicao;
 
-    // Funções de Confirmação (Chamadas pelos Modais)
-    window.confirmarAprovacao = confirmarAprovacao;
-    window.confirmarRejeicao = confirmarRejeicao;
+// Funções de Confirmação (Chamadas pelos Modais)
+window.confirmarAprovacao = confirmarAprovacao;
+window.confirmarRejeicao = confirmarRejeicao;
 
-    // =================================================================
-    // 1. INICIALIZAÇÃO E LISTENERS (CORRIGIDO)
-    // =================================================================
-    function iniciarComponentes() {
-        injetarModaisDinamicos();
-        criarToolbarFlutuante();
+// =================================================================
+// 1. INICIALIZAÇÃO E LISTENERS (CORRIGIDO)
+// =================================================================
+function iniciarComponentes() {
+    injetarModaisDinamicos();
+    criarToolbarFlutuante();
+    instalarBloqueioCliqueCheckboxes();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', iniciarComponentes);
+} else {
+    iniciarComponentes(); // Executa imediatamente se o DOM já estiver pronto
+}
+
+function criarToolbarFlutuante() {
+    if (!document.querySelector('.actions-group-modern')) {
+        const toolbar = document.createElement('div');
+        toolbar.className = 'actions-group-modern';
+        toolbar.innerHTML = `
+            <div class="selection-info">
+                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                <span id="count-materiais-selection">0</span> selecionados
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-light text-danger fw-bold border-0" onclick="prepararRejeicao(null, null, 'LOTE')">
+                    Recusar Lote
+                </button>
+                <button class="btn btn-success-gradient shadow-sm" onclick="prepararAprovacao(null, null, 'LOTE')">
+                    Aprovar Lote
+                </button>
+            </div>
+        `;
+        document.body.appendChild(toolbar);
+        // começa escondida; aparece quando houver seleção
+        toolbar.style.display = 'none';
     }
+}
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', iniciarComponentes);
-    } else {
-        iniciarComponentes(); // Executa imediatamente se o DOM já estiver pronto
-    }
-
-    function criarToolbarFlutuante() {
-        if (!document.querySelector('.actions-group-modern')) {
-            const toolbar = document.createElement('div');
-            toolbar.className = 'actions-group-modern';
-            toolbar.innerHTML = `
-                <div class="selection-info">
-                    <i class="bi bi-check-circle-fill text-success me-2"></i>
-                    <span id="count-materiais-selection">0</span> selecionados
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-light text-danger fw-bold border-0" onclick="prepararRejeicao(null, null, 'LOTE')">
-                        Recusar Lote
-                    </button>
-                    <button class="btn btn-success-gradient shadow-sm" onclick="prepararAprovacao(null, null, 'LOTE')">
-                        Aprovar Lote
-                    </button>
-                </div>
-            `;
-            document.body.appendChild(toolbar);
-        }
-    }
-
-    function injetarModaisDinamicos() {
-        // 1. Modal de Aprovação (Genérico)
-        if (!document.getElementById('modalAprovacaoGenerico')) {
-            const modalAprov = document.createElement('div');
-            modalAprov.innerHTML = `
-            <div class="modal fade" id="modalAprovacaoGenerico" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content modal-content-modern border-0">
-                        <div class="modal-body p-4 text-center">
-                            <div class="modal-icon-circle bg-success bg-opacity-10 text-success mb-3">
-                                <i class="bi bi-check-lg"></i>
-                            </div>
-                            <h5 class="fw-bold mb-2">Confirmar Aprovação</h5>
-                            <p class="text-muted small mb-4" id="msgAprovacaoGenerico">Deseja realmente aprovar?</p>
-                            
-                            <div class="d-flex gap-2 justify-content-center">
-                                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="button" class="btn btn-success-gradient px-4" onclick="confirmarAprovacao()">
-                                    <i class="bi bi-check-circle me-1"></i> Confirmar
-                                </button>
-                            </div>
+function injetarModaisDinamicos() {
+    // 1. Modal de Aprovação (Genérico)
+    if (!document.getElementById('modalAprovacaoGenerico')) {
+        const modalAprov = document.createElement('div');
+        // Adicionado ID ao botão confirmar para manipular loading
+        modalAprov.innerHTML = `
+        <div class="modal fade" id="modalAprovacaoGenerico" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content modal-content-modern border-0">
+                    <div class="modal-body p-4 text-center">
+                        <div class="modal-icon-circle bg-success bg-opacity-10 text-success mb-3">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">Confirmar Aprovação</h5>
+                        <p class="text-muted small mb-4" id="msgAprovacaoGenerico">Deseja realmente aprovar?</p>
+                        
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-success-gradient px-4 d-flex align-items-center gap-2" id="btnConfirmarAprovacaoGen" onclick="confirmarAprovacao()">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                <i class="bi bi-check-circle"></i> Confirmar
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>`;
-            document.body.appendChild(modalAprov.firstElementChild);
-        }
+            </div>
+        </div>`;
+        document.body.appendChild(modalAprov.firstElementChild);
+    }
 
-        // 2. Modal de Recusa (Genérico)
-        if (!document.getElementById('modalRecusaGenerico')) {
-            const modalRecusa = document.createElement('div');
-            modalRecusa.innerHTML = `
-            <div class="modal fade" id="modalRecusaGenerico" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content modal-content-modern border-0">
-                        <div class="modal-body p-4 text-center">
-                            <div class="modal-icon-circle bg-danger bg-opacity-10 text-danger mb-3">
-                                <i class="bi bi-x-lg"></i>
-                            </div>
-                            <h5 class="fw-bold mb-2">Confirmar Recusa</h5>
-                            <p class="text-muted small mb-3" id="msgRecusaGenerico">Informe o motivo da recusa:</p>
-                            
-                            <textarea id="inputMotivoGenerico" class="form-control form-control-modern mb-3" rows="3" placeholder="Digite o motivo..."></textarea>
-                            
-                            <div class="d-flex gap-2 justify-content-center">
-                                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="button" class="btn btn-danger-gradient px-4" onclick="confirmarRejeicao()">
-                                    <i class="bi bi-x-circle me-1"></i> Recusar
-                                </button>
-                            </div>
+    // 2. Modal de Recusa (Genérico)
+    if (!document.getElementById('modalRecusaGenerico')) {
+        const modalRecusa = document.createElement('div');
+        // Adicionado ID ao botão confirmar para manipular loading
+        modalRecusa.innerHTML = `
+        <div class="modal fade" id="modalRecusaGenerico" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content modal-content-modern border-0">
+                    <div class="modal-body p-4 text-center">
+                        <div class="modal-icon-circle bg-danger bg-opacity-10 text-danger mb-3">
+                            <i class="bi bi-x-lg"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">Confirmar Recusa</h5>
+                        <p class="text-muted small mb-3" id="msgRecusaGenerico">Informe o motivo da recusa:</p>
+                        
+                        <textarea id="inputMotivoGenerico" class="form-control form-control-modern mb-3" rows="3" placeholder="Digite o motivo..."></textarea>
+                        
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-danger-gradient px-4 d-flex align-items-center gap-2" id="btnConfirmarRecusaGen" onclick="confirmarRejeicao()">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                <i class="bi bi-x-circle"></i> Recusar
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>`;
-            document.body.appendChild(modalRecusa.firstElementChild);
-        }
+            </div>
+        </div>`;
+        document.body.appendChild(modalRecusa.firstElementChild);
     }
+}
 
-    // =================================================================
-    // 2. BUSCA DE DADOS (GET)
-    // =================================================================
-    async function carregarDadosMateriais() {
-        const container = document.getElementById('container-pedidos-materiais');
-        if (!container) return;
+// =================================================================
+// 2. BUSCA DE DADOS (GET)
+// =================================================================
+async function carregarDadosMateriais() {
+    const container = document.getElementById('container-pedidos-materiais');
+    if (!container) return;
 
+    container.innerHTML = `
+        <div class="empty-state-modern py-5">
+            <div class="spinner-border text-success" role="status" style="width: 3rem; height: 3rem;"></div>
+            <p class="mt-4 text-muted fw-bold tracking-wide">BUSCANDO SOLICITAÇÕES...</p>
+        </div>`;
+
+    try {
+        const url = `${API_MATERIALS_URL}/api/materiais/solicitacoes/pendentes`;
+        const headersExtras = {};
+        if (typeof userRole !== 'undefined' && userRole) {
+            headersExtras['X-User-Role'] = userRole;
+        }
+
+        const response = await fetchComAuth(url, { method: 'GET', headers: headersExtras });
+        if (!response.ok) throw new Error(`Status: ${response.status}`);
+
+        const dados = await response.json();
+        listaCompletaSolicitacoes = Array.isArray(dados) ? dados : [];
+        renderizarCardsPedidos(listaCompletaSolicitacoes);
+
+    } catch (error) {
+        console.error(error);
         container.innerHTML = `
-            <div class="empty-state-modern py-5">
-                <div class="spinner-border text-success" role="status" style="width: 3rem; height: 3rem;"></div>
-                <p class="mt-4 text-muted fw-bold tracking-wide">BUSCANDO SOLICITAÇÕES...</p>
+            <div class="text-center py-5">
+                <div class="mb-3 text-danger"><i class="bi bi-wifi-off fs-1"></i></div>
+                <h5 class="text-muted">Falha na conexão</h5>
+                <p class="small text-muted">${error.message}</p>
+                <button class="btn btn-refresh-glass mx-auto mt-3" onclick="carregarDadosMateriais()">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
             </div>`;
+    }
+}
 
-        try {
-            const url = `${API_MATERIALS_URL}/api/materiais/solicitacoes/pendentes`;
-            const headersExtras = {};
-            if (typeof userRole !== 'undefined' && userRole) {
-                headersExtras['X-User-Role'] = userRole;
-            }
+// =================================================================
+// 3. RENDERIZAÇÃO
+// =================================================================
+function renderizarCardsPedidos(lista) {
+    const container = document.getElementById('container-pedidos-materiais');
+    if (!container) return;
 
-            const response = await fetchComAuth(url, { method: 'GET', headers: headersExtras });
-            if (!response.ok) throw new Error(`Status: ${response.status}`);
+    container.innerHTML = '';
+    selecionadosMateriais = [];
+    atualizarUIGlobal();
 
-            const dados = await response.json();
-            listaCompletaSolicitacoes = Array.isArray(dados) ? dados : [];
-            renderizarCardsPedidos(listaCompletaSolicitacoes);
-
-        } catch (error) {
-            console.error(error);
-            container.innerHTML = `
-                <div class="text-center py-5">
-                    <div class="mb-3 text-danger"><i class="bi bi-wifi-off fs-1"></i></div>
-                    <h5 class="text-muted">Falha na conexão</h5>
-                    <p class="small text-muted">${error.message}</p>
-                    <button class="btn btn-refresh-glass mx-auto mt-3" onclick="carregarDadosMateriais()">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
-                </div>`;
-        }
+    if (!lista || lista.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-modern py-5 fade-in-up">
+                <div style="font-size: 4rem; color: #e9ecef;"><i class="bi bi-box-seam"></i></div>
+                <h5 class="mt-3 text-muted fw-bold">Tudo limpo por aqui!</h5>
+                <p class="text-muted small">Nenhuma solicitação pendente no momento.</p>
+            </div>`;
+        return;
     }
 
-    // =================================================================
-    // 3. RENDERIZAÇÃO
-    // =================================================================
-    function renderizarCardsPedidos(lista) {
-        const container = document.getElementById('container-pedidos-materiais');
-        if (!container) return;
+    const accordionWrapper = document.createElement('div');
+    accordionWrapper.className = 'custom-accordion-modern';
+    accordionWrapper.id = 'accordionMateriais';
 
-        container.innerHTML = '';
-        selecionadosMateriais = [];
-        atualizarUIGlobal();
+    const role = (typeof userRole !== 'undefined' ? userRole : '').toUpperCase();
+    const podeAprovar = ['COORDINATOR', 'MANAGER', 'ADMIN', 'CONTROLLER'].includes(role);
 
-        if (!lista || lista.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state-modern py-5 fade-in-up">
-                    <div style="font-size: 4rem; color: #e9ecef;"><i class="bi bi-box-seam"></i></div>
-                    <h5 class="mt-3 text-muted fw-bold">Tudo limpo por aqui!</h5>
-                    <p class="text-muted small">Nenhuma solicitação pendente no momento.</p>
-                </div>`;
-            return;
+    lista.forEach((solicitacao, index) => {
+        const pedidoId = solicitacao.id;
+
+        // Correções de campos
+        const osObj = solicitacao.os || {};
+        const osReal = osObj.os || osObj.numero || osObj.numeroOS || osObj.id || 'N/A';
+        const solicitante = solicitacao.nomeSolicitante && solicitacao.nomeSolicitante !== 'null'
+            ? solicitacao.nomeSolicitante
+            : 'Solicitante Desconhecido';
+
+        const dataStr = formatarDataHora(solicitacao.dataSolicitacao);
+
+        let segmento = 'Geral';
+        if (solicitacao.os && solicitacao.os.segmento && solicitacao.os.segmento.nome) {
+            segmento = solicitacao.os.segmento.nome;
+        } else if (solicitacao.os && solicitacao.os.segmentoDescricao) {
+            segmento = solicitacao.os.segmentoDescricao;
         }
 
-        const accordionWrapper = document.createElement('div');
-        accordionWrapper.className = 'custom-accordion-modern';
-        accordionWrapper.id = 'accordionMateriais';
+        const totalValor = calcularTotal(solicitacao.itens);
+        const totalItens = (solicitacao.itens || []).length;
 
-        const role = (typeof userRole !== 'undefined' ? userRole : '').toUpperCase();
-        const podeAprovar = ['COORDINATOR', 'MANAGER', 'ADMIN', 'CONTROLLER'].includes(role);
+        // Renderiza Linhas da Tabela
+        const linhasItens = (solicitacao.itens || []).map(item => {
+            const mat = item.material || {};
+            const saldo = toNumber(mat.saldoFisico);
+            const qtd = toNumber(item.quantidadeSolicitada);
+            const custo = toNumber(mat.custoMedioPonderado);
+            const totalItem = qtd * custo;
+            const alertaEstoque = saldo < qtd;
+            
+            const isItemSelected = selecionadosMateriais.includes(item.id);
 
-        lista.forEach((solicitacao, index) => {
-            const pedidoId = solicitacao.id;
+            // Status visual
+            let statusHtml = '';
+            if (item.statusItem === 'PENDENTE') statusHtml = `<span class="badge bg-light text-secondary border">PENDENTE</span>`;
+            else if (item.statusItem === 'APROVADO') statusHtml = `<span class="badge status-approved"><i class="bi bi-check-circle-fill me-1"></i>APROVADO</span>`;
+            else if (item.statusItem === 'REPROVADO') statusHtml = `<span class="badge status-rejected"><i class="bi bi-x-circle-fill me-1"></i>RECUSADO</span>`;
 
-            // Correções de campos
-            const osObj = solicitacao.os || {};
-            const osReal = osObj.os || osObj.numero || osObj.numeroOS || osObj.id || 'N/A';
-            const solicitante = solicitacao.nomeSolicitante && solicitacao.nomeSolicitante !== 'null'
-                ? solicitacao.nomeSolicitante
-                : 'Solicitante Desconhecido';
-
-            const dataStr = formatarDataHora(solicitacao.dataSolicitacao);
-
-            let segmento = 'Geral';
-            if (solicitacao.os && solicitacao.os.segmento && solicitacao.os.segmento.nome) {
-                segmento = solicitacao.os.segmento.nome;
-            } else if (solicitacao.os && solicitacao.os.segmentoDescricao) {
-                segmento = solicitacao.os.segmentoDescricao;
+            // Botões de Ação Individual
+            let acoesHtml = '';
+            if (item.statusItem === 'PENDENTE' && podeAprovar) {
+                acoesHtml = `
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn-icon-item btn-action-approve" onclick="prepararAprovacao(${pedidoId}, ${item.id}, 'ITEM')" title="Aprovar Item">
+                            <i class="bi bi-check-lg"></i>
+                        </button>
+                        <button class="btn-icon-item btn-action-reject" onclick="prepararRejeicao(${pedidoId}, ${item.id}, 'ITEM')" title="Recusar Item">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                `;
             }
 
-            const totalValor = calcularTotal(solicitacao.itens);
-            const totalItens = (solicitacao.itens || []).length;
-
-            // Renderiza Linhas da Tabela
-            const linhasItens = (solicitacao.itens || []).map(item => {
-                const mat = item.material || {};
-                const saldo = toNumber(mat.saldoFisico);
-                const qtd = toNumber(item.quantidadeSolicitada);
-                const custo = toNumber(mat.custoMedioPonderado);
-                const totalItem = qtd * custo;
-                const alertaEstoque = saldo < qtd;
-                
-                // --- CORREÇÃO: Definindo isItemSelected para usar no checkbox ---
-                const isItemSelected = selecionadosMateriais.includes(item.id);
-
-                // Status visual
-                let statusHtml = '';
-                if (item.statusItem === 'PENDENTE') statusHtml = `<span class="badge bg-light text-secondary border">PENDENTE</span>`;
-                else if (item.statusItem === 'APROVADO') statusHtml = `<span class="badge status-approved"><i class="bi bi-check-circle-fill me-1"></i>APROVADO</span>`;
-                else if (item.statusItem === 'REPROVADO') statusHtml = `<span class="badge status-rejected"><i class="bi bi-x-circle-fill me-1"></i>RECUSADO</span>`;
-
-                // Botões de Ação Individual
-                let acoesHtml = '';
-                if (item.statusItem === 'PENDENTE' && podeAprovar) {
-                    acoesHtml = `
-                        <div class="d-flex justify-content-end gap-2">
-                            <button class="btn-icon-item btn-action-approve" onclick="prepararAprovacao(${pedidoId}, ${item.id}, 'ITEM')" title="Aprovar Item">
-                                <i class="bi bi-check-lg"></i>
-                            </button>
-                            <button class="btn-icon-item btn-action-reject" onclick="prepararRejeicao(${pedidoId}, ${item.id}, 'ITEM')" title="Recusar Item">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </div>
-                    `;
-                }
-
-                return `
-                    <tr>
-                        <td class="text-center">
-                            ${item.statusItem === 'PENDENTE' && podeAprovar ? `
-                                <div class="form-check d-flex justify-content-center">
-                                    <input class="form-check-input check-item-filho" 
-                                           type="checkbox" 
-                                           value="${item.id}" 
-                                           ${isItemSelected ? 'checked' : ''}
-                                           onchange="toggleItemIndividual(this, ${pedidoId})">
-                                </div>
-                            ` : ''}
-                        </td>
-                        <td style="width: 60px;">
-                            <div class="material-icon-box">
-                                <i class="bi bi-box-seam"></i>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="text-item-title">${mat.descricao || 'Item Desconhecido'}</span>
-                            <span class="text-muted text-xs font-monospace">COD: ${mat.codigo || '-'}</span>
-                        </td>
-                        <td class="text-center"><span class="badge-unid">${mat.unidadeMedida || 'UN'}</span></td>
-                        <td class="text-center fw-bold text-dark">${qtd}</td>
-                        <td class="text-center">
-                            <span class="${alertaEstoque ? 'text-danger fw-bold' : 'text-success'}">
-                                ${saldo}
-                            </span>
-                            ${alertaEstoque ? '<i class="bi bi-exclamation-circle-fill text-danger ms-1" title="Estoque insuficiente"></i>' : ''}
-                        </td>
-                        <td class="text-end pe-4">
-                            <span class="price-tag">${formatarMoeda(totalItem)}</span>
-                        </td>
-                        <td class="text-center">${statusHtml}</td>
-                        <td class="text-end ps-3">${acoesHtml}</td>
-                    </tr>
-                `;
-            }).join('');
-
-            const cardItem = document.createElement('div');
-            cardItem.className = 'accordion-item pedido-item-dom fade-in-up';
-            cardItem.setAttribute('data-search', `${osReal} ${solicitante}`.toLowerCase());
-            cardItem.style.animationDelay = `${index * 0.05}s`;
-
-            // --- REMOVIDO OBJETO CONTRATADO DO CABEÇALHO ---
-            cardItem.innerHTML = `
-                <div class="pedido-header collapsed" data-bs-toggle="collapse" data-bs-target="#collapse-${pedidoId}">
-                    <div class="d-flex align-items-center w-100 gap-3">
-                        ${podeAprovar ? `
-                            <div class="form-check" onclick="event.stopPropagation()">
-                                <input class="form-check-input form-check-input-custom check-pedido-pai" 
+            return `
+                <tr>
+                    <td class="text-center">
+                        ${item.statusItem === 'PENDENTE' && podeAprovar ? `
+                            <div class="form-check d-flex justify-content-center" onclick="event.stopPropagation(); event.stopImmediatePropagation();">
+                                <input class="form-check-input check-item-filho" 
                                        type="checkbox" 
-                                       value="${pedidoId}" 
-                                       onchange="togglePedidoInteiro(this, ${pedidoId})">
+                                       value="${item.id}" 
+                                       ${isItemSelected ? 'checked' : ''}
+                                       onclick="event.stopPropagation(); event.stopImmediatePropagation();"
+                                       onchange="toggleItemIndividual(this, ${pedidoId})">
                             </div>
                         ` : ''}
-
-                        <div class="d-flex flex-column flex-grow-1">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <span class="badge-os">OS ${osReal}</span>
-                                <span class="text-muted text-xs ms-auto d-md-none">${dataStr}</span>
-                            </div>
-                            <div class="d-flex align-items-center justify-content-between">
-                            <div class="user-name">
-                                <i class="bi bi-person-circle text-muted me-2 opacity-50"></i>
-                                <span class="fw-bold text-dark">${solicitante}</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-3 d-none d-md-flex">
-                                <span class="text-muted text-xs" title="Data da Solicitação">
-                                    <i class="bi bi-calendar me-1"></i>${dataStr}
-                                </span>
-                                
-                                <span class="badge bg-light text-dark border" title="Segmento">
-                                    <i class="bi bi-layers me-1"></i>${segmento}
-                                </span>
-                                
-                                <span class="fw-bold text-success ms-2">${formatarMoeda(totalValor)}</span>
-                            </div>
+                    </td>
+                    <td style="width: 60px;">
+                        <div class="material-icon-box">
+                            <i class="bi bi-box-seam"></i>
                         </div>
-                        </div>
-                        
-                        <div class="ms-3 text-muted opacity-50">
-                            <i class="bi bi-chevron-down transition-icon"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="collapse-${pedidoId}" class="accordion-collapse collapse" data-bs-parent="#accordionMateriais">
-                    <div class="accordion-body bg-white p-0">
-                        <div class="table-responsive p-3" style="max-height: 500px; overflow-y: auto; overflow-x: auto;">
-                            <table class="table-modern-2026">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 40px;" class="text-center">
-                                            <i class="bi bi-check2-square"></i>
-                                        </th>
-                                        <th>Ref</th>
-                                        <th>Material / Descrição</th>
-                                        <th class="text-center">Unid</th>
-                                        <th class="text-center">Qtd</th>
-                                        <th class="text-center">Estoque</th>
-                                        <th class="text-end pe-4">Total</th>
-                                        <th class="text-center">Status</th>
-                                        <th class="text-end">Ação</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${linhasItens}
-                                    ${solicitacao.justificativa ? `
-                                        <tr class="row-justificativa">
-                                            <td colspan="9">
-                                                <div class="justificativa-box">
-                                                    <i class="bi bi-chat-quote-fill fs-5"></i>
-                                                    <div>
-                                                        <strong>JUSTIFICATIVA DO SOLICITANTE:</strong><br>
-                                                        ${solicitacao.justificativa}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ` : ''}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="p-3 bg-light border-top d-flex align-items-center justify-content-between">
-                            <div class="text-muted text-xs">
-                                <i class="bi bi-info-circle me-1"></i>
-                                ${totalItens} itens na solicitação
-                            </div>
-                            ${podeAprovar ? `
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-outline-danger fw-bold border-0" 
-                                            onclick="prepararRejeicao(${pedidoId}, null, 'PEDIDO')">
-                                        Recusar Pedido
-                                    </button>
-                                    <button class="btn btn-success-gradient btn-sm px-4 shadow-sm" 
-                                            onclick="prepararAprovacao(${pedidoId}, null, 'PEDIDO')">
-                                        <i class="bi bi-check2-all me-1"></i> Aprovar Tudo
-                                    </button>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
+                    </td>
+                    <td>
+                        <span class="text-item-title">${mat.descricao || 'Item Desconhecido'}</span>
+                        <span class="text-muted text-xs font-monospace">COD: ${mat.codigo || '-'}</span>
+                    </td>
+                    <td class="text-center"><span class="badge-unid">${mat.unidadeMedida || 'UN'}</span></td>
+                    <td class="text-center fw-bold text-dark">${qtd}</td>
+                    <td class="text-center">
+                        <span class="${alertaEstoque ? 'text-danger fw-bold' : 'text-success'}">
+                            ${saldo}
+                        </span>
+                        ${alertaEstoque ? '<i class="bi bi-exclamation-circle-fill text-danger ms-1" title="Estoque insuficiente"></i>' : ''}
+                    </td>
+                    <td class="text-end pe-4">
+                        <span class="price-tag">${formatarMoeda(totalItem)}</span>
+                    </td>
+                    <td class="text-center">${statusHtml}</td>
+                    <td class="text-end ps-3">${acoesHtml}</td>
+                </tr>
             `;
-            accordionWrapper.appendChild(cardItem);
-        });
+        }).join('');
 
-        container.appendChild(accordionWrapper);
-    }
+        const cardItem = document.createElement('div');
+        cardItem.className = 'accordion-item pedido-item-dom fade-in-up';
+        cardItem.setAttribute('data-search', `${osReal} ${solicitante}`.toLowerCase());
+        cardItem.style.animationDelay = `${index * 0.05}s`;
 
-    // =================================================================
-    // 4. LÓGICA DE INTERAÇÃO (GATILHOS)
-    // =================================================================
+        // CORREÇÃO: Adicionado onclick="event.stopPropagation()" também no INPUT para garantir que não abra o accordion
+        cardItem.innerHTML = `
+            <div class="pedido-header collapsed" data-bs-toggle="collapse" data-bs-target="#collapse-${pedidoId}">
+                <div class="d-flex align-items-center w-100 gap-3">
+                    ${podeAprovar ? `
+                        <div class="form-check" onclick="event.stopPropagation()">
+                            <input class="form-check-input form-check-input-custom check-pedido-pai" 
+                                   type="checkbox" 
+                                   value="${pedidoId}" 
+                                   onclick="event.stopPropagation()"
+                                   onchange="togglePedidoInteiro(this, ${pedidoId})">
+                        </div>
+                    ` : ''}
 
-    // --- Preparar Aprovação ---
-    function prepararAprovacao(idSolicitacao, idItem, tipo) {
-        acaoIndividualAlvo = { idSolicitacao, idItem, tipo };
+                    <div class="d-flex flex-column flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge-os">OS ${osReal}</span>
+                            <span class="text-muted text-xs ms-auto d-md-none">${dataStr}</span>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between">
+                        <div class="user-name">
+                            <i class="bi bi-person-circle text-muted me-2 opacity-50"></i>
+                            <span class="fw-bold text-dark">${solicitante}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-3 d-none d-md-flex">
+                            <span class="text-muted text-xs" title="Data da Solicitação">
+                                <i class="bi bi-calendar me-1"></i>${dataStr}
+                            </span>
+                            
+                            <span class="badge bg-light text-dark border" title="Segmento">
+                                <i class="bi bi-layers me-1"></i>${segmento}
+                            </span>
+                            
+                            <span class="fw-bold text-success ms-2">${formatarMoeda(totalValor)}</span>
+                        </div>
+                    </div>
+                    </div>
+                    
+                    <div class="ms-3 text-muted opacity-50">
+                        <i class="bi bi-chevron-down transition-icon"></i>
+                    </div>
+                </div>
+            </div>
 
-        let texto = "";
-        if (tipo === 'ITEM') texto = "Deseja aprovar este item individualmente?";
-        if (tipo === 'PEDIDO') texto = "Deseja aprovar todos os itens deste pedido?";
-        if (tipo === 'LOTE') texto = `Deseja aprovar ${selecionadosMateriais.length} solicitações selecionadas?`;
+            <div id="collapse-${pedidoId}" class="accordion-collapse collapse" data-bs-parent="#accordionMateriais">
+                <div class="accordion-body bg-white p-0">
+                    <div class="table-responsive p-3" style="max-height: 500px; overflow-y: auto; overflow-x: auto;">
+                        <table class="table-modern-2026">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;" class="text-center">
+                                        <i class="bi bi-check2-square"></i>
+                                    </th>
+                                    <th>Ref</th>
+                                    <th>Material / Descrição</th>
+                                    <th class="text-center">Unid</th>
+                                    <th class="text-center">Qtd</th>
+                                    <th class="text-center">Estoque</th>
+                                    <th class="text-end pe-4">Total</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-end">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${linhasItens}
+                                ${solicitacao.justificativa ? `
+                                    <tr class="row-justificativa">
+                                        <td colspan="9">
+                                            <div class="justificativa-box">
+                                                <i class="bi bi-chat-quote-fill fs-5"></i>
+                                                <div>
+                                                    <strong>JUSTIFICATIVA DO SOLICITANTE:</strong><br>
+                                                    ${solicitacao.justificativa}
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ` : ''}
+                            </tbody>
+                        </table>
+                    </div>
 
-        const txtEl = document.getElementById('msgAprovacaoGenerico');
-        if (txtEl) txtEl.innerText = texto;
+                    <div class="p-3 bg-light border-top d-flex align-items-center justify-content-between">
+                        <div class="text-muted text-xs">
+                            <i class="bi bi-info-circle me-1"></i>
+                            ${totalItens} itens na solicitação
+                        </div>
+                        ${podeAprovar ? `
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-danger fw-bold border-0" 
+                                        onclick="prepararRejeicao(${pedidoId}, null, 'PEDIDO')">
+                                    Recusar Pedido
+                                </button>
+                                <button class="btn btn-success-gradient btn-sm px-4 shadow-sm" 
+                                        onclick="prepararAprovacao(${pedidoId}, null, 'PEDIDO')">
+                                    <i class="bi bi-check2-all me-1"></i> Aprovar Tudo
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        accordionWrapper.appendChild(cardItem);
+    });
 
-        const modal = new bootstrap.Modal(document.getElementById('modalAprovacaoGenerico'));
-        modal.show();
-    }
+    container.appendChild(accordionWrapper);
+}
 
-    // --- Preparar Rejeição ---
-    function prepararRejeicao(idSolicitacao, idItem, tipo) {
-        acaoIndividualAlvo = { idSolicitacao, idItem, tipo };
+// =================================================================
+// 4. LÓGICA DE INTERAÇÃO (GATILHOS)
+// =================================================================
 
-        let texto = "";
-        if (tipo === 'ITEM') texto = "Motivo da recusa deste item:";
-        if (tipo === 'PEDIDO') texto = "Motivo da recusa do pedido completo:";
-        if (tipo === 'LOTE') texto = `Motivo da recusa para as ${selecionadosMateriais.length} solicitações:`;
+// --- Preparar Aprovação ---
+function prepararAprovacao(idSolicitacao, idItem, tipo) {
+    acaoIndividualAlvo = { idSolicitacao, idItem, tipo };
 
-        const txtEl = document.getElementById('msgRecusaGenerico');
-        if (txtEl) txtEl.innerText = texto;
+    let texto = "";
+    if (tipo === 'ITEM') texto = "Deseja aprovar este item individualmente?";
+    if (tipo === 'PEDIDO') texto = "Deseja aprovar todos os itens deste pedido?";
+    if (tipo === 'LOTE') texto = `Deseja aprovar ${selecionadosMateriais.length} solicitações selecionadas?`;
 
-        document.getElementById('inputMotivoGenerico').value = '';
+    const txtEl = document.getElementById('msgAprovacaoGenerico');
+    if (txtEl) txtEl.innerText = texto;
 
-        const modal = new bootstrap.Modal(document.getElementById('modalRecusaGenerico'));
-        modal.show();
-    }
+    // garante que o modal sempre abra "limpo" (sem spinner preso / botões desabilitados)
+    resetModalLoadingState('modalAprovacaoGenerico', 'btnConfirmarAprovacaoGen');
 
-    // =================================================================
-    // 5. CONFIRMAÇÕES (AÇÃO REAL)
-    // =================================================================
+    const modal = new bootstrap.Modal(document.getElementById('modalAprovacaoGenerico'));
+    modal.show();
+}
 
-    async function confirmarAprovacao() {
-        const modalEl = document.getElementById('modalAprovacaoGenerico');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
+// --- Preparar Rejeição ---
+function prepararRejeicao(idSolicitacao, idItem, tipo) {
+    acaoIndividualAlvo = { idSolicitacao, idItem, tipo };
 
+    let texto = "";
+    if (tipo === 'ITEM') texto = "Motivo da recusa deste item:";
+    if (tipo === 'PEDIDO') texto = "Motivo da recusa do pedido completo:";
+    if (tipo === 'LOTE') texto = `Motivo da recusa para as ${selecionadosMateriais.length} solicitações:`;
+
+    const txtEl = document.getElementById('msgRecusaGenerico');
+    if (txtEl) txtEl.innerText = texto;
+
+    document.getElementById('inputMotivoGenerico').value = '';
+
+    // garante que o modal sempre abra "limpo" (sem spinner preso / botões desabilitados)
+    resetModalLoadingState('modalRecusaGenerico', 'btnConfirmarRecusaGen');
+
+    const modal = new bootstrap.Modal(document.getElementById('modalRecusaGenerico'));
+    modal.show();
+}
+
+// =================================================================
+// 5. CONFIRMAÇÕES (AÇÃO REAL)
+// =================================================================
+
+async function confirmarAprovacao() {
+    // Sempre mostra carregando no modal
+    const modalEl = document.getElementById('modalAprovacaoGenerico');
+    const btn = document.getElementById('btnConfirmarAprovacaoGen');
+    setModalInteratividade(modalEl, false);
+    setButtonLoadingSafe(btn, true);
+
+    try {
         if (!acaoIndividualAlvo) return;
         const { idSolicitacao, idItem, tipo } = acaoIndividualAlvo;
 
         if (tipo === 'LOTE') {
             await enviarDecisaoLote('APROVAR', null);
         } else if (tipo === 'PEDIDO') {
-            // Pedido agora é tratado como lote de itens se for via botão "Aprovar Tudo"
-            // Mas aqui o backend pode esperar ids de itens. 
-            // Como "Aprovar Tudo" não preenche 'selecionadosMateriais' automaticamente,
-            // precisamos pegar os itens da solicitação. Mas para simplificar, 
-            // vamos assumir que o usuário clicou no botão do pedido.
-            // Para "PEDIDO", vamos buscar os itens pendentes dessa solicitação e aprovar em lote.
-            
             const solicitacao = listaCompletaSolicitacoes.find(s => s.id === idSolicitacao);
             if(solicitacao && solicitacao.itens) {
                  const idsPendentes = solicitacao.itens
@@ -471,19 +480,34 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         } else if (tipo === 'ITEM') {
             await enviarDecisaoItem(idSolicitacao, idItem, 'APROVAR', null);
         }
-    }
 
-    async function confirmarRejeicao() {
-        const motivo = document.getElementById('inputMotivoGenerico').value;
-        if (!motivo || motivo.trim() === '') {
-            alert("Motivo é obrigatório.");
-            return;
-        }
-
-        const modalEl = document.getElementById('modalRecusaGenerico');
+        // Fecha modal apenas no sucesso
         const modal = bootstrap.Modal.getInstance(modalEl);
         if (modal) modal.hide();
 
+    } catch (error) {
+        console.error(error);
+        if (window.mostrarToast) mostrarToast("Erro ao processar aprovação", "error");
+    } finally {
+        setButtonLoadingSafe(btn, false);
+        setModalInteratividade(modalEl, true);
+    }
+}
+
+async function confirmarRejeicao() {
+    const motivo = document.getElementById('inputMotivoGenerico').value;
+    if (!motivo || motivo.trim() === '') {
+        alert("Motivo é obrigatório.");
+        return;
+    }
+
+    // Sempre mostra carregando no modal
+    const modalEl = document.getElementById('modalRecusaGenerico');
+    const btn = document.getElementById('btnConfirmarRecusaGen');
+    setModalInteratividade(modalEl, false);
+    setButtonLoadingSafe(btn, true);
+
+    try {
         if (!acaoIndividualAlvo) return;
         const { idSolicitacao, idItem, tipo } = acaoIndividualAlvo;
 
@@ -501,184 +525,272 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         } else if (tipo === 'ITEM') {
             await enviarDecisaoItem(idSolicitacao, idItem, 'REJEITAR', motivo);
         }
+
+        // Fecha modal apenas no sucesso
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+    } catch (error) {
+        console.error(error);
+        if (window.mostrarToast) mostrarToast("Erro ao processar recusa", "error");
+    } finally {
+        setButtonLoadingSafe(btn, false);
+        setModalInteratividade(modalEl, true);
     }
+}
 
-    // =================================================================
-    // 6. BACKEND CALLS
-    // =================================================================
+// =================================================================
+// 6. BACKEND CALLS
+// =================================================================
 
-    // --- ITEM INDIVIDUAL ---
-    async function enviarDecisaoItem(idSolicitacao, idItem, acao, observacao) {
-        if (window.toggleLoader) window.toggleLoader(true);
-        try {
-            const role = (typeof userRole !== 'undefined' ? userRole : '').toUpperCase();
-            const usuarioId = (typeof userId !== 'undefined') ? userId : null;
-            const url = `${API_MATERIALS_URL}/api/materiais/solicitacoes/${idSolicitacao}/itens/${idItem}/decidir`;
+// --- ITEM INDIVIDUAL ---
+async function enviarDecisaoItem(idSolicitacao, idItem, acao, observacao) {
+    // window.toggleLoader(true); // Opcional se já estiver usando o loading do botão
+    try {
+        const role = (typeof userRole !== 'undefined' ? userRole : '').toUpperCase();
+        const usuarioId = (typeof userId !== 'undefined') ? userId : null;
+        const url = `${API_MATERIALS_URL}/api/materiais/solicitacoes/${idSolicitacao}/itens/${idItem}/decidir`;
 
-            const body = { acao, observacao, aprovadorId: usuarioId };
+        const body = { acao, observacao, aprovadorId: usuarioId };
 
-            const response = await fetchComAuth(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-User-Role': role },
-                body: JSON.stringify(body)
-            });
+        const response = await fetchComAuth(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-User-Role': role },
+            body: JSON.stringify(body)
+        });
 
-            if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
 
-            if (window.mostrarToast) mostrarToast(`Item ${acao === 'APROVAR' ? 'Aprovado' : 'Recusado'} com sucesso!`, "success");
-            await carregarDadosMateriais();
+        if (window.mostrarToast) mostrarToast(`Item ${acao === 'APROVAR' ? 'Aprovado' : 'Recusado'} com sucesso!`, "success");
+        await carregarDadosMateriais();
 
-        } catch (error) {
-            console.error(error);
-            if (window.mostrarToast) mostrarToast(error.message, "error");
-        } finally {
-            if (window.toggleLoader) window.toggleLoader(false);
+    } catch (error) {
+        throw error; // Repassa erro para o catch do modal
+    } finally {
+        // window.toggleLoader(false);
+    }
+}
+
+// --- LOTE (OU PEDIDO INTEIRO) ---
+async function enviarDecisaoLote(acao, observacao) {
+    // window.toggleLoader(true);
+    try {
+        // CORREÇÃO: Limpa toolbar imediatamente para feedback visual
+        const itensProcessados = [...selecionadosMateriais]; // Cópia para usar no corpo
+        selecionadosMateriais = [];
+        limparSelecaoUI();
+        atualizarUIGlobal();
+
+        const role = (typeof userRole !== 'undefined' ? userRole : '').toUpperCase();
+        const usuarioId = (typeof userId !== 'undefined') ? userId : null;
+
+        let endpoint = '';
+        if (role === 'CONTROLLER' || role === 'ADMIN') {
+            endpoint = (acao === 'APROVAR')
+                ? `/api/materiais/solicitacoes/controller/aprovar-lote`
+                : `/api/materiais/solicitacoes/controller/rejeitar-lote`;
+        } else {
+            endpoint = (acao === 'APROVAR')
+                ? `/api/materiais/solicitacoes/coordenador/aprovar-lote`
+                : `/api/materiais/solicitacoes/coordenador/rejeitar-lote`;
         }
+
+        const body = {
+            ids: itensProcessados, // AGORA SÃO IDS DE ITENS
+            aprovadorId: usuarioId,
+            observacao: observacao
+        };
+
+        const response = await fetchComAuth(`${API_MATERIALS_URL}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-User-Role': role },
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+
+        if (window.mostrarToast) mostrarToast(`Operação ${acao} realizada com sucesso!`, "success");
+
+        await carregarDadosMateriais();
+        if (typeof carregarDashboardEBadges === 'function') carregarDashboardEBadges();
+
+    } catch (error) {
+        throw error;
+    } finally {
+        // window.toggleLoader(false);
+    }
+}
+
+// =================================================================
+// 7. UTILITÁRIOS E FILTROS
+// =================================================================
+
+// -----------------------------------------------------------------
+// Helpers de UI (loading / seleção)
+// -----------------------------------------------------------------
+
+function setButtonLoadingSafe(btn, isLoading) {
+    if (!btn) return;
+    if (typeof window.setButtonLoading === 'function') {
+        window.setButtonLoading(btn, isLoading);
+        return;
     }
 
-    // --- LOTE (OU PEDIDO INTEIRO) ---
-    async function enviarDecisaoLote(acao, observacao) {
-        if (window.toggleLoader) window.toggleLoader(true);
-        try {
-            const role = (typeof userRole !== 'undefined' ? userRole : '').toUpperCase();
-            const usuarioId = (typeof userId !== 'undefined') ? userId : null;
+    // fallback (quando setButtonLoading não existir)
+    const spinner = btn.querySelector('.spinner-border');
+    const icon = btn.querySelector('i');
 
-            // Define rota baseada no perfil
-            let endpoint = '';
-            if (role === 'CONTROLLER' || role === 'ADMIN') {
-                endpoint = (acao === 'APROVAR')
-                    ? `/api/materiais/solicitacoes/controller/aprovar-lote`
-                    : `/api/materiais/solicitacoes/controller/rejeitar-lote`;
-            } else {
-                endpoint = (acao === 'APROVAR')
-                    ? `/api/materiais/solicitacoes/coordenador/aprovar-lote`
-                    : `/api/materiais/solicitacoes/coordenador/rejeitar-lote`;
-            }
+    if (isLoading) {
+        btn.disabled = true;
+        if (spinner) spinner.classList.remove('d-none');
+        if (icon) icon.classList.add('d-none');
+    } else {
+        btn.disabled = false;
+        if (spinner) spinner.classList.add('d-none');
+        if (icon) icon.classList.remove('d-none');
+    }
+}
 
-            const body = {
-                ids: selecionadosMateriais, // AGORA SÃO IDS DE ITENS
-                aprovadorId: usuarioId,
-                observacao: observacao
-            };
+function setModalInteratividade(modalEl, habilitar) {
+    if (!modalEl) return;
+    // trava o cancelar/fechar e inputs enquanto estiver processando
+    modalEl.querySelectorAll('[data-bs-dismiss="modal"]').forEach(btn => {
+        btn.disabled = !habilitar;
+    });
+    const textarea = modalEl.querySelector('textarea');
+    if (textarea) textarea.disabled = !habilitar;
+}
 
-            const response = await fetchComAuth(`${API_MATERIALS_URL}${endpoint}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-User-Role': role },
-                body: JSON.stringify(body)
-            });
+function resetModalLoadingState(modalId, confirmBtnId) {
+    const modalEl = document.getElementById(modalId);
+    const btn = document.getElementById(confirmBtnId);
+    setButtonLoadingSafe(btn, false);
+    setModalInteratividade(modalEl, true);
+}
 
-            if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+function deduplicarSelecao() {
+    // garante que o contador reflita o real (evita duplicatas)
+    selecionadosMateriais = Array.from(new Set(selecionadosMateriais));
+}
 
-            if (window.mostrarToast) mostrarToast(`Operação ${acao} realizada com sucesso!`, "success");
+function limparSelecaoUI() {
+    // feedback instantâneo depois de uma ação em lote
+    document.querySelectorAll('.check-item-filho, .check-pedido-pai').forEach(cb => {
+        cb.checked = false;
+        cb.indeterminate = false;
+    });
+    document.querySelectorAll('.pedido-item-dom.selected-card').forEach(card => card.classList.remove('selected-card'));
+}
 
-            selecionadosMateriais = [];
-            await carregarDadosMateriais();
-            if (typeof carregarDashboardEBadges === 'function') carregarDashboardEBadges();
+function instalarBloqueioCliqueCheckboxes() {
+    // Bootstrap collapse escuta cliques via delegation; aqui a gente intercepta antes
+    // para garantir que o click no checkbox NÃO abre/fecha o accordion.
+    document.addEventListener('click', function (e) {
+        const alvo = e.target && e.target.closest && e.target.closest('input[type="checkbox"].check-item-filho, input[type="checkbox"].check-pedido-pai');
+        if (!alvo) return;
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+    }, true);
+}
 
-        } catch (error) {
-            console.error(error);
-            if (window.mostrarToast) mostrarToast(error.message, "error");
-        } finally {
-            if (window.toggleLoader) window.toggleLoader(false);
-        }
+// --- Nova Lógica de Seleção: Item Individual ---
+function toggleItemIndividual(checkbox, pedidoId) {
+    const itemId = parseInt(checkbox.value);
+    
+    if (checkbox.checked) {
+        if (!selecionadosMateriais.includes(itemId)) selecionadosMateriais.push(itemId);
+    } else {
+        selecionadosMateriais = selecionadosMateriais.filter(id => id !== itemId);
     }
 
-    // =================================================================
-    // 7. UTILITÁRIOS E FILTROS
-    // =================================================================
+    const card = checkbox.closest('.pedido-item-dom');
+    atualizarEstadoCheckboxPai(card, pedidoId);
+    deduplicarSelecao();
+    atualizarUIGlobal();
+}
 
-    // --- Nova Lógica de Seleção: Item Individual ---
-    function toggleItemIndividual(checkbox, pedidoId) {
-        const itemId = parseInt(checkbox.value);
-        const card = checkbox.closest('.pedido-item-dom');
+// --- Atualiza Lógica de Seleção: Pedido Inteiro (Pai) ---
+function togglePedidoInteiro(checkbox, pedidoId) {
+    const card = checkbox.closest('.pedido-item-dom');
+    const checkboxesFilhos = card.querySelectorAll('.check-item-filho');
+    const isChecked = checkbox.checked;
+
+    checkboxesFilhos.forEach(child => {
+        child.checked = isChecked;
+        const itemId = parseInt(child.value);
         
-        if (checkbox.checked) {
+        if (isChecked) {
             if (!selecionadosMateriais.includes(itemId)) selecionadosMateriais.push(itemId);
         } else {
             selecionadosMateriais = selecionadosMateriais.filter(id => id !== itemId);
         }
+    });
 
-        atualizarEstadoCheckboxPai(card, pedidoId);
-        atualizarUIGlobal();
+    if (isChecked) card.classList.add('selected-card');
+    else card.classList.remove('selected-card');
+
+    // garante consistência visual (indeterminate/reset)
+    atualizarEstadoCheckboxPai(card, pedidoId);
+    deduplicarSelecao();
+    atualizarUIGlobal();
+}
+
+// --- Função Auxiliar Visual ---
+function atualizarEstadoCheckboxPai(card, pedidoId) {
+    if (!card) return;
+    const checkPai = card.querySelector('.check-pedido-pai');
+    const filhos = Array.from(card.querySelectorAll('.check-item-filho'));
+    
+    if(filhos.length === 0) return;
+
+    const todosMarcados = filhos.every(c => c.checked);
+    const algumMarcado = filhos.some(c => c.checked);
+
+    if (checkPai) {
+        checkPai.checked = todosMarcados;
+        checkPai.indeterminate = algumMarcado && !todosMarcados; 
     }
+    
+    if (algumMarcado) card.classList.add('selected-card');
+    else card.classList.remove('selected-card');
+}
 
-    // --- Atualiza Lógica de Seleção: Pedido Inteiro (Pai) ---
-    function togglePedidoInteiro(checkbox, pedidoId) {
-        const card = checkbox.closest('.pedido-item-dom');
-        const checkboxesFilhos = card.querySelectorAll('.check-item-filho');
-        const isChecked = checkbox.checked;
+function atualizarUIGlobal() {
+    const toolbar = document.querySelector('.actions-group-modern');
+    const counter = document.getElementById('count-materiais-selection');
+    if (!toolbar || !counter) return;
 
-        checkboxesFilhos.forEach(child => {
-            child.checked = isChecked;
-            const itemId = parseInt(child.value);
-            
-            if (isChecked) {
-                if (!selecionadosMateriais.includes(itemId)) selecionadosMateriais.push(itemId);
-            } else {
-                selecionadosMateriais = selecionadosMateriais.filter(id => id !== itemId);
-            }
-        });
+    const total = selecionadosMateriais.length;
+    counter.innerText = String(total);
 
-        if (isChecked) card.classList.add('selected-card');
-        else card.classList.remove('selected-card');
+    const hasSelection = total > 0;
+    toolbar.classList.toggle('show', hasSelection);
+    // garante que some imediatamente na ação em lote, sem depender de CSS/transição
+    toolbar.style.display = hasSelection ? 'flex' : 'none';
+}
 
-        atualizarUIGlobal();
-    }
+function filtrarMateriaisNaTela() {
+    const termo = (document.getElementById('filtro-materiais-input')?.value || '').toLowerCase();
+    document.querySelectorAll('.pedido-item-dom').forEach(card => {
+        const searchData = card.getAttribute('data-search').toLowerCase();
+        card.classList.toggle('d-none', !searchData.includes(termo));
+    });
+}
 
-    // --- Função Auxiliar Visual ---
-    function atualizarEstadoCheckboxPai(card, pedidoId) {
-        if (!card) return;
-        const checkPai = card.querySelector('.check-pedido-pai');
-        const filhos = Array.from(card.querySelectorAll('.check-item-filho'));
-        
-        if(filhos.length === 0) return;
+// Compatibilidade com código legado
+function aprovarLoteMateriais() { prepararAprovacao(null, null, 'LOTE'); }
+function rejeitarLoteMateriais() { prepararRejeicao(null, null, 'LOTE'); }
+function confirmarAprovacaoLoteMateriais() { confirmarAprovacao(); }
+function confirmarRejeicaoLoteMateriais() { confirmarRejeicao(); }
 
-        const todosMarcados = filhos.every(c => c.checked);
-        const algumMarcado = filhos.some(c => c.checked);
-
-        if (checkPai) {
-            checkPai.checked = todosMarcados;
-            // CORREÇÃO: "someMarcado" alterado para "algumMarcado"
-            checkPai.indeterminate = algumMarcado && !todosMarcados; 
-        }
-        
-        if (algumMarcado) card.classList.add('selected-card');
-        else card.classList.remove('selected-card');
-    }
-
-    function atualizarUIGlobal() {
-        const toolbar = document.querySelector('.actions-group-modern');
-        const counter = document.getElementById('count-materiais-selection');
-        if (toolbar && counter) {
-            counter.innerText = selecionadosMateriais.length;
-            if (selecionadosMateriais.length > 0) toolbar.classList.add('show');
-            else toolbar.classList.remove('show');
-        }
-    }
-
-    function filtrarMateriaisNaTela() {
-        const termo = (document.getElementById('filtro-materiais-input')?.value || '').toLowerCase();
-        document.querySelectorAll('.pedido-item-dom').forEach(card => {
-            const searchData = card.getAttribute('data-search').toLowerCase();
-            card.classList.toggle('d-none', !searchData.includes(termo));
-        });
-    }
-
-    // Compatibilidade com código legado
-    function aprovarLoteMateriais() { prepararAprovacao(null, null, 'LOTE'); }
-    function rejeitarLoteMateriais() { prepararRejeicao(null, null, 'LOTE'); }
-    function confirmarAprovacaoLoteMateriais() { confirmarAprovacao(); }
-    function confirmarRejeicaoLoteMateriais() { confirmarRejeicao(); }
-
-    function toNumber(v) { return Number(v) || 0; }
-    function calcularTotal(itens) {
-        return (itens || []).reduce((acc, i) => acc + (toNumber(i.quantidadeSolicitada) * toNumber(i.material?.custoMedioPonderado)), 0);
-    }
-    function formatarDataHora(iso) {
-        if (!iso) return '-';
-        const d = new Date(iso);
-        return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    }
-    const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
-
+function toNumber(v) { return Number(v) || 0; }
+function calcularTotal(itens) {
+    return (itens || []).reduce((acc, i) => acc + (toNumber(i.quantidadeSolicitada) * toNumber(i.material?.custoMedioPonderado)), 0);
+}
+function formatarDataHora(iso) {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 })();
