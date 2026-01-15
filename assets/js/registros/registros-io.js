@@ -318,22 +318,28 @@ const RegistrosIO = {
                             const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os/export/completo`);
                             if (!response.ok) throw new Error("Erro ao baixar dados completos.");
                             const listaCompletaOS = await response.json();
-                            
+
                             atualizarProgresso(50, 'Processando dados...');
                             linhasParaExportar = RegistrosIO.processarListaParaExportacao(listaCompletaOS);
 
                         } else if (tipoExportacaoSelecionada === 'FATURADOS_PENDENTES') {
-                            atualizarProgresso(30, 'Buscando registros faturados pendentes...');
-                            const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os/relatorios/faturados-nao-finalizados`);
-                            if (!response.ok) throw new Error("Erro ao gerar relatório especial.");
-                            const listaEspecialOS = await response.json();
+                            atualizarProgresso(30, 'Buscando registros inconsistentes...');
 
-                            if (!listaEspecialOS || listaEspecialOS.length === 0) {
-                                throw new Error("Nenhum registro encontrado para este critério.");
+                            // 1. Chama o endpoint que retorna JSON (Lista de DTOs)
+                            const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os/relatorios/faturados-nao-finalizados`);
+
+                            if (!response.ok) throw new Error("Erro ao buscar dados do relatório.");
+
+                            // 2. Recebe a lista igual à Base Completa
+                            const listaInconsistencias = await response.json();
+
+                            if (!listaInconsistencias || listaInconsistencias.length === 0) {
+                                throw new Error("Nenhum registro com inconsistência (Faturado mas não Finalizado) encontrado.");
                             }
 
-                            atualizarProgresso(50, 'Processando dados...');
-                            linhasParaExportar = RegistrosIO.processarListaParaExportacao(listaEspecialOS);
+                            atualizarProgresso(60, 'Gerando Excel no padrão Base Completa...');
+
+                            linhasParaExportar = RegistrosIO.processarListaParaExportacao(listaInconsistencias);
                         }
 
                         if (linhasParaExportar.length === 0) {
