@@ -253,6 +253,56 @@ const RegistrosActions = {
         }
     },
 
+    setupRelatorioEspecial: () => {
+        const userRole = RegistrosState.userRole; // Ou como você pega a role: localStorage.getItem('role')
+        
+        // Regra de Visibilidade: Apenas ADMIN, CONTROLLER, ASSISTANT
+        if (['ADMIN', 'CONTROLLER', 'ASSISTANT'].includes(userRole)) {
+            const container = document.getElementById('container-relatorio-especial');
+            if (container) container.classList.remove('d-none');
+        }
+
+        // Listener do Click
+        const btn = document.getElementById('btnRelatorioFaturadoPendente');
+        if (btn) {
+            btn.addEventListener('click', async () => {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando...';
+                btn.disabled = true;
+
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`${RegistrosState.API_BASE_URL}/os/relatorios/faturados-nao-finalizados`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Erro ao gerar relatório');
+
+                    // Lógica para baixar o arquivo
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Relatorio_Faturados_Pendentes_${new Date().getTime()}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+
+                } catch (error) {
+                    console.error(error);
+                    alert('Erro ao baixar relatório.');
+                } finally {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }
+            });
+        }
+    },
+
     setupFormEdicao: (modal) => {
         const formEditarDetalheEl = document.getElementById('formEditarDetalhe');
         if (!formEditarDetalheEl) return;
