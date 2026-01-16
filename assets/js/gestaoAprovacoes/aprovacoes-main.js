@@ -62,8 +62,12 @@ document.addEventListener('DOMContentLoaded', async function () {
                 renderizarAcordeonPendencias(window.todasPendenciasAtividades);
             } 
             else if (painelAtivoId === '#materiais-pane') {
-                // CORREÇÃO: Chama a nova função de Cards
-                renderizarCardsPedidos(window.todasPendenciasMateriais);
+                // CORREÇÃO: Chama o carregamento completo para exibir o spinner/loader inicial
+                if (typeof carregarDadosMateriais === 'function') {
+                    carregarDadosMateriais();
+                } else {
+                    renderizarCardsPedidos(window.todasPendenciasMateriais);
+                }
             } 
             else if (painelAtivoId === '#complementares-pane') {
                 renderizarTabelaPendentesComplementares(window.todasPendenciasComplementares);
@@ -90,8 +94,11 @@ document.addEventListener('DOMContentLoaded', async function () {
                 renderizarAcordeonPendencias(window.todasPendenciasAtividades);
             } 
             else if (targetPaneId === '#materiais-pane') {
-                // CORREÇÃO: Chama a nova função de Cards na troca de aba
-                renderizarCardsPedidos(window.todasPendenciasMateriais);
+                // CORREÇÃO CRUCIAL: Ao trocar para a aba Materiais, forçamos o carregarDadosMateriais()
+                // Isso ativa o spinner definido em aprovacoes-materiais.js antes de mostrar o resultado.
+                if (typeof carregarDadosMateriais === 'function') {
+                    carregarDadosMateriais();
+                }
             } 
             else if (targetPaneId === '#complementares-pane') {
                 renderizarTabelaPendentesComplementares(window.todasPendenciasComplementares);
@@ -421,8 +428,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             modalAprovarMaterial.hide();
             await carregarDashboardEBadges();
             
-            // CORREÇÃO: Renderiza Cards Atualizados
-            renderizarCardsPedidos(window.todasPendenciasMateriais);
+            // CORREÇÃO: Usa carregarDadosMateriais() para dar refresh visual correto
+            if (typeof carregarDadosMateriais === 'function') carregarDadosMateriais();
+            else renderizarCardsPedidos(window.todasPendenciasMateriais);
             
         } catch (e) { mostrarToast(e.message, 'error'); }
         finally { setButtonLoading(this, false); toggleLoader(false, '#materiais-pane'); }
@@ -444,8 +452,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             modalRecusarMaterial.hide();
             await carregarDashboardEBadges();
             
-            // CORREÇÃO: Renderiza Cards Atualizados
-            renderizarCardsPedidos(window.todasPendenciasMateriais);
+            // CORREÇÃO: Usa carregarDadosMateriais() para dar refresh visual correto
+            if (typeof carregarDadosMateriais === 'function') carregarDadosMateriais();
+            else renderizarCardsPedidos(window.todasPendenciasMateriais);
 
         } catch (e) { mostrarToast(e.message, 'error'); }
         finally { setButtonLoading(btn, false); toggleLoader(false, '#materiais-pane'); }

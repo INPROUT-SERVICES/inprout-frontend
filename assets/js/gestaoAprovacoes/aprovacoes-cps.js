@@ -178,7 +178,7 @@ function renderizarBarraFiltrosModerna() {
 async function initFiltrosCPS() {
     const nomesMeses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     const hoje = new Date();
-    
+
     const selectMesPend = document.getElementById('cps-filtro-mes-ref');
     const selectMesHist = document.getElementById('cps-hist-filtro-mes-ref');
 
@@ -215,18 +215,18 @@ async function initFiltrosCPS() {
         if (resSeg.ok) {
             const segs = await resSeg.json();
             selectsSeg.forEach(sel => {
-                if (sel) { 
+                if (sel) {
                     const valAtual = sel.value;
-                    sel.innerHTML = '<option value="">Todos os Segmentos</option>'; 
-                    segs.forEach(s => sel.add(new Option(s.nome, s.id))); 
+                    sel.innerHTML = '<option value="">Todos os Segmentos</option>';
+                    segs.forEach(s => sel.add(new Option(s.nome, s.id)));
                     if (valAtual) sel.value = valAtual;
                 }
             });
         }
-        
+
         if (resPrest.ok) {
             const prests = await resPrest.json();
-            
+
             // Prestador Pendências
             const elPrestPend = selectsPrest[0];
             if (elPrestPend) {
@@ -236,7 +236,7 @@ async function initFiltrosCPS() {
                 }
                 elPrestPend.innerHTML = '<option value="">Todos os Prestadores</option>';
                 prests.forEach(p => elPrestPend.add(new Option(`${p.codigoPrestador} - ${p.prestador}`, p.id)));
-                
+
                 window.choicesCpsPrestador = new Choices(elPrestPend, {
                     searchEnabled: true,
                     itemSelectText: '',
@@ -255,7 +255,7 @@ async function initFiltrosCPS() {
                 }
                 elPrestHist.innerHTML = '<option value="">Todos os Prestadores</option>';
                 prests.forEach(p => elPrestHist.add(new Option(`${p.codigoPrestador} - ${p.prestador}`, p.id)));
-                
+
                 window.choicesCpsHistPrestador = new Choices(elPrestHist, {
                     searchEnabled: true,
                     itemSelectText: '',
@@ -272,7 +272,7 @@ async function initFiltrosCPS() {
     // Isso evita que o preenchimento dispare o 'change' e recarregue a tela.
     if (selectMesPend) selectMesPend.addEventListener('change', carregarPendenciasCPS);
     if (selectsSeg[0]) selectsSeg[0].addEventListener('change', carregarPendenciasCPS);
-    
+
     // Listener no select do Choices.js (o evento sobe do elemento original)
     if (selectsPrest[0]) selectsPrest[0].addEventListener('change', carregarPendenciasCPS);
 
@@ -287,9 +287,9 @@ async function initFiltrosCPS() {
 
 async function carregarPendenciasCPS() {
     toggleLoader(true, '#cps-pendencias-pane');
-    
+
     await atualizarHeaderKpiCPS();
-    
+
     try {
         const segmentoId = document.getElementById('cps-filtro-segmento')?.value || '';
         const prestadorId = document.getElementById('cps-filtro-prestador')?.value || '';
@@ -298,9 +298,9 @@ async function carregarPendenciasCPS() {
 
         const res = await fetchComAuth(`${API_BASE_URL}/controle-cps?${params}`, { headers: { 'X-User-ID': userId } });
         if (!res.ok) throw new Error('Erro ao buscar pendências.');
-        
+
         const dados = await res.json();
-        
+
         window.dadosCpsGlobais = dados;
         renderizarAcordeonCPS(window.dadosCpsGlobais, 'accordionPendenciasCPS', 'msg-sem-pendencias-cps', true);
 
@@ -314,7 +314,7 @@ async function carregarPendenciasCPS() {
 async function atualizarHeaderKpiCPS() {
     const els = document.querySelectorAll('.kpi-cps-total-mes-value');
     if (!els.length) return;
-    
+
     const mesVal = document.getElementById('cps-filtro-mes-ref')?.value;
     const segId = document.getElementById('cps-filtro-segmento')?.value || '';
     const prestId = document.getElementById('cps-filtro-prestador')?.value || '';
@@ -322,7 +322,7 @@ async function atualizarHeaderKpiCPS() {
     if (!mesVal) return;
 
     const [ano, mes] = mesVal.split('-');
-    
+
     const params = new URLSearchParams({
         inicio: `${ano}-${mes}-01`,
         fim: `${ano}-${mes}-${new Date(ano, mes, 0).getDate()}`,
@@ -369,7 +369,7 @@ async function carregarHistoricoCPS(append = false) {
             window.cpsHistDataInicio = new Date();
             window.cpsHistDataInicio.setDate(window.cpsHistDataFim.getDate() - 30);
         }
-        
+
         window.dadosCpsHistorico = [];
         const acc = document.getElementById('accordionHistoricoCPS');
         if (acc) acc.innerHTML = '';
@@ -379,7 +379,7 @@ async function carregarHistoricoCPS(append = false) {
         const novaDataFim = new Date(window.cpsHistDataInicio);
         novaDataFim.setDate(novaDataFim.getDate() - 1);
         window.cpsHistDataFim = novaDataFim;
-        
+
         const novaDataInicio = new Date(window.cpsHistDataFim);
         novaDataInicio.setDate(novaDataInicio.getDate() - 30);
         window.cpsHistDataInicio = novaDataInicio;
@@ -419,6 +419,7 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
 
     const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
 
+    // Filtros de visualização por perfil
     if (isPendencia) {
         lista = lista.filter(l => {
             if (['COORDINATOR', 'MANAGER'].includes(userRole)) return l.statusPagamento === 'EM_ABERTO';
@@ -435,7 +436,8 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
     }
     if (msgDiv) msgDiv.classList.add('d-none');
 
-    const grupos = lista.reduce((acc, l) => {
+    // Agrupamento por OS
+    const gruposMap = lista.reduce((acc, l) => {
         const id = l.os?.id || 0;
         if (!acc[id]) {
             acc[id] = { 
@@ -453,11 +455,47 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         return acc;
     }, {});
 
+    // Converte mapa para lista para poder ordenar os GRUPOS
+    const listaGrupos = Object.values(gruposMap);
+
+    // --- 1. ORDENAÇÃO DOS GRUPOS (PRIORIDADE VISUAL) ---
+    listaGrupos.sort((a, b) => {
+        // Verifica se existe solicitação de adiantamento dentro do grupo
+        const aTemAdiant = a.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
+        const bTemAdiant = b.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
+        
+        // Prioridade 1: Grupos com Solicitação de Adiantamento (Para Controller)
+        if (userRole === 'CONTROLLER') {
+            if (aTemAdiant && !bTemAdiant) return -1; // A vem primeiro
+            if (!aTemAdiant && bTemAdiant) return 1;  // B vem primeiro
+        }
+        return 0; // Mantém ordem original para os demais
+    });
+
     const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
-    Object.values(grupos).forEach((grp, idx) => {
+    listaGrupos.forEach((grp, idx) => {
         const uid = `cps-${isPendencia ? 'pend' : 'hist'}-${idx}`;
-        grp.itens.sort((a, b) => (a.statusPagamento === 'EM_ABERTO' ? -1 : 1));
+        
+        // Ordenação interna dos itens (Rows)
+        grp.itens.sort((a, b) => {
+            if (a.statusPagamento === 'SOLICITACAO_ADIANTAMENTO') return -1;
+            if (b.statusPagamento === 'SOLICITACAO_ADIANTAMENTO') return 1;
+            return 0;
+        });
+
+        // Verifica flag para pintar o container
+        const temSolicitacaoAdiantamento = grp.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
+
+        // --- 2. DEFINE COR DO CONTAINER (HEADER DO ACORDEÃO) ---
+        let headerStyleClass = '';
+        let headerStyleInline = '';
+        
+        if (isPendencia && userRole === 'CONTROLLER' && temSolicitacaoAdiantamento) {
+            // Amarelo claro para chamar atenção (bg-warning-subtle é do Bootstrap 5.3+, fallback com style)
+            headerStyleClass = 'bg-warning-subtle'; 
+            headerStyleInline = 'background-color: #fff3cd !important; color: #664d03;';
+        }
 
         let showHeaderCheck = false;
         if (isPendencia) {
@@ -473,6 +511,7 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
                 <div class="header-title-wrapper">
                     <span class="header-title-project">${grp.projeto || '-'}</span>
                     <span class="header-title-os">${grp.os || '-'}</span>
+                    ${temSolicitacaoAdiantamento && userRole === 'CONTROLLER' ? '<span class="badge bg-warning text-dark ms-2"><i class="bi bi-exclamation-triangle-fill"></i> Adiantamento</span>' : ''}
                 </div>
                 <div class="header-kpi-wrapper d-flex gap-3">
                     <div class="header-kpi"><span class="kpi-label">TOTAL CPS</span><span class="kpi-value">${fmt(grp.totalCps)}</span></div>
@@ -485,10 +524,15 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         const linhas = grp.itens.map(l => {
             let btns = `<button class="btn btn-sm btn-outline-info me-1" title="Ver" onclick="verComentarios(${l.id})"><i class="bi bi-eye"></i></button>`;
             let showRowCheck = false;
+            
             const isConfirmado = l.statusPagamento === 'FECHADO' || l.statusPagamento === 'ALTERACAO_SOLICITADA';
-            const isAdiantado = (parseFloat(l.valorAdiantamento) || 0) > 0;
             const isPago = l.statusPagamento === 'PAGO' || l.statusPagamento === 'CONCLUIDO';
+            const isAdiantado = (parseFloat(l.valorAdiantamento) || 0) > 0;
+            const isSolicitacao = l.statusPagamento === 'SOLICITACAO_ADIANTAMENTO';
+
             let rowClass = isPago ? 'table-success' : (isConfirmado ? 'table-primary-light' : (isAdiantado ? 'table-warning-light' : ''));
+            // Destaca a linha da solicitação também, se quiser
+            if (isSolicitacao) rowClass = 'table-warning';
 
             if (isPendencia) {
                 if (['COORDINATOR', 'MANAGER', 'ADMIN'].includes(userRole) && l.statusPagamento === 'EM_ABERTO') {
@@ -528,7 +572,9 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         <div class="accordion-item border mb-2 shadow-sm" style="border-radius: 8px; overflow: hidden;">
             <h2 class="accordion-header position-relative" id="heading-${uid}">
                 ${checkHtml}
-                <button class="accordion-button collapsed ${pl}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${uid}">
+                <button class="accordion-button collapsed ${pl} ${headerStyleClass}" type="button" 
+                        style="${headerStyleInline}"
+                        data-bs-toggle="collapse" data-bs-target="#collapse-${uid}">
                     ${headerHtml}
                 </button>
             </h2>
@@ -583,9 +629,9 @@ function atualizarBotoesLoteCPS() {
         if (pane) {
             toolbar = document.createElement('div');
             toolbar.id = 'cps-toolbar-lote';
-            toolbar.className = 'cps-toolbar-floating d-none'; 
+            toolbar.className = 'cps-toolbar-floating d-none';
             document.body.appendChild(toolbar);
-            
+
             document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
                 tab.addEventListener('show.bs.tab', () => toolbar.classList.add('d-none'));
             });
@@ -694,7 +740,7 @@ window.executarAcaoLote = function (acao) {
         const m = new bootstrap.Modal(document.getElementById('modalConfirmacaoGenerica'));
         document.getElementById('modalGenericoTitulo').innerText = acao === 'pagarController' ? 'Pagar CPS' : 'Pagar Adiantamentos';
         document.getElementById('modalGenericoTexto').innerText = `Confirma o pagamento de ${ids.length} itens selecionados?`;
-        
+
         const btn = document.getElementById('btnGenericoConfirmar');
         const novoBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(novoBtn, btn);
@@ -756,7 +802,7 @@ function toggleLoader(show, selector) {
 
     // Tenta encontrar o loader interno específico
     const loader = container.querySelector('.overlay-loader');
-    
+
     if (loader) {
         // Se existe o loader "bonito"
         if (show) {
@@ -895,7 +941,7 @@ if (formRecu) {
     formRecu.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = formRecu.querySelector('button[type="submit"]');
-        
+
         // Dados do Formulário
         const motivo = document.getElementById('cpsMotivoRecusaInput').value;
         const usuarioId = parseInt(localStorage.getItem('usuarioId')); // Garante que é número (Long)
@@ -915,8 +961,8 @@ if (formRecu) {
         if (isLote) {
             // Pega IDs dos checkboxes marcados
             ids = Array.from(document.querySelectorAll('.cps-check:checked'))
-                       .map(c => parseInt(c.dataset.id))
-                       .filter(id => !isNaN(id)); // Filtra inválidos
+                .map(c => parseInt(c.dataset.id))
+                .filter(id => !isNaN(id)); // Filtra inválidos
         } else {
             // Pega ID do campo oculto (item único)
             const idUnico = parseInt(document.getElementById('cpsLancamentoIdRecusar').value);
@@ -932,24 +978,24 @@ if (formRecu) {
 
         // Define URL e Payload com tipos corretos
         const url = isLote ? '/controle-cps/recusar-controller-lote' : '/controle-cps/recusar-controller';
-        
+
         // ATENÇÃO: Para item único, o backend espera "lancamentoId" (singular). 
         // Para lote, espera "lancamentoIds" (plural).
-        const payload = isLote 
+        const payload = isLote
             ? { lancamentoIds: ids, controllerId: usuarioId, motivo: motivo }
             : { lancamentoId: ids[0], controllerId: usuarioId, motivo: motivo };
 
         try {
-            const res = await fetchComAuth(`${API_BASE_URL}${url}`, { 
-                method: 'POST', 
+            const res = await fetchComAuth(`${API_BASE_URL}${url}`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' }, // Garante cabeçalho JSON
-                body: JSON.stringify(payload) 
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
                 mostrarToast("Devolução realizada com sucesso!", "success");
                 if (window.modalRecusarCPS) window.modalRecusarCPS.hide();
-                
+
                 // Limpa seleção e recarrega
                 document.querySelectorAll('.cps-check:checked').forEach(c => c.checked = false);
                 document.querySelectorAll('.cps-select-all').forEach(c => c.checked = false);
@@ -962,15 +1008,15 @@ if (formRecu) {
                 try {
                     const erroJson = JSON.parse(erroTxt);
                     msgErro = erroJson.message || msgErro;
-                } catch(e) { msgErro = erroTxt; }
-                
+                } catch (e) { msgErro = erroTxt; }
+
                 throw new Error(msgErro);
             }
-        } catch (err) { 
+        } catch (err) {
             console.error(err);
-            mostrarToast(err.message, "error"); 
-        } finally { 
-            setLoading(btn, false); 
+            mostrarToast(err.message, "error");
+        } finally {
+            setLoading(btn, false);
         }
     });
 }
@@ -1049,7 +1095,7 @@ function gerarOpcoesCompetencia() {
     const select = document.getElementById('cpsCompetenciaInput');
     if (!select) return;
     select.innerHTML = '';
-    
+
     const hoje = new Date();
     // Data base inicial (Mês atual)
     let dataBase = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -1071,7 +1117,7 @@ function gerarOpcoesCompetencia() {
     // ----------------------------
 
     const meses = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
-    
+
     for (let i = 0; i < 60; i++) {
         const mes = dataBase.getMonth();
         const ano = dataBase.getFullYear();
