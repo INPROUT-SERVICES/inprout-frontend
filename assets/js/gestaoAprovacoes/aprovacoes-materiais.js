@@ -202,7 +202,7 @@ function renderizarCardsPedidos(lista) {
     accordionWrapper.id = 'accordionMateriais';
 
     const role = (typeof userRole !== 'undefined' ? userRole : '').toUpperCase();
-    const podeAprovar = ['COORDINATOR', 'MANAGER', 'ADMIN', 'CONTROLLER'].includes(role);
+    const podeAprovar = ['COORDINATOR', 'ADMIN', 'CONTROLLER'].includes(role);
 
     lista.forEach((solicitacao, index) => {
         const pedidoId = solicitacao.id;
