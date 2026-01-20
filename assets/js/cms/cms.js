@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // CONFIGURAÇÕES E CONSTANTES
     // ==========================================================
     const API_BASE_URL = 'http://localhost:8081';      // Microsserviço de Materiais (Backend Novo)
-    const API_MONOLITO_URL = 'https://www.inproutservices.com.br/api';  // Monólito (Backend Antigo)
+    const API_MONOLITO_URL = 'http://localhost:8080';  // Monólito (Backend Antigo)
 
     // --- Seletores de Elementos Principais ---
     const containerMateriais = document.getElementById('materiais-container');

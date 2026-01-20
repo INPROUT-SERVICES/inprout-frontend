@@ -5,7 +5,7 @@
 
 window.RegistrosState = {
     userRole: (localStorage.getItem("role") || "").trim().toUpperCase(),
-    API_BASE_URL: 'https://www.inproutservices.com.br/api',
+    API_BASE_URL: 'http://localhost:8080',
     
     // Dados da página atual
     todasAsLinhas: [], 

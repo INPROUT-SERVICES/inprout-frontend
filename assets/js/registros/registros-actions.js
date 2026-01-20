@@ -173,9 +173,8 @@ const RegistrosActions = {
         // Listener de Exclusão (Mantido)
         const btnConfirmarExclusaoDefinitiva = document.getElementById('btnConfirmarExclusaoDefinitiva');
         if (btnConfirmarExclusaoDefinitiva) {
-            btnConfirmarExclusaoDefinitiva.addEventListener('click', async function () {
-                // ... seu código de exclusão existente ...
-                // Só lembre de checar se está usando RegistrosUtils.mostrarToast aqui também ao invés de alert
+            btnConfirmarExclusaoDefinitiva.addEventListener('click', function () {
+                RegistrosActions.executarExclusao(this, modalConfirmarExclusao);
             });
         }
     },
@@ -255,7 +254,7 @@ const RegistrosActions = {
 
     setupRelatorioEspecial: () => {
         const userRole = RegistrosState.userRole; // Ou como você pega a role: localStorage.getItem('role')
-        
+
         // Regra de Visibilidade: Apenas ADMIN, CONTROLLER, ASSISTANT
         if (['ADMIN', 'CONTROLLER', 'ASSISTANT'].includes(userRole)) {
             const container = document.getElementById('container-relatorio-especial');

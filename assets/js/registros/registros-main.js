@@ -4,24 +4,40 @@
  */
 
 document.addEventListener('DOMContentLoaded', async function () {
-    // 1. Lógica de Segurança das Abas (Novo código)
+    // 1. Configura visibilidade das abas (Segurança)
     configurarVisibilidadeAbas();
 
-    // Inicializa ações de UI (botões, modais)
+    // 2. Inicializa módulos
     RegistrosActions.init();
-    
-    // Inicializa Importação/Exportação
     RegistrosIO.init();
 
     if (RegistrosApi.inicializarPagina) {
         await RegistrosApi.inicializarPagina();
     }
 
-    // Configura ouvinte de busca
+    // 3. Listener de Busca
     document.getElementById('searchInput').addEventListener('input', RegistrosRender.renderizarTabelaComFiltro);
 
-    // Carrega os dados da tabela
+    // 4. Carrega os dados da tabela (Lista de Registros)
     RegistrosApi.carregarDados(0, '');
+
+    // --- CORREÇÃO DO DASHBOARD AQUI --- //
+
+    // Verifica permissão e carrega o Dashboard se for ADMIN
+    const role = (localStorage.getItem("role") || "").trim().toUpperCase();
+    if (role === 'ADMIN') {
+        console.log("Iniciando carregamento do Dashboard...");
+        RegistrosApi.carregarDashboard();
+    }
+
+    // Adiciona evento para recarregar/atualizar ao clicar na aba "Análise"
+    const dashboardTabBtn = document.getElementById('dashboard-tab');
+    if (dashboardTabBtn) {
+        dashboardTabBtn.addEventListener('shown.bs.tab', function (event) {
+            // Apenas recarrega se não estiver carregando (opcional)
+            RegistrosApi.carregarDashboard();
+        });
+    }
 });
 
 /**

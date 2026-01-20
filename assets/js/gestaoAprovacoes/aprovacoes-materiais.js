@@ -1,5 +1,10 @@
-// Define a URL do serviço de materiais (Porta 8081 conforme application.yaml)
-window.API_MATERIALS_URL = window.API_MATERIALS_URL || 'http://localhost:8081';
+if (!window.API_MATERIALS_URL) {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        window.API_MATERIALS_URL = 'http://localhost:8081';
+    } else {
+        window.API_MATERIALS_URL = window.location.origin; 
+    }
+}
 var API_MATERIALS_URL = window.API_MATERIALS_URL;
 
 (function () { 'use strict';
@@ -148,9 +153,20 @@ async function carregarDadosMateriais() {
 
     try {
         const url = `${API_MATERIALS_URL}/api/materiais/solicitacoes/pendentes`;
+        
         const headersExtras = {};
+        
+        // 1. Envia a Role (já existia)
         if (typeof userRole !== 'undefined' && userRole) {
             headersExtras['X-User-Role'] = userRole;
+        }
+
+        // 2. CORREÇÃO: Envia o ID do Usuário para filtro de segmento
+        // Tenta pegar de variável global ou do localStorage (como fallback)
+        const currentUserId = (typeof userId !== 'undefined' && userId) ? userId : localStorage.getItem('usuarioId');
+        
+        if (currentUserId) {
+            headersExtras['X-User-Id'] = currentUserId;
         }
 
         const response = await fetchComAuth(url, { method: 'GET', headers: headersExtras });
