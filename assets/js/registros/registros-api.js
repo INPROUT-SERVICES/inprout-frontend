@@ -43,7 +43,7 @@ const RegistrosApi = {
             return true;
         } catch (error) {
             console.error(error);
-            throw error; 
+            throw error;
         }
     },
 
@@ -176,30 +176,53 @@ const RegistrosApi = {
     },
 
     preencherDashboard: (stats) => {
-        // Simples Helpers para evitar nulos
-        const setText = (id, val) => document.getElementById(id).innerText = val || 0;
+        // Helper para texto simples
+        const setText = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = val || 0;
+        };
 
+        // Helper para moeda
+        const setMoney = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = RegistrosUtils.formatarMoeda(val || 0);
+        };
+
+        // Quantidades
         setText('dash-nao-iniciado', stats.naoIniciado);
         setText('dash-paralisado', stats.paralisado);
         setText('dash-aguardando-doc', stats.aguardandoDoc);
 
+        // -- NOVOS VALORES --
+        setMoney('dash-valor-nao-iniciado', stats.valorNaoIniciado);
+        setMoney('dash-valor-paralisado', stats.valorParalisado);
+        setMoney('dash-valor-aguardando-doc', stats.valorAguardandoDoc);
+
         // Em Andamento
-        setText('dash-andamento-total', stats.emAndamento?.total);
-        setText('dash-andamento-com-po', stats.emAndamento?.comPo);
-        setText('dash-andamento-sem-po', stats.emAndamento?.semPo);
+        if (stats.emAndamento) {
+            setText('dash-andamento-total', stats.emAndamento.total);
+            setText('dash-andamento-com-po', stats.emAndamento.comPo);
+            setText('dash-andamento-sem-po', stats.emAndamento.semPo);
+
+            // Valor total em andamento
+            setMoney('dash-valor-andamento-total', stats.emAndamento.valorTotal);
+        }
 
         // Finalizado
-        setText('dash-finalizado-total', stats.finalizado?.total);
-        setText('dash-finalizado-com-po', stats.finalizado?.comPo);
-        setText('dash-finalizado-sem-po', stats.finalizado?.semPo);
+        if (stats.finalizado) {
+            setText('dash-finalizado-total', stats.finalizado.total);
+            setText('dash-finalizado-com-po', stats.finalizado.comPo);
+            setText('dash-finalizado-sem-po', stats.finalizado.semPo);
 
-        // Gate
+            // Valor total finalizado
+            setMoney('dash-valor-finalizado-total', stats.finalizado.valorTotal);
+        }
+
+        // Gate (Mantido igual)
         if (stats.gateAtual) {
             document.getElementById('dash-gate-nome').innerText = stats.gateAtual.nomeGate;
-            // Formata data YYYY-MM-DD para DD/MM/YYYY
             const dataFim = stats.gateAtual.previsao ? stats.gateAtual.previsao.split('-').reverse().join('/') : '--';
             document.getElementById('dash-gate-previsao').innerText = dataFim;
-
             setText('dash-gate-solicitado', stats.gateAtual.idSolicitado);
             setText('dash-gate-ok', stats.gateAtual.idOk);
         } else {

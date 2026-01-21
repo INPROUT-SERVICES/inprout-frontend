@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // CONFIGURAÇÕES E CONSTANTES
     // ==========================================================
     const API_BASE_URL = 'http://localhost:8081';      // Microsserviço de Materiais (Backend Novo)
-    const API_MONOLITO_URL = 'http://localhost:8080';  // Monólito (Backend Antigo)
+    const API_MONOLITO_URL = 'https://www.inproutservices.com.br/api';  // Monólito (Backend Antigo)
 
     // --- Seletores de Elementos Principais ---
     const containerMateriais = document.getElementById('materiais-container');
@@ -107,9 +107,16 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function setupRoleBasedUI_CMA() {
+        // 1. Configuração da Importação (já existente)
         if (importContainer) {
             importContainer.classList.toggle('d-none', !temAcessoTotal);
             importContainer.classList.toggle('d-flex', temAcessoTotal);
+        }
+
+        // 2. NOVO: Ocultar botão de Novo Material se não tiver acesso total
+        if (btnNovoMaterial) {
+            // Se tem acesso total, mostra (display: flex), senão esconde (none)
+            btnNovoMaterial.style.display = temAcessoTotal ? 'flex' : 'none';
         }
     }
 
@@ -252,6 +259,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const empresa = material.empresa || 'N/A';
             const empresaClass = empresa === 'INPROUT' ? 'empresa-inprout' : 'empresa-cliente';
 
+            // --- LÓGICA DE PERMISSÃO DOS BOTÕES ---
+            // Se temAcessoTotal (Admin/Controller), gera o HTML do botão.
+            // Se for Manager (false), gera uma string vazia.
+
+            const btnEntradaHtml = temAcessoTotal
+                ? `<button class="btn-card entry btn-acao" data-acao="entrada" data-id="${material.id}" title="Adicionar Estoque">
+                     <i class="bi bi-plus-circle-fill"></i> Entrada
+                   </button>`
+                : '';
+
+            const btnExcluirHtml = temAcessoTotal
+                ? `<button class="btn-card delete btn-acao" data-acao="excluir" data-id="${material.id}" data-descricao="${material.descricao}" title="Excluir">
+                     <i class="bi bi-trash"></i>
+                   </button>`
+                : '';
+
+            // Ícone do botão de detalhes muda visualmente para "olho" se for apenas leitura (opcional, mas recomendado)
+            const iconeDetalhes = temAcessoTotal ? 'bi-pencil-square' : 'bi-eye';
+            const tituloDetalhes = temAcessoTotal ? 'Editar' : 'Visualizar';
+
             const cardHTML = `
                 <div class="material-card ${selectedClass}" data-id="${material.id}">
                     <div class="card-check-wrapper">
@@ -280,15 +307,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
 
                     <div class="card-actions">
-                        <button class="btn-card entry btn-acao" data-acao="entrada" data-id="${material.id}" title="Adicionar Estoque">
-                            <i class="bi bi-plus-circle-fill"></i> Entrada
+                        ${btnEntradaHtml} 
+                        
+                        <button class="btn-card details btn-acao" data-acao="detalhes" data-id="${material.id}" title="${tituloDetalhes}">
+                            <i class="bi ${iconeDetalhes}"></i>
                         </button>
-                        <button class="btn-card details btn-acao" data-acao="detalhes" data-id="${material.id}" title="Editar">
-                            <i class="bi bi-pencil-square"></i>
-                        </button>
-                        <button class="btn-card delete btn-acao" data-acao="excluir" data-id="${material.id}" data-descricao="${material.descricao}" title="Excluir">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                        
+                        ${btnExcluirHtml}
                     </div>
                 </div>
             `;

@@ -82,36 +82,52 @@
                     </div>
                 </div>
 
-                <div id="dashboard-content" class="d-none"></div>
-
                 <div id="dashboard-content" class="d-none">
                     <div class="row g-4 mb-4">
 
-                        <div class="col-md-4 col-xl-2">
+                        <div class="col-md-6 col-xl-3">
                             <div class="card h-100 border-start border-4 border-secondary shadow-sm">
                                 <div class="card-body">
                                     <h6 class="text-uppercase text-muted small fw-bold">Não Iniciado</h6>
                                     <h2 class="display-6 fw-bold text-secondary mb-0" id="dash-nao-iniciado">0</h2>
+                                    <small class="text-muted fw-bold" id="dash-valor-nao-iniciado">R$ 0,00</small>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="col-md-4 col-xl-2">
+                        <div class="col-md-6 col-xl-3">
                             <div class="card h-100 border-start border-4 border-danger shadow-sm">
                                 <div class="card-body">
                                     <h6 class="text-uppercase text-muted small fw-bold">Paralisado</h6>
                                     <h2 class="display-6 fw-bold text-danger mb-0" id="dash-paralisado">0</h2>
+                                    <small class="text-danger fw-bold" id="dash-valor-paralisado">R$ 0,00</small>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="col-md-4 col-xl-3">
+                        <div class="col-md-6 col-xl-3">
+                            <div class="card h-100 border-start border-4 border-warning shadow-sm"
+                                style="border-color: #fd7e14 !important;">
+                                <div class="card-body">
+                                    <h6 class="text-uppercase text-muted small fw-bold">Aguard. Doc</h6>
+                                    <h2 class="display-6 fw-bold text-warning mb-0" style="color: #fd7e14 !important;"
+                                        id="dash-aguardando-doc">0</h2>
+                                    <small class="fw-bold" style="color: #fd7e14 !important;"
+                                        id="dash-valor-aguardando-doc">R$ 0,00</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-xl-3">
                             <div class="card h-100 border-start border-4 border-warning shadow-sm">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <h6 class="text-uppercase text-muted small fw-bold mb-0">Em Andamento</h6>
                                         <span class="badge bg-warning text-dark fs-6" id="dash-andamento-total">0</span>
                                     </div>
+                                    <div class="mb-2 text-warning fw-bold small" id="dash-valor-andamento-total">R$ 0,00
+                                    </div>
+
                                     <div class="d-flex justify-content-between small text-muted border-top pt-2">
                                         <span>Com PO: <strong id="dash-andamento-com-po">0</strong></span>
                                         <span>Sem PO: <strong id="dash-andamento-sem-po">0</strong></span>
@@ -120,24 +136,16 @@
                             </div>
                         </div>
 
-                        <div class="col-md-4 col-xl-2">
-                            <div class="card h-100 border-start border-4 border-warning shadow-sm"
-                                style="border-color: #fd7e14 !important;">
-                                <div class="card-body">
-                                    <h6 class="text-uppercase text-muted small fw-bold">Aguard. Doc</h6>
-                                    <h2 class="display-6 fw-bold text-warning mb-0" style="color: #fd7e14 !important;"
-                                        id="dash-aguardando-doc">0</h2>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-4 col-xl-3">
+                        <div class="col-md-6 col-xl-3">
                             <div class="card h-100 border-start border-4 border-success shadow-sm">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <h6 class="text-uppercase text-muted small fw-bold mb-0">Finalizado</h6>
                                         <span class="badge bg-success fs-6" id="dash-finalizado-total">0</span>
                                     </div>
+                                    <div class="mb-2 text-success fw-bold small" id="dash-valor-finalizado-total">R$
+                                        0,00</div>
+
                                     <div class="d-flex justify-content-between small text-muted border-top pt-2">
                                         <span>Com PO: <strong id="dash-finalizado-com-po">0</strong></span>
                                         <span>Sem PO: <strong id="dash-finalizado-sem-po">0</strong></span>
