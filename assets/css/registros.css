@@ -521,3 +521,26 @@ div:where(.swal2-icon).swal2-question {
     border-color: #198754 !important;
     color: #198754 !important;
 }
+
+.row-inativo {
+    background-color: #fcebeb !important; /* Vermelho bem claro */
+    color: #8c8c8c !important;
+}
+
+.row-inativo td {
+    text-decoration: line-through; /* Risco no texto */
+    opacity: 0.7;
+}
+
+/* Garante que os botões de ação não fiquem riscados/apagados */
+.row-inativo td .btn-group-actions, 
+.row-inativo td button {
+    text-decoration: none !important;
+    opacity: 1 !important;
+}
+
+/* Badge específica para status inativo se quiser usar */
+.badge-inativo {
+    background-color: #dc3545;
+    color: white;
+}

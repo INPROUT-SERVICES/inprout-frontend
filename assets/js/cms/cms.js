@@ -2,8 +2,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================
     // CONFIGURAÇÕES E CONSTANTES
     // ==========================================================
-    const API_BASE_URL = 'http://localhost:8081';      // Microsserviço de Materiais (Backend Novo)
-    const API_MONOLITO_URL = 'https://www.inproutservices.com.br/api';  // Monólito (Backend Antigo)
+    const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:8081'
+        : window.location.origin + '/api/materiais'; // Em produção será http://localhost:8080/materiais
+
+    // O Monólito pode permanecer assim ou também usar window.location.origin
+    const API_MONOLITO_URL = 'http://localhost:8080';
 
     // --- Seletores de Elementos Principais ---
     const containerMateriais = document.getElementById('materiais-container');
@@ -155,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (containerMateriais) containerMateriais.innerHTML = '';
 
         try {
-            const response = await fetchComAuth(`${API_BASE_URL}/materiais`);
+            const response = await fetchComAuth(`${API_BASE_URL}`);
             if (!response.ok) throw new Error('Erro ao carregar materiais');
             todosOsMateriais = await response.json();
             todosOsMateriais.sort((a, b) => a.codigo.localeCompare(b.codigo));
@@ -665,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 try {
                     // URL corrigida conforme sua estrutura de pastas (/api/materiais...)
-                    const response = await fetchComAuth(`${API_BASE_URL}/api/materiais/solicitacoes/lote`, {
+                    const response = await fetchComAuth(`${API_BASE_URL}/solicitacoes/lote`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)

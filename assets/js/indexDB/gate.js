@@ -20,7 +20,7 @@ async function carregarTabelaGates() {
     tbody.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
 
     try {
-        const response = await fetchComAuth("https://www.inproutservices.com.br/api/gates");
+        const response = await fetchComAuth("http://localhost:8080/gates");
         if (!response.ok) throw new Error("Falha ao carregar GATEs.");
 
         const gates = await response.json();
@@ -87,7 +87,7 @@ function configurarModalCriarGate() {
         };
 
         try {
-            const response = await fetchComAuth("https://www.inproutservices.com.br/api/gates", {
+            const response = await fetchComAuth("http://localhost:8080/gates", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -139,7 +139,7 @@ function configurarModalExcluirGate() {
         btnConfirmar.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Excluindo...`;
 
         try {
-            const response = await fetchComAuth(`https://www.inproutservices.com.br/api/gates/${gateIdParaExcluir}`, {
+            const response = await fetchComAuth(`http://localhost:8080/gates/${gateIdParaExcluir}`, {
                 method: 'DELETE'
             });
 

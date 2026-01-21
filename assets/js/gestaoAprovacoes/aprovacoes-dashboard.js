@@ -17,7 +17,7 @@ async function carregarDashboardEBadges() {
             fetchComAuth(`${API_BASE_URL}/lancamentos/pendentes/${userId}`),
             fetchComAuth(`${API_BASE_URL}/lancamentos/pendencias-por-coordenador`),
             fetchComAuth(`${API_BASE_URL}/solicitacoes/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } }),
-            fetchComAuth(`${API_BASE_URL}/solicitacoes-complementares/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } })
+            fetchComAuth(`${API_BASE_URL}/aprovacoes/complementares/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } })
         ]);
 
         if (!responseGeral.ok || !responsePendenciasAtiv.ok || !responsePendenciasCoord.ok || !responsePendenciasMat.ok || !responsePendenciasCompl.ok) {

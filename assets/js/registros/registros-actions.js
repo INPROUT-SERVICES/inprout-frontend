@@ -17,9 +17,8 @@ const RegistrosActions = {
         input.addEventListener('input', (e) => {
             clearTimeout(timeout);
             timeout = setTimeout(() => {
-                // Chama a API com o novo termo, voltando para página 0
                 RegistrosApi.carregarDados(0, e.target.value);
-            }, 600); // Espera 600ms após parar de digitar
+            }, 600);
         });
     },
 
@@ -33,7 +32,6 @@ const RegistrosActions = {
                     icon.classList.remove('bi-sort-down', 'bi-sort-up');
                     icon.classList.add(RegistrosState.osSortDirection === 'asc' ? 'bi-sort-down' : 'bi-sort-up');
                 }
-                // Recarrega dados com nova ordenação
                 RegistrosApi.carregarDados(RegistrosState.paginaAtual, RegistrosState.termoBusca);
             });
         }
@@ -67,8 +65,7 @@ const RegistrosActions = {
 
     setupListenersAcoes: () => {
         const accordionContainer = document.getElementById('accordion-registros');
-
-        // Inicialização dos Modais
+        
         const modalEditarDetalheEl = document.getElementById('modalEditarDetalhe');
         const modalEditarDetalhe = modalEditarDetalheEl ? new bootstrap.Modal(modalEditarDetalheEl) : null;
 
@@ -78,18 +75,51 @@ const RegistrosActions = {
         const modalHistoricoEl = document.getElementById('modalHistoricoLancamentos');
         const modalHistorico = modalHistoricoEl ? new bootstrap.Modal(modalHistoricoEl) : null;
 
-        // NOVO: Modal de Finalização
         const modalFinalizarEl = document.getElementById('modalConfirmarFinalizacao');
         const modalFinalizar = modalFinalizarEl ? new bootstrap.Modal(modalFinalizarEl) : null;
 
-        // Delegação de eventos
         accordionContainer.addEventListener('click', async function (e) {
             const btnEdit = e.target.closest('.btn-edit-detalhe');
             const btnDelete = e.target.closest('.btn-delete-registro');
             const btnHistorico = e.target.closest('.btn-historico');
-
-            // Seletor ajustado para pegar o wrapper do ícone
             const btnFinalizarWrapper = e.target.closest('.icon-hover-wrapper');
+            
+            // --- NOVO: Listener do Botão de Inativar/Ativar ---
+            const btnToggleStatus = e.target.closest('.btn-toggle-status');
+
+            if (btnToggleStatus) {
+                e.preventDefault();
+                e.stopPropagation();
+                const detalheId = btnToggleStatus.dataset.id;
+                const statusAtual = btnToggleStatus.dataset.status;
+                
+                const acao = statusAtual === 'INATIVO' ? 'ATIVAR' : 'INATIVAR';
+                const novoStatus = statusAtual === 'INATIVO' ? 'ATIVO' : 'INATIVO';
+                const cor = statusAtual === 'INATIVO' ? 'success' : 'warning';
+
+                const result = await Swal.fire({
+                    title: `Deseja ${acao} este registro?`,
+                    text: acao === 'INATIVO' 
+                          ? "O registro ficará riscado e o valor não somará no total da OS." 
+                          : "O registro voltará a ser contabilizado normalmente.",
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: `Sim, ${acao}`,
+                    confirmButtonColor: acao === 'INATIVO' ? '#d33' : '#28a745',
+                    cancelButtonText: 'Cancelar'
+                });
+
+                if (result.isConfirmed) {
+                    try {
+                        await RegistrosApi.alternarStatusDetalhe(detalheId, novoStatus);
+                        RegistrosUtils.mostrarToast(`Registro alterado para ${novoStatus} com sucesso!`, 'success');
+                        RegistrosApi.carregarDados(RegistrosState.paginaAtual, RegistrosState.termoBusca);
+                    } catch (error) {
+                        RegistrosUtils.mostrarToast("Erro ao alterar status: " + error.message, 'error');
+                    }
+                }
+            }
+            // --------------------------------------------------
 
             if (btnEdit) {
                 e.preventDefault();
@@ -101,12 +131,8 @@ const RegistrosActions = {
                 e.preventDefault();
                 const detalheId = btnDelete.dataset.id;
                 const deleteInput = document.getElementById('deleteOsId');
-                if (deleteInput) {
-                    deleteInput.value = detalheId;
-                }
-                if (modalConfirmarExclusao) {
-                    modalConfirmarExclusao.show();
-                }
+                if (deleteInput) deleteInput.value = detalheId;
+                if (modalConfirmarExclusao) modalConfirmarExclusao.show();
             }
 
             if (btnHistorico) {
@@ -115,50 +141,37 @@ const RegistrosActions = {
                 RegistrosActions.abrirModalHistorico(detalheId, modalHistorico);
             }
 
-            // --- LÓGICA DO ÍCONE FINALIZAR (ABRE MODAL) ---
             if (btnFinalizarWrapper) {
                 e.stopPropagation();
                 e.preventDefault();
-
                 const osId = btnFinalizarWrapper.getAttribute('data-os-id');
-
-                // Joga o ID no input hidden do modal
                 const inputHidden = document.getElementById('inputHiddenOsIdFinalizar');
                 if (inputHidden) inputHidden.value = osId;
-
-                // Abre o modal
                 if (modalFinalizar) modalFinalizar.show();
             }
         });
 
-        // --- LISTENER DO BOTÃO "SIM, FINALIZAR" DENTRO DO MODAL ---
         const btnConfirmarFinalizacaoAction = document.getElementById('btnConfirmarFinalizacaoAction');
         if (btnConfirmarFinalizacaoAction) {
             btnConfirmarFinalizacaoAction.addEventListener('click', async () => {
                 const inputHidden = document.getElementById('inputHiddenOsIdFinalizar');
                 const osId = inputHidden ? inputHidden.value : null;
-
                 if (!osId) return;
 
-                // UI Loading no botão do modal
                 const originalText = btnConfirmarFinalizacaoAction.innerHTML;
                 btnConfirmarFinalizacaoAction.disabled = true;
                 btnConfirmarFinalizacaoAction.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processando...';
 
                 try {
                     const sucesso = await RegistrosApi.finalizarOsRestante(osId);
-
                     if (sucesso) {
                         RegistrosUtils.mostrarToast('OS finalizada com sucesso!', 'success');
                         RegistrosApi.carregarDados(RegistrosState.paginaAtual, RegistrosState.termoBusca);
                         if (modalFinalizar) modalFinalizar.hide();
                     } else {
-                        // Se retornou false (erro tratado no API catch mas sem throw)
                         RegistrosUtils.mostrarToast('Não foi possível finalizar a OS.', 'error');
                     }
                 } catch (error) {
-                    console.error(error);
-                    // O erro vindo do RegistrosApi já deve ser tratado lá, mas garantimos o toast
                     RegistrosUtils.mostrarToast(error.message || 'Erro inesperado.', 'error');
                 } finally {
                     btnConfirmarFinalizacaoAction.innerHTML = originalText;
@@ -167,10 +180,8 @@ const RegistrosActions = {
             });
         }
 
-        // Restante dos listeners (Edição, Exclusão...) mantidos...
         RegistrosActions.setupFormEdicao(modalEditarDetalhe);
 
-        // Listener de Exclusão (Mantido)
         const btnConfirmarExclusaoDefinitiva = document.getElementById('btnConfirmarExclusaoDefinitiva');
         if (btnConfirmarExclusaoDefinitiva) {
             btnConfirmarExclusaoDefinitiva.addEventListener('click', function () {
@@ -185,7 +196,6 @@ const RegistrosActions = {
         if (linhaData) {
             const formEditarDetalheEl = document.getElementById('formEditarDetalhe');
             document.getElementById('editDetalheId').value = detalheId;
-
             const osId = RegistrosUtils.get(linhaData, 'os.id');
             formEditarDetalheEl.dataset.osId = osId;
 
@@ -206,7 +216,6 @@ const RegistrosActions = {
             selectSegmento.innerHTML = '<option value="">Carregando...</option>';
             try {
                 const segmentos = await RegistrosApi.fetchSegmentos();
-
                 selectSegmento.innerHTML = '<option value="" disabled>Selecione o segmento...</option>';
                 segmentos.forEach(seg => {
                     const option = document.createElement('option');
@@ -252,16 +261,52 @@ const RegistrosActions = {
         }
     },
 
-    setupRelatorioEspecial: () => {
-        const userRole = RegistrosState.userRole; // Ou como você pega a role: localStorage.getItem('role')
+    abrirModalHistorico: (detalheId, modal) => {
+        const linhaData = RegistrosState.todasAsLinhas.find(l => RegistrosUtils.get(l, 'detalhe.id') == detalheId);
+        if (!linhaData || !linhaData.detalhe || !linhaData.detalhe.lancamentos) return;
 
-        // Regra de Visibilidade: Apenas ADMIN, CONTROLLER, ASSISTANT
+        const lancamentos = [...linhaData.detalhe.lancamentos];
+        // Ordena do mais recente para o mais antigo
+        lancamentos.sort((a, b) => b.id - a.id);
+
+        const tbody = document.getElementById('tbody-historico-lancamentos');
+        if (tbody) {
+            tbody.innerHTML = '';
+            lancamentos.forEach(l => {
+                const tr = document.createElement('tr');
+                
+                // Formatação de status (exemplo simples)
+                let statusBadge = l.situacaoAprovacao;
+                if(l.situacaoAprovacao === 'APROVADO') statusBadge = '<span class="badge bg-success">Aprovado</span>';
+                else if(l.situacaoAprovacao === 'REJEITADO') statusBadge = '<span class="badge bg-danger">Rejeitado</span>';
+                else if(l.situacaoAprovacao && l.situacaoAprovacao.includes('PENDENTE')) statusBadge = '<span class="badge bg-warning text-dark">Pendente</span>';
+
+                tr.innerHTML = `
+                    <td>${RegistrosUtils.formatarData(l.dataAtividade)}</td>
+                    <td>${statusBadge}</td>
+                    <td>${l.situacao || '-'}</td>
+                    <td>${l.etapa ? (l.etapa.codigoGeral + ' - ' + l.etapa.nomeGeral) : '-'}</td>
+                    
+                    <td><small class="text-muted" style="white-space: pre-wrap;">${l.detalheDiario || '-'}</small></td>
+                    
+                    <td>${l.prestador ? l.prestador.nome : '-'}</td>
+                    <td>${RegistrosUtils.formatarMoeda(l.valor)}</td>
+                    <td>${l.manager ? l.manager.nome : '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        if (modal) modal.show();
+    },
+
+    setupRelatorioEspecial: () => {
+        const userRole = RegistrosState.userRole;
         if (['ADMIN', 'CONTROLLER', 'ASSISTANT'].includes(userRole)) {
             const container = document.getElementById('container-relatorio-especial');
             if (container) container.classList.remove('d-none');
         }
 
-        // Listener do Click
         const btn = document.getElementById('btnRelatorioFaturadoPendente');
         if (btn) {
             btn.addEventListener('click', async () => {
@@ -273,14 +318,10 @@ const RegistrosActions = {
                     const token = localStorage.getItem('token');
                     const response = await fetch(`${RegistrosState.API_BASE_URL}/os/relatorios/faturados-nao-finalizados`, {
                         method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
+                        headers: { 'Authorization': `Bearer ${token}` }
                     });
 
                     if (!response.ok) throw new Error('Erro ao gerar relatório');
-
-                    // Lógica para baixar o arquivo
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -290,7 +331,6 @@ const RegistrosActions = {
                     a.click();
                     a.remove();
                     window.URL.revokeObjectURL(url);
-
                 } catch (error) {
                     console.error(error);
                     alert('Erro ao baixar relatório.');
@@ -337,11 +377,9 @@ const RegistrosActions = {
 
         formEditarDetalheEl.addEventListener('submit', async function (e) {
             e.preventDefault();
-
             const detalheId = document.getElementById('editDetalheId').value;
             const osId = formEditarDetalheEl.dataset.osId;
             const btnSalvar = document.getElementById('btnSalvarDetalhe');
-
             const currentKey = document.getElementById('novaKeyValue').value;
             const currentSegmentoId = document.getElementById('selectSegmento').value;
             const currentGestorTim = document.getElementById('novoGestorTimValue').value;
@@ -359,7 +397,6 @@ const RegistrosActions = {
             btnSalvar.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Salvando...`;
 
             const promises = [];
-
             if (keyChanged) {
                 promises.push(fetchComAuth(`${RegistrosState.API_BASE_URL}/os/detalhe/${detalheId}/key`, {
                     method: 'PATCH',
@@ -384,10 +421,8 @@ const RegistrosActions = {
 
             try {
                 const results = await Promise.all(promises);
-
                 let allSuccessful = true;
                 let errorMessages = [];
-
                 for (let i = 0; i < results.length; i++) {
                     const response = results[i];
                     if (!response.ok) {
@@ -404,13 +439,10 @@ const RegistrosActions = {
                 if (allSuccessful) {
                     RegistrosUtils.mostrarToast('Detalhes atualizados com sucesso!', 'success');
                     if (modal) modal.hide();
-
                     RegistrosApi.carregarDados(RegistrosState.paginaAtual, RegistrosState.termoBusca);
-
                 } else {
                     throw new Error(errorMessages.join(' | '));
                 }
-
             } catch (error) {
                 RegistrosUtils.mostrarToast(error.message, 'error');
             } finally {
@@ -418,42 +450,6 @@ const RegistrosActions = {
                 btnSalvar.innerHTML = 'Salvar Alterações';
             }
         });
-    },
-
-    abrirModalHistorico: (detalheId, modal) => {
-        const linhaData = RegistrosState.todasAsLinhas.find(l => RegistrosUtils.get(l, 'detalhe.id') == detalheId);
-
-        if (linhaData && linhaData.detalhe && linhaData.detalhe.lancamentos) {
-            const modalBody = document.getElementById('tbody-historico-lancamentos');
-            const modalTitle = document.getElementById('modalHistoricoLancamentosLabel');
-            const key = RegistrosUtils.get(linhaData, 'detalhe.key', '');
-
-            modalTitle.innerHTML = `<i class="bi bi-clock-history me-2"></i>Histórico da Linha: ${key}`;
-
-            const lancamentosOrdenados = [...linhaData.detalhe.lancamentos].sort((a, b) => b.id - a.id);
-
-            if (lancamentosOrdenados.length === 0) {
-                modalBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum lançamento encontrado para esta linha.</td></tr>';
-            } else {
-                modalBody.innerHTML = lancamentosOrdenados.map(lanc => {
-                    const etapa = RegistrosUtils.get(lanc, 'etapa', {});
-                    return `
-                    <tr>
-                        <td>${RegistrosUtils.formatarData(RegistrosUtils.get(lanc, 'dataAtividade'))}</td>
-                        <td><span class="badge rounded-pill text-bg-info">${RegistrosUtils.get(lanc, 'situacaoAprovacao', '').replace(/_/g, ' ')}</span></td>
-                        <td>${RegistrosUtils.get(lanc, 'situacao', '')}</td>
-                        <td>${etapa.nomeDetalhado || '-'}</td>
-                        <td>${RegistrosUtils.get(lanc, 'prestador.nome', '-')}</td>
-                        <td>${RegistrosUtils.formatarMoeda(RegistrosUtils.get(lanc, 'valor'))}</td>
-                        <td>${RegistrosUtils.get(lanc, 'manager.nome', '-')}</td>
-                    </tr>
-                `;
-                }).join('');
-            }
-            if (modal) modal.show();
-        } else {
-            RegistrosUtils.mostrarToast("Não foi possível encontrar o histórico para esta linha.", "error");
-        }
     },
 
     executarExclusao: async (btn, modal) => {
@@ -466,15 +462,11 @@ const RegistrosActions = {
         try {
             const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os/detalhe/${detalheId}`, { method: 'DELETE' });
             if (!response.ok) throw new Error('Falha ao excluir.');
-
             RegistrosUtils.mostrarToast('Excluído com sucesso!', 'success');
-
             const idx = RegistrosState.todasAsLinhas.findIndex(l => RegistrosUtils.get(l, 'detalhe.id') == detalheId);
             if (idx > -1) RegistrosState.todasAsLinhas.splice(idx, 1);
-
             RegistrosRender.renderizarTabelaComFiltro();
             if (modal) modal.hide();
-
         } catch (error) {
             RegistrosUtils.mostrarToast(error.message, 'error');
         } finally {
@@ -506,7 +498,6 @@ const RegistrosActions = {
 
     abrirModalFinanceiro: async (osId, nomeOs, materialAtual, transporteAtual) => {
         if (event) event.stopPropagation();
-
         const { value: formValues } = await Swal.fire({
             title: `Valores Extras - OS ${nomeOs}`,
             html: `
@@ -537,9 +528,7 @@ const RegistrosActions = {
                 const payload = {};
                 if (formValues.materialAdicional) payload.materialAdicional = parseFloat(formValues.materialAdicional);
                 if (formValues.transporte) payload.transporte = parseFloat(formValues.transporte);
-
                 if (Object.keys(payload).length === 0) return;
-
                 const response = await fetch(`${RegistrosState.API_BASE_URL}/os/${osId}/valores-financeiros`, {
                     method: 'PATCH',
                     headers: {
@@ -548,11 +537,9 @@ const RegistrosActions = {
                     },
                     body: JSON.stringify(payload)
                 });
-
                 if (!response.ok) throw new Error('Erro ao atualizar valores');
                 const osAtualizada = await response.json();
                 Swal.fire('Sucesso!', 'Valores atualizados.', 'success');
-
                 RegistrosState.todasAsLinhas.forEach(linha => {
                     if (linha.os.id === osId) {
                         linha.os.custoTotalMateriais = osAtualizada.custoTotalMateriais;
@@ -560,7 +547,6 @@ const RegistrosActions = {
                     }
                 });
                 RegistrosRender.renderizarTabelaComFiltro();
-
             } catch (error) {
                 console.error(error);
                 Swal.fire('Erro', 'Não foi possível salvar os valores.', 'error');
@@ -568,5 +554,4 @@ const RegistrosActions = {
         }
     }
 };
-
 window.abrirModalFinanceiro = RegistrosActions.abrirModalFinanceiro;

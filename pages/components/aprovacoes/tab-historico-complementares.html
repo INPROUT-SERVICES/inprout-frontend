@@ -1,20 +1,66 @@
-    <div class="content-loader-container">
-    <div class="card shadow-sm">
-        <div class="card-header bg-white py-3">
-            <h5 class="mb-0 card-title-modern"><i class="bi bi-hourglass-split me-2"></i>Histórico de Solicitações Complementares</h5>
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="card-title text-secondary m-0">
+                <i class="bi bi-clock-history me-2"></i>Histórico de Atividades Complementares
+            </h5>
         </div>
-        <div class="card-body">
-            <div class="table-responsive custom-scroll">
-                <table class="table modern-table align-middle">
-                    <thead id="thead-historico-complementares"></thead>
-                    <tbody id="tbody-historico-complementares"></tbody>
-                </table>
+
+        <div class="filter-bar">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="filtroStatusHistComp" class="filter-label"><i class="bi bi-funnel-fill me-1"></i> Status</label>
+                    <select id="filtroStatusHistComp" class="form-select form-select-sm shadow-none">
+                        <option value="">Todos os Status</option>
+                        <option value="APROVADO">Aprovado</option>
+                        <option value="REJEITADO">Recusado/Rejeitado</option>
+                        <option value="PENDENTE">Pendente</option>
+                    </select>
+                </div>
+
+                <div class="col-md-5">
+                    <label for="buscaHistComp" class="filter-label"><i class="bi bi-search me-1"></i> Pesquisar</label>
+                    <div class="input-group input-group-sm search-input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="buscaHistComp" class="form-control shadow-none" placeholder="Busque por OS, Valor, ID ou Motivo...">
+                    </div>
+                </div>
+
+                <div class="col-md-4 text-end">
+                    <div class="results-counter shadow-sm" id="contadorHistComp">
+                        <i class="bi bi-list-ul me-1"></i> Carregando...
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="overlay-loader d-none">
-        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-            <span class="visually-hidden">Carregando...</span>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle border-light" id="tabelaHistoricoComplementares">
+                <thead class="table-light">
+                <tr>
+                    <th class="fw-bold text-secondary text-uppercase small">ID</th>
+                    <th class="fw-bold text-secondary text-uppercase small">OS</th>
+                    <th class="fw-bold text-secondary text-uppercase small">LPU</th>
+                    <th class="fw-bold text-secondary text-uppercase small">Qtd</th>
+                    <th class="fw-bold text-secondary text-uppercase small">Valor</th>
+                    <th class="fw-bold text-secondary text-uppercase small">Justificativa</th>
+                    <th class="fw-bold text-secondary text-uppercase small">Solicitado</th>
+                    <th class="fw-bold text-secondary text-uppercase small">Status</th>
+                    <th class="fw-bold text-secondary text-uppercase small">Analisado</th>
+                    <th class="fw-bold text-secondary text-uppercase small">Motivo Recusa</th>
+                </tr>
+                </thead>
+                <tbody id="tbodyHistoricoComplementares">
+                <tr>
+                    <td colspan="10" class="text-center text-muted py-5">
+                        <div class="d-flex flex-column align-items-center">
+                            <i class="bi bi-inbox fs-1 opacity-25"></i>
+                            <span class="mt-2">Nenhum registro encontrado.</span>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

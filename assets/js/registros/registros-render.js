@@ -5,15 +5,16 @@
 
 const RegistrosRender = {
     // Definição das colunas
-    colunasCompletas: ["OS", "SITE", "CONTRATO", "SEGMENTO", "PROJETO", "GESTOR TIM", "REGIONAL", "LPU", "LOTE", "BOQ", "PO", "ITEM", "OBJETO CONTRATADO", "UNIDADE", "QUANTIDADE", "VALOR TOTAL OS", "OBSERVAÇÕES", "DATA PO", "VISTORIA", "PLANO VISTORIA", "DESMOBILIZAÇÃO", "PLANO DESMOBILIZAÇÃO", "INSTALAÇÃO", "PLANO INSTALAÇÃO", "ATIVAÇÃO", "PLANO ATIVAÇÃO", "DOCUMENTAÇÃO", "PLANO DOCUMENTAÇÃO", "ETAPA GERAL", "ETAPA DETALHADA", "STATUS", "DETALHE DIÁRIO", "CÓD. PRESTADOR", "PRESTADOR", "VALOR", "GESTOR", "SITUAÇÃO", "DATA ATIVIDADE", "FATURAMENTO", "SOLICIT ID FAT", "RECEB ID FAT", "ID FATURAMENTO", "DATA FAT INPROUT", "SOLICIT FS PORTAL", "DATA FS", "NUM FS", "GATE", "GATE ID", "DATA CRIAÇÃO OS", "KEY"],
+    colunasCompletas: ["OS", "SITE", "CONTRATO", "SEGMENTO", "PROJETO", "GESTOR TIM", "REGIONAL", "LPU", "LOTE", "BOQ", "PO", "ITEM", "OBJETO CONTRATADO", "UNIDADE", "QUANTIDADE", "VALOR TOTAL OS", "OBSERVAÇÕES", "DATA PO", "VISTORIA", "PLANO VISTORIA", "DESMOBILIZAÇÃO", "PLANO DESMOBILIZAÇÃO", "INSTALAÇÃO", "PLANO INSTALAÇÃO", "ATIVAÇÃO", "PLANO ATIVAÇÃO", "DOCUMENTAÇÃO", "PLANO DOCUMENTAÇÃO", "ETAPA GERAL", "ETAPA DETALHADA", "STATUS", "DETALHE DIÁRIO", "CÓD. PRESTADOR", "PRESTADOR", "VALOR", "GESTOR", "SITUAÇÃO", "DATA ATIVIDADE", "FATURAMENTO", "SOLICIT ID FAT", "RECEB ID FAT", "ID FATURAMENTO", "DATA FAT INPROUT", "SOLICIT FS PORTAL", "DATA FS", "NUM FS", "GATE", "GATE ID", "DATA CRIAÇÃO OS", "KEY", "STATUS REGISTRO"],
 
+    // CORREÇÃO: Removido "HISTÓRICO" daqui, pois ele é adicionado dinamicamente depois
     colunasGestor: [
-        "HISTÓRICO", "OS", "SITE", "CONTRATO", "SEGMENTO", "PROJETO", "GESTOR TIM", "REGIONAL",
+        "OS", "SITE", "CONTRATO", "SEGMENTO", "PROJETO", "GESTOR TIM", "REGIONAL",
         "LPU", "OBJETO CONTRATADO", "QUANTIDADE",
         "VISTORIA", "PLANO VISTORIA", "DESMOBILIZAÇÃO", "PLANO DESMOBILIZAÇÃO", "INSTALAÇÃO",
         "PLANO INSTALAÇÃO", "ATIVAÇÃO", "PLANO ATIVAÇÃO", "DOCUMENTAÇÃO", "PLANO DOCUMENTAÇÃO",
         "ETAPA GERAL", "ETAPA DETALHADA", "STATUS", "DETALHE DIÁRIO", "CÓD. PRESTADOR", "PRESTADOR",
-        "VALOR", "GESTOR", "SITUAÇÃO", "DATA ATIVIDADE", "KEY"
+        "VALOR", "GESTOR", "SITUAÇÃO", "DATA ATIVIDADE", "KEY", "STATUS REGISTRO"
     ],
 
     getHeaders: () => {
@@ -45,23 +46,35 @@ const RegistrosRender = {
             const etapa = RegistrosUtils.get(linha, 'ultimoLancamento.etapa', null);
             return etapa ? `${etapa.indiceDetalhado} - ${etapa.nomeDetalhado}` : '-';
         },
-        "STATUS": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.status'), "DETALHE DIÁRIO": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.detalheDiario'),
+        "STATUS": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.status'), 
+        "DETALHE DIÁRIO": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.detalheDiario'),
         "CÓD. PRESTADOR": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.prestador.codigo'), "PRESTADOR": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.prestador.nome'),
         "VALOR": (linha) => RegistrosUtils.formatarMoeda(RegistrosUtils.get(linha, 'ultimoLancamento.valor')), "GESTOR": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.manager.nome'),
-        "SITUAÇÃO": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.situacao'), "DATA ATIVIDADE": (linha) => RegistrosUtils.formatarData(RegistrosUtils.get(linha, 'ultimoLancamento.dataAtividade')),
+        
+        "SITUAÇÃO": (linha) => {
+            if (RegistrosUtils.get(linha, 'detalhe.statusRegistro') === 'INATIVO') {
+                return 'CANCELADO';
+            }
+            return RegistrosUtils.get(linha, 'ultimoLancamento.situacao');
+        },
+        
+        "DATA ATIVIDADE": (linha) => RegistrosUtils.formatarData(RegistrosUtils.get(linha, 'ultimoLancamento.dataAtividade')),
         "FATURAMENTO": (linha) => RegistrosUtils.get(linha, 'detalhe.faturamento'), "SOLICIT ID FAT": (linha) => RegistrosUtils.get(linha, 'detalhe.solitIdFat'),
         "RECEB ID FAT": (linha) => RegistrosUtils.get(linha, 'detalhe.recebIdFat'), "ID FATURAMENTO": (linha) => RegistrosUtils.get(linha, 'detalhe.idFaturamento'),
         "DATA FAT INPROUT": (linha) => RegistrosUtils.formatarData(RegistrosUtils.get(linha, 'detalhe.dataFatInprout')), "SOLICIT FS PORTAL": (linha) => RegistrosUtils.get(linha, 'detalhe.solitFsPortal'),
         "DATA FS": (linha) => RegistrosUtils.formatarData(RegistrosUtils.get(linha, 'detalhe.dataFs')), "NUM FS": (linha) => RegistrosUtils.get(linha, 'detalhe.numFs'),
         "GATE": (linha) => RegistrosUtils.get(linha, 'detalhe.gate'), "GATE ID": (linha) => RegistrosUtils.get(linha, 'detalhe.gateId'),
         "DATA CRIAÇÃO OS": (linha) => RegistrosUtils.formatarDataHora(RegistrosUtils.get(linha, 'detalhe.dataCriacaoItem')), "KEY": (linha) => RegistrosUtils.get(linha, 'detalhe.key'),
-        "VALOR CPS LEGADO": (linha) => RegistrosUtils.formatarMoeda(RegistrosUtils.get(linha, 'os.valorCpsLegado'))
+        "VALOR CPS LEGADO": (linha) => RegistrosUtils.formatarMoeda(RegistrosUtils.get(linha, 'os.valorCpsLegado')),
+        "STATUS REGISTRO": (linha) => RegistrosUtils.get(linha, 'detalhe.statusRegistro', 'ATIVO')
     },
 
     verificarSeOsFinalizada: (grupo) => {
         if (!grupo.linhas || grupo.linhas.length === 0) return false;
         return grupo.linhas.every(linha => {
             const situacao = RegistrosUtils.get(linha, 'ultimoLancamento.situacao');
+            const isInativo = RegistrosUtils.get(linha, 'detalhe.statusRegistro') === 'INATIVO';
+            if (isInativo) return true;
             return situacao && String(situacao).toUpperCase().trim() === 'FINALIZADO';
         });
     },
@@ -74,23 +87,51 @@ const RegistrosRender = {
         const dadosOS = grupo.linhas[0].os || {};
         const osIdReal = dadosOS.id;
 
-        // Cálculos Financeiros
-        const valorTotalOS = RegistrosUtils.get(grupo.linhas[0], 'os.detalhes', []).reduce((sum, d) => sum + (d.valorTotal || 0), 0);
-        const valorTotalCPS = grupo.linhas.flatMap(linha => RegistrosUtils.get(linha, 'detalhe.lancamentos', []))
-            .filter(lanc => ['APROVADO', 'APROVADO_CPS_LEGADO'].includes(lanc.situacaoAprovacao))
-            .reduce((sum, lanc) => sum + (lanc.valor || 0), 0);
+        // --- CÁLCULO FINANCEIRO ATUALIZADO (BOQ) ---
+        let valorTotalOS = 0;
+        let valorEmAnalise = 0;
+
+        // Filtra inativos e processa o BOQ
+        const detalhesAtivos = RegistrosUtils.get(grupo.linhas[0], 'os.detalhes', [])
+            .filter(d => d.statusRegistro !== 'INATIVO');
+
+        detalhesAtivos.forEach(d => {
+            // Garante que é string, remove espaços e verifica se é vazio ou hifen
+            let boq = d.boq ? String(d.boq).trim() : '';
+            if (boq === '') boq = '-';
+            
+            const valorItem = d.valorTotal || 0;
+
+            if (boq === '-') {
+                // Se BOQ for hifen ou vazio -> EM ANÁLISE
+                valorEmAnalise += valorItem;
+            } else {
+                // Se tiver qualquer outra coisa no BOQ -> TOTAL OS
+                valorTotalOS += valorItem;
+            }
+        });
+
+        const valorTotalCPS = grupo.linhas.flatMap(linha => {
+             if(RegistrosUtils.get(linha, 'detalhe.statusRegistro') === 'INATIVO') return [];
+             return RegistrosUtils.get(linha, 'detalhe.lancamentos', []);
+        })
+        .filter(lanc => ['APROVADO', 'APROVADO_CPS_LEGADO'].includes(lanc.situacaoAprovacao))
+        .reduce((sum, lanc) => sum + (lanc.valor || 0), 0);
 
         const custoTotalMateriais = dadosOS.custoTotalMateriais || 0;
         const valorCpsLegado = dadosOS.valorCpsLegado || 0;
         const valorTransporte = dadosOS.transporte || 0;
         const totalGasto = valorTotalCPS + custoTotalMateriais + valorCpsLegado + valorTransporte;
+        
         const percentual = valorTotalOS > 0 ? (totalGasto / valorTotalOS) * 100 : 0;
 
         // HTML dos KPIs
         let kpisInternosHTML = '';
         if (role !== 'MANAGER') {
             kpisInternosHTML += `
-                <div class="header-kpi"><span class="kpi-label">Total OS</span><span class="kpi-value">${RegistrosUtils.formatarMoeda(valorTotalOS)}</span></div>`;
+                <div class="header-kpi"><span class="kpi-label">Total OS</span><span class="kpi-value">${RegistrosUtils.formatarMoeda(valorTotalOS)}</span></div>
+                <div class="header-kpi"><span class="kpi-label text-info">Em Análise</span><span class="kpi-value text-info">${RegistrosUtils.formatarMoeda(valorEmAnalise)}</span></div>`;
+
             if (valorCpsLegado > 0) {
                 kpisInternosHTML += `<div class="header-kpi"><span class="kpi-label text-warning">Legado</span><span class="kpi-value text-warning">${RegistrosUtils.formatarMoeda(valorCpsLegado)}</span></div>`;
             }
@@ -107,19 +148,21 @@ const RegistrosRender = {
         
         grupo.linhas.forEach(linha => {
             const situacao = RegistrosUtils.get(linha, 'ultimoLancamento.situacao');
-            const situacaoNormalizada = situacao ? String(situacao).toUpperCase().trim() : 'PENDENTE';
-            if (situacaoNormalizada === 'FINALIZADO') {
-                temFinalizado = true;
-            } else {
-                temPendente = true; 
+            const isInativo = RegistrosUtils.get(linha, 'detalhe.statusRegistro') === 'INATIVO';
+            
+            if (!isInativo) {
+                const situacaoNormalizada = situacao ? String(situacao).toUpperCase().trim() : 'PENDENTE';
+                if (situacaoNormalizada === 'FINALIZADO') {
+                    temFinalizado = true;
+                } else {
+                    temPendente = true; 
+                }
             }
         });
 
-        // 1. COR: Amarelo mais visível (#fff3cd - Warning Light do Bootstrap)
         const isTotalmenteFinalizada = RegistrosRender.verificarSeOsFinalizada(grupo);
         const headerStyle = isTotalmenteFinalizada ? 'style="background-color: #fff3cd !important;"' : '';
         
-        // --- ÍCONE "FINALIZAR OS" ---
         let btnFinalizarOsHTML = '';
         if (['ADMIN', 'COORDINATOR', 'MANAGER'].includes(role)) {
             if (temFinalizado && temPendente) {
@@ -143,22 +186,39 @@ const RegistrosRender = {
         if (['ADMIN', 'ASSISTANT', 'MANAGER', 'COORDINATOR'].includes(role)) {
             headersVisiveis.push("AÇÕES");
         }
-        headersVisiveis.unshift("HISTÓRICO");
+        headersVisiveis.unshift("HISTÓRICO"); // Adiciona o histórico aqui
 
         const bodyRowsHTML = grupo.linhas.map(linhaData => {
+            const detalheId = RegistrosUtils.get(linhaData, 'detalhe.id', '');
+            
+            const statusRegistro = RegistrosUtils.get(linhaData, 'detalhe.statusRegistro', 'ATIVO');
+            const isInativo = statusRegistro === 'INATIVO';
+            const rowClass = isInativo ? 'row-inativo' : '';
+            
             const cellsHTML = headersVisiveis.map(header => {
-                const detalheId = RegistrosUtils.get(linhaData, 'detalhe.id', '');
-                
-                // Botões de Ação
                 if (header === "HISTÓRICO") {
                     const lancamentosCount = RegistrosUtils.get(linhaData, 'detalhe.lancamentos', []).length;
                     const isDisabled = !detalheId || lancamentosCount <= 1;
                     return `<td><button class="btn btn-sm btn-outline-info btn-historico" data-detalhe-id="${detalheId}" title="Ver Histórico" ${isDisabled ? 'disabled' : ''}><i class="bi bi-clock-history"></i></button></td>`;
                 }
+                
                 if (header === "AÇÕES") {
-                    let btnEditar = (['ADMIN', 'ASSISTANT', 'COORDINATOR', 'MANAGER'].includes(role) && detalheId) ? `<button class="btn btn-sm btn-outline-primary btn-edit-detalhe" data-id="${detalheId}" title="Editar"><i class="bi bi-pencil-fill"></i></button>` : '';
-                    let btnExcluir = (['ADMIN', 'ASSISTANT'].includes(role)) ? `<button class="btn btn-sm btn-outline-danger btn-delete-registro" data-id="${detalheId}" title="Excluir"><i class="bi bi-trash-fill"></i></button>` : '';
-                    return `<td><div class="d-flex justify-content-center gap-2">${btnEditar} ${btnExcluir}</div></td>`;
+                    let btnEditar = (['ADMIN', 'ASSISTANT', 'COORDINATOR', 'MANAGER'].includes(role) && detalheId) 
+                        ? `<button class="btn btn-sm btn-outline-primary btn-edit-detalhe" data-id="${detalheId}" title="Editar"><i class="bi bi-pencil-fill"></i></button>` : '';
+                    
+                    let btnExcluir = (['ADMIN', 'ASSISTANT'].includes(role)) 
+                        ? `<button class="btn btn-sm btn-outline-danger btn-delete-registro" data-id="${detalheId}" title="Excluir"><i class="bi bi-trash-fill"></i></button>` : '';
+                    
+                    let btnInativar = '';
+                    if (['ADMIN', 'ASSISTANT'].includes(role) && detalheId) {
+                        if (isInativo) {
+                             btnInativar = `<button class="btn btn-sm btn-success btn-toggle-status" data-id="${detalheId}" data-status="INATIVO" title="Reativar Registro"><i class="bi bi-check-circle"></i></button>`;
+                        } else {
+                             btnInativar = `<button class="btn btn-sm btn-outline-secondary btn-toggle-status" data-id="${detalheId}" data-status="ATIVO" title="Inativar/Cancelar"><i class="bi bi-x-circle"></i></button>`;
+                        }
+                    }
+
+                    return `<td><div class="d-flex justify-content-center gap-2 btn-group-actions">${btnInativar} ${btnEditar} ${btnExcluir}</div></td>`;
                 }
 
                 const func = RegistrosRender.dataMapping[header];
@@ -171,7 +231,7 @@ const RegistrosRender = {
                 if (header === "DETALHE DIÁRIO") classes += ' detalhe-diario-cell';
                 return `<td class="${classes}">${valor}</td>`;
             }).join('');
-            return `<tr>${cellsHTML}</tr>`;
+            return `<tr class="${rowClass}">${cellsHTML}</tr>`;
         }).join('');
 
         const headerHTML = `
@@ -222,15 +282,10 @@ const RegistrosRender = {
             return;
         }
 
-        // --- ORDENAÇÃO NO FRONTEND (PÁGINA ATUAL) ---
-        console.log("Aplicando ordenação. Perfil atual:", RegistrosState.userRole); // Debug
-        
         if (['ADMIN', 'ASSISTANT'].includes(RegistrosState.userRole)) {
             grupos.sort((a, b) => {
                 const aFinalizada = RegistrosRender.verificarSeOsFinalizada(a);
                 const bFinalizada = RegistrosRender.verificarSeOsFinalizada(b);
-                
-                // Finalizada (-1) vem antes de Não Finalizada (1)
                 if (aFinalizada && !bFinalizada) return -1;
                 if (!aFinalizada && bFinalizada) return 1;
                 return 0; 
@@ -278,7 +333,6 @@ const RegistrosRender = {
 
         let grupos = RegistrosRender.transformarEmGrupos(linhasFiltradas);
         
-        // Aplica a mesma ordenação para o Filtro
         if (['ADMIN', 'ASSISTANT'].includes(RegistrosState.userRole)) {
             grupos.sort((a, b) => {
                 const aFinalizada = RegistrosRender.verificarSeOsFinalizada(a);

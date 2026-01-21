@@ -4,11 +4,9 @@
  */
 const RegistrosApi = {
 
-    // CORREÇÃO: Função adicionada para resolver o erro "is not a function"
     inicializarPagina: async () => {
         try {
             const segmentos = await RegistrosApi.fetchSegmentos();
-            // Salva apenas os IDs para validação posterior no processarDadosPagina
             if (segmentos && segmentos.length > 0) {
                 const idsSegmentos = segmentos.map(s => s.id);
                 localStorage.setItem('segmentos', JSON.stringify(idsSegmentos));
@@ -47,7 +45,27 @@ const RegistrosApi = {
         }
     },
 
-    // Função principal que carrega os dados
+    // --- NOVA FUNÇÃO: ALTERAR STATUS (ATIVO/INATIVO) ---
+    alternarStatusDetalhe: async (detalheId, novoStatus) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${RegistrosState.API_BASE_URL}/os/detalhe/${detalheId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: novoStatus })
+            });
+
+            if (!response.ok) throw new Error('Erro ao atualizar status do registro.');
+            return true;
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    },
+
     carregarDados: async (pagina = 0, busca = '') => {
         const accordionContainer = document.getElementById('accordion-registros');
 
@@ -55,7 +73,6 @@ const RegistrosApi = {
         RegistrosState.paginaAtual = pagina;
         RegistrosState.termoBusca = busca;
 
-        // Loader
         accordionContainer.innerHTML = `
             <div class="d-flex flex-column align-items-center justify-content-center py-5">
                 <div class="spinner-border text-success" style="width: 3rem; height: 3rem;" role="status"></div>
@@ -63,28 +80,20 @@ const RegistrosApi = {
             </div>`;
 
         try {
-            // Configura parâmetros
             const size = RegistrosState.linhasPorPagina === 'all' ? 200 : RegistrosState.linhasPorPagina;
             const sort = `id,${RegistrosState.osSortDirection}`;
             const buscaEncoded = encodeURIComponent(busca);
-
-            // Chama o endpoint com ?search=...
             const url = `${RegistrosState.API_BASE_URL}/os?page=${pagina}&size=${size}&sort=${sort}&search=${buscaEncoded}`;
 
-            const response = await fetchComAuth(url); // fetchComAuth vem do global.js
+            const response = await fetchComAuth(url);
 
             if (!response.ok) throw new Error('Falha ao comunicar com o servidor.');
 
             const data = await response.json();
-
-            // Atualiza estado
             RegistrosState.totalPaginas = data.totalPages;
             RegistrosState.totalElementos = data.totalElements;
 
-            // Processa para exibição
             RegistrosApi.processarDadosPagina(data.content || []);
-
-            // Renderiza
             RegistrosRender.renderizarTabela();
 
         } catch (error) {
@@ -100,23 +109,22 @@ const RegistrosApi = {
     },
 
     processarDadosPagina: (listaDeOs) => {
-        RegistrosState.todasAsLinhas = []; // Limpa memória local
-
+        RegistrosState.todasAsLinhas = []; 
         const userSegmentos = JSON.parse(localStorage.getItem('segmentos')) || [];
         const role = RegistrosState.userRole;
 
         listaDeOs.forEach(os => {
-            // Filtro de permissão de visualização (Manager/Coord)
             if (['MANAGER', 'COORDINATOR'].includes(role)) {
-                // Verifica se o ID do segmento da OS está na lista permitida do usuário
                 if (!os.segmento || !userSegmentos.includes(os.segmento.id)) return;
             }
 
-            if (os.detalhes && os.detalhes.length > 0) {
-                const detalhesAtivos = os.detalhes.filter(d => d.statusRegistro !== 'INATIVO');
+            // AGORA CARREGAMOS TODOS, INCLUSIVE INATIVOS (para mostrar riscado)
+            // Se preferir esconder totalmente os inativos, descomente o filtro abaixo.
+            // const detalhesParaMostrar = os.detalhes.filter(d => d.statusRegistro !== 'INATIVO'); 
+            const detalhesParaMostrar = os.detalhes || [];
 
-                detalhesAtivos.forEach(detalhe => {
-                    // Lógica para definir qual lançamento mostrar na linha principal
+            if (detalhesParaMostrar.length > 0) {
+                detalhesParaMostrar.forEach(detalhe => {
                     let lancamentoParaExibir = detalhe.ultimoLancamento;
 
                     if (!lancamentoParaExibir && detalhe.lancamentos && detalhe.lancamentos.length > 0) {
@@ -159,12 +167,8 @@ const RegistrosApi = {
         try {
             const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os/dashboard-stats`);
             if (!response.ok) throw new Error('Erro ao carregar dashboard');
-
             const stats = await response.json();
-
-            // Renderiza os valores
             RegistrosApi.preencherDashboard(stats);
-
             content.classList.remove('d-none');
         } catch (error) {
             console.error(error);
@@ -176,49 +180,30 @@ const RegistrosApi = {
     },
 
     preencherDashboard: (stats) => {
-        // Helper para texto simples
-        const setText = (id, val) => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = val || 0;
-        };
+        const setText = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val || 0; };
+        const setMoney = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = RegistrosUtils.formatarMoeda(val || 0); };
 
-        // Helper para moeda
-        const setMoney = (id, val) => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = RegistrosUtils.formatarMoeda(val || 0);
-        };
-
-        // Quantidades
         setText('dash-nao-iniciado', stats.naoIniciado);
         setText('dash-paralisado', stats.paralisado);
         setText('dash-aguardando-doc', stats.aguardandoDoc);
-
-        // -- NOVOS VALORES --
         setMoney('dash-valor-nao-iniciado', stats.valorNaoIniciado);
         setMoney('dash-valor-paralisado', stats.valorParalisado);
         setMoney('dash-valor-aguardando-doc', stats.valorAguardandoDoc);
 
-        // Em Andamento
         if (stats.emAndamento) {
             setText('dash-andamento-total', stats.emAndamento.total);
             setText('dash-andamento-com-po', stats.emAndamento.comPo);
             setText('dash-andamento-sem-po', stats.emAndamento.semPo);
-
-            // Valor total em andamento
             setMoney('dash-valor-andamento-total', stats.emAndamento.valorTotal);
         }
 
-        // Finalizado
         if (stats.finalizado) {
             setText('dash-finalizado-total', stats.finalizado.total);
             setText('dash-finalizado-com-po', stats.finalizado.comPo);
             setText('dash-finalizado-sem-po', stats.finalizado.semPo);
-
-            // Valor total finalizado
             setMoney('dash-valor-finalizado-total', stats.finalizado.valorTotal);
         }
 
-        // Gate (Mantido igual)
         if (stats.gateAtual) {
             document.getElementById('dash-gate-nome').innerText = stats.gateAtual.nomeGate;
             const dataFim = stats.gateAtual.previsao ? stats.gateAtual.previsao.split('-').reverse().join('/') : '--';

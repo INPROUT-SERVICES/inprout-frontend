@@ -33,16 +33,26 @@ const RegistrosIO = {
         }
     },
 
+    // --- MUDANÇA: Gera o Template Dinamicamente com todas as colunas ---
     setupTemplateDownload: () => {
         const btn = document.getElementById('btnDownloadTemplate');
         if (btn) {
             btn.addEventListener('click', () => {
-                const link = document.createElement('a');
-                link.href = '../assets/templates/template_importacao_os.xlsx';
-                link.setAttribute('download', 'template_importacao_os.xlsx');
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                 // Usa as colunas definidas no render, que agora incluem STATUS REGISTRO
+                 const headers = RegistrosRender.colunasCompletas;
+                 
+                 // Cria o arquivo Excel na memória
+                 const wb = XLSX.utils.book_new();
+                 const ws = XLSX.utils.aoa_to_sheet([headers]);
+                 
+                 // Ajusta largura das colunas (opcional, mas fica melhor visualmente)
+                 const wscols = headers.map(() => ({wch: 20}));
+                 ws['!cols'] = wscols;
+
+                 XLSX.utils.book_append_sheet(wb, ws, "Template");
+                 
+                 // Baixa o arquivo
+                 XLSX.writeFile(wb, "template_importacao_os.xlsx");
             });
         }
     },

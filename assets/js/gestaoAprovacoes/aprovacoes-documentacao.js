@@ -498,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processando...';
 
             try {
-                const response = await fetchComAuth(`${API_BASE_URL}/solicitacoes-complementares/${id}/${tipoAprovador}/aprovar`, {
+                const response = await fetchComAuth(`${API_BASE_URL}/aprovacoes/complementares/${id}/${tipoAprovador}/aprovar`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -554,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
 
             try {
-                const response = await fetchComAuth(`${API_BASE_URL}/solicitacoes-complementares/${id}/rejeitar`, {
+                const response = await fetchComAuth(`${API_BASE_URL}/aprovacoes/complementares/${id}/rejeitar`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

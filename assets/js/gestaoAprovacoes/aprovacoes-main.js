@@ -471,7 +471,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             : [this.dataset.id];
 
         if (ids.length === 0) return;
-        const endpoint = userRole === 'COORDINATOR' ? '/solicitacoes-complementares/lote/coordenador/aprovar' : '/solicitacoes-complementares/lote/controller/aprovar';
+        const endpoint = userRole === 'COORDINATOR' ? '/aprovacoes/complementares/lote/coordenador/aprovar' : '/aprovacoes/complementares/lote/controller/aprovar';
 
         toggleLoader(true, '#complementares-pane');
         setButtonLoading(this, true);
@@ -495,7 +495,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const motivo = document.getElementById('motivoRecusaComplementar').value;
 
         if (ids.length === 0) return;
-        const endpoint = userRole === 'COORDINATOR' ? '/solicitacoes-complementares/lote/coordenador/rejeitar' : '/solicitacoes-complementares/lote/controller/rejeitar';
+        const endpoint = userRole === 'COORDINATOR' ? '/aprovacoes/complementares/lote/coordenador/rejeitar' : '/aprovacoes/complementares/lote/controller/rejeitar';
 
         toggleLoader(true, '#complementares-pane');
         setButtonLoading(btn, true);
@@ -669,7 +669,7 @@ async function carregarDashboardEBadges() {
             // Garante que usamos a rota completa: host + /api/materiais/solicitacoes/pendentes
             fetchComAuth(`${API_MATERIALS_URL}/api/materiais/solicitacoes/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } }),
             
-            fetchComAuth(`${API_BASE_URL}/solicitacoes-complementares/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } })
+            fetchComAuth(`${API_BASE_URL}/aprovacoes/complementares/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } })  
         ]);
 
         if (!resGeral.ok) throw new Error('Falha no dashboard.');
