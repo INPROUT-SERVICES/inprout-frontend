@@ -1,14 +1,17 @@
 const AprovacoesComplementares = {
 
+    // URL do Novo Microsserviço (Porta 8082)
+    MS_URL: "http://localhost:8082/v1/solicitacoes-complementares",
+
     currentSolicitacao: null,
     currentOsCompleta: null,
     listenersConfigurados: false,
     listaCompletaLpus: null,
-    choicesInstance: null, // Armazena instância do Choices para o modal principal
+    choicesInstance: null,
 
     init: () => {
         if (!AprovacoesComplementares.listenersConfigurados) {
-            AprovacoesComplementares.setupListeners();
+            // Listeners apenas para funcionalidades gerais, sem lote
             AprovacoesComplementares.listenersConfigurados = true;
             console.log("Listeners de Aprovações Complementares ativados.");
         }
@@ -36,6 +39,7 @@ const AprovacoesComplementares = {
     // CARREGAMENTO DE DADOS (LPU E PENDÊNCIAS)
     // =========================================================================
 
+    // Mantido no Monólito (API_BASE_URL) para buscar contratos/LPUs
     carregarTodasLpus: async () => {
         if (AprovacoesComplementares.listaCompletaLpus) return AprovacoesComplementares.listaCompletaLpus;
 
@@ -52,7 +56,6 @@ const AprovacoesComplementares = {
                         if (lpu.ativo) {
                             lpus.push({
                                 id: lpu.id,
-                                // CORREÇÃO AQUI: FORMATO CONTRATO | LPU
                                 nome: `${contrato.nome} | ${lpu.codigoLpu} - ${lpu.nomeLpu}`,
                                 codigo: lpu.codigoLpu,
                                 contrato: contrato.nome
@@ -62,9 +65,7 @@ const AprovacoesComplementares = {
                 }
             });
 
-            // Ordena alfabeticamente
             lpus.sort((a, b) => a.nome.localeCompare(b.nome));
-
             AprovacoesComplementares.listaCompletaLpus = lpus;
             return lpus;
         } catch (error) {
@@ -73,6 +74,7 @@ const AprovacoesComplementares = {
         }
     },
 
+    // Migrado para o Microsserviço (MS_URL)
     carregarPendencias: async () => {
         AprovacoesComplementares.init();
 
@@ -85,16 +87,17 @@ const AprovacoesComplementares = {
         tbody.innerHTML = '';
 
         try {
-            // CORREÇÃO AQUI: HEADERS ADICIONADOS PARA EVITAR ERRO 500
-            const response = await fetch(`${API_BASE_URL}/aprovacoes/complementares/pendentes`, {
+            const response = await fetch(`${AprovacoesComplementares.MS_URL}/pendentes`, {
                 headers: { 
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'X-User-Role': localStorage.getItem('userRole'),
-                    'X-User-ID': localStorage.getItem('userId')
+                    'Content-Type': 'application/json'
                 }
             });
 
-            if (!response.ok) throw new Error('Erro ao buscar pendências');
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Erro ao buscar pendências (${response.status}): ${errText}`);
+            }
 
             const lista = await response.json();
             window.todasPendenciasComplementares = lista || [];
@@ -102,7 +105,8 @@ const AprovacoesComplementares = {
 
         } catch (error) {
             console.error(error);
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-3">Erro: ${error.message}</td></tr>`;
+            // colspan ajustado pois removemos a coluna de checkbox
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-3">Erro de conexão com Microsserviço: ${error.message}</td></tr>`;
         } finally {
             if (loader) loader.classList.add('d-none');
         }
@@ -129,37 +133,29 @@ const AprovacoesComplementares = {
         lista.forEach(item => {
             const tr = document.createElement('tr');
 
-            let valorTotal = item.valorTotalCalculado;
-            if (valorTotal === undefined || valorTotal === null) {
-                const valorUnit = (item.lpuOriginal && item.lpuOriginal.valor) ? item.lpuOriginal.valor : 0;
-                valorTotal = (item.quantidade || 0) * valorUnit;
-            }
-            const valorFormatado = valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            let valorTotal = item.valorTotalEstimado;
+            const valorFormatado = (valorTotal !== undefined && valorTotal !== null) 
+                ? valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
+                : 'R$ 0,00';
 
             const dataObj = AprovacoesComplementares.parseDataBR(item.dataSolicitacao);
             const dataFormatada = dataObj ? dataObj.toLocaleDateString('pt-BR') : '-';
 
-            const nomeLpu = item.lpuAprovada ? item.lpuAprovada.nomeLpu : (item.lpuOriginal ? item.lpuOriginal.nomeLpu : (item.lpu ? item.lpu.nomeLpu : '-'));
-            const codLpu = item.lpuAprovada ? item.lpuAprovada.codigoLpu : (item.lpuOriginal ? item.lpuOriginal.codigoLpu : (item.lpu ? item.lpu.codigoLpu : '-'));
-            const qtd = item.quantidadeAprovada || item.quantidade || 0;
-            const solicitante = item.solicitanteNome || 'Sistema';
+            const qtd = item.quantidadeAprovada || item.quantidadeOriginal || 0;
+            const solicitante = item.solicitanteNomeSnapshot || "Usuario";
 
+            // NOTA: A primeira coluna (checkbox) foi removida aqui.
+            // Lembre-se de remover o <th> correspondente no HTML.
             tr.innerHTML = `
-                <td class="text-center">
-                    <div class="form-check d-flex justify-content-center">
-                        <input class="form-check-input check-item-comp" type="checkbox" value="${item.id}">
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="fw-bold text-dark">OS #${item.osId}</span>
+                        <span class="small text-muted">Solic.: ${solicitante}</span>
                     </div>
                 </td>
                 <td>
                     <div class="d-flex flex-column">
-                        <span class="fw-bold text-dark">${item.os ? item.os.os : '-'}</span>
-                        <span class="small text-muted" title="Solicitante: ${solicitante}">Solic.: ${solicitante}</span>
-                    </div>
-                </td>
-                <td>
-                    <div class="d-flex flex-column">
-                         <span class="fw-bold text-secondary" style="font-size: 0.9rem;">${codLpu}</span>
-                         <span class="small text-muted text-truncate" style="max-width: 250px;" title="${nomeLpu}">${nomeLpu}</span>
+                         <span class="small text-muted text-truncate" style="max-width: 250px;">LPU ID: ${item.lpuOriginalId}</span>
                     </div>
                 </td>
                 <td class="text-center">
@@ -198,31 +194,6 @@ const AprovacoesComplementares = {
         });
     },
 
-    setupListeners: () => {
-        document.addEventListener('click', (e) => {
-            const target = e.target;
-
-            if (target.closest('#btnAprovarMassaComp')) {
-                e.preventDefault();
-                AprovacoesComplementares.processarLote('APROVAR');
-            }
-
-            if (target.closest('#btnRejeitarMassaComp')) {
-                e.preventDefault();
-                AprovacoesComplementares.processarLote('REJEITAR');
-            }
-        });
-
-        document.addEventListener('change', (e) => {
-            if (e.target && e.target.id === 'checkAllComp') {
-                const isChecked = e.target.checked;
-                document.querySelectorAll('.check-item-comp').forEach(checkbox => {
-                    checkbox.checked = isChecked;
-                });
-            }
-        });
-    },
-
     // =========================================================================
     // MODAL DE ANÁLISE DETALHADA E GERENCIAMENTO
     // =========================================================================
@@ -231,16 +202,16 @@ const AprovacoesComplementares = {
         try {
             Swal.fire({ title: 'A carregar dados da OS...', didOpen: () => Swal.showLoading() });
 
-            // 1. Busca dados da solicitação
-            const respSol = await fetch(`${API_BASE_URL}/aprovacoes/complementares/${id}`, {
+            // 1. Busca dados da solicitação no MICROSSERVIÇO
+            const respSol = await fetch(`${AprovacoesComplementares.MS_URL}/${id}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
-            if (!respSol.ok) throw new Error("Erro ao carregar solicitação");
+            if (!respSol.ok) throw new Error("Erro ao carregar solicitação do microsserviço");
             const solicitacao = await respSol.json();
             AprovacoesComplementares.currentSolicitacao = solicitacao;
 
-            // 2. Busca dados completos da OS
-            const osId = solicitacao.os ? solicitacao.os.id : solicitacao.osId;
+            // 2. Busca dados completos da OS no MONÓLITO
+            const osId = solicitacao.osId; 
             const respOs = await fetch(`${API_BASE_URL}/os/${osId}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
@@ -252,12 +223,15 @@ const AprovacoesComplementares = {
             if (osCompleta) {
                 AprovacoesComplementares.renderizarDetalhesOs(osCompleta);
                 AprovacoesComplementares.renderizarItensExistentes(osCompleta.detalhes || []);
+            } else {
+                document.getElementById('osDetailsContainer').innerHTML = `<div class="alert alert-warning">OS ID ${osId} não encontrada no sistema principal.</div>`;
             }
 
             // Preenche dados do Manager
-            const lpuOrig = solicitacao.lpuOriginal || solicitacao.lpu;
-            const qtdOrig = solicitacao.quantidadeOriginal || solicitacao.quantidade;
-            document.getElementById('viewLpuOriginal').value = lpuOrig ? `${lpuOrig.codigoLpu} - ${lpuOrig.nomeLpu}` : 'N/A';
+            const lpuLabel = solicitacao.lpuOriginalId ? `ID: ${solicitacao.lpuOriginalId}` : 'N/A';
+            const qtdOrig = solicitacao.quantidadeOriginal || 0;
+            
+            document.getElementById('viewLpuOriginal').value = lpuLabel;
             document.getElementById('viewQtdOriginal').value = qtdOrig;
             document.getElementById('viewJustificativaManager').value = solicitacao.justificativa || 'Sem justificativa.';
 
@@ -268,27 +242,20 @@ const AprovacoesComplementares = {
             document.getElementById('editStatusRegistro').value = solicitacao.statusRegistroAprovado || 'ATIVO';
             document.getElementById('editJustificativaCoordenador').value = solicitacao.justificativaCoordenador || '';
 
-            // --- CONFIGURAÇÃO DO CHOICES.JS E CARREGAMENTO DE LPUS ---
-            
-            // Esconde a busca antiga se existir no HTML
+            // --- CONFIGURAÇÃO DO CHOICES.JS E CARREGAMENTO DE LPUS (MONÓLITO) ---
             const searchInput = document.getElementById('editLpuBusca');
             if(searchInput) searchInput.parentElement.style.display = 'none';
 
             const lpuSelect = document.getElementById('editLpuSelect');
-            
-            // Carrega TODAS as LPUs
             const todasLpus = await AprovacoesComplementares.carregarTodasLpus();
             
-            // Destroi instância anterior do Choices se existir
             if (AprovacoesComplementares.choicesInstance) {
                 AprovacoesComplementares.choicesInstance.destroy();
                 AprovacoesComplementares.choicesInstance = null;
             }
 
-            // Monta as opções do select
             let optionsHtml = `<option value="">Selecione uma LPU...</option>`;
-            const lpuFinal = solicitacao.lpuAprovada || lpuOrig;
-            const lpuFinalId = lpuFinal ? lpuFinal.id : null;
+            const lpuFinalId = solicitacao.lpuAprovadaId || solicitacao.lpuOriginalId;
 
             todasLpus.forEach(l => {
                 const isSelected = lpuFinalId && l.id === lpuFinalId;
@@ -296,13 +263,8 @@ const AprovacoesComplementares = {
             });
             lpuSelect.innerHTML = optionsHtml;
 
-            // Inicializa Choices.js no select principal
             AprovacoesComplementares.choicesInstance = new Choices(lpuSelect, {
-                searchEnabled: true,
-                itemSelectText: '',
-                placeholder: true,
-                placeholderValue: 'Pesquise por código, nome ou contrato...',
-                shouldSort: false
+                searchEnabled: true, itemSelectText: '', placeholder: true, shouldSort: false
             });
 
             const modalEl = document.getElementById('modalAnaliseCoordenador');
@@ -322,10 +284,8 @@ const AprovacoesComplementares = {
             <div class="col-md-3"><strong>OS:</strong> <br>${os.os || '-'}</div>
             <div class="col-md-3"><strong>Projeto:</strong> <br>${os.projeto || '-'}</div>
             <div class="col-md-3"><strong>Regional:</strong> <br>${os.regional || '-'}</div>
-            <div class="col-md-3"><strong>Site:</strong> <br>${os.site || '-'}</div>
-            <div class="col-md-3"><strong>Cidade/UF:</strong> <br>${os.cidade || '-'} / ${os.uf || '-'}</div>
             <div class="col-md-3"><strong>Segmento:</strong> <br>${os.segmento ? os.segmento.nome : '-'}</div>
-            <div class="col-md-6"><strong>Descrição:</strong> <br><small>${os.descricao || '-'}</small></div>
+            <div class="col-md-12"><strong>Descrição:</strong> <br><small>${os.descricao || '-'}</small></div>
         `;
     },
 
@@ -341,14 +301,11 @@ const AprovacoesComplementares = {
         itens.forEach(item => {
             const isInactive = item.statusRegistro === 'INATIVO';
             const rowClass = isInactive ? 'table-secondary text-muted text-decoration-line-through' : '';
-            const statusBadge = isInactive
-                ? '<span class="badge bg-secondary">INATIVO</span>'
-                : '<span class="badge bg-success">ATIVO</span>';
+            const statusBadge = isInactive ? '<span class="badge bg-secondary">INATIVO</span>' : '<span class="badge bg-success">ATIVO</span>';
 
             const lpuCodigo = item.lpu ? item.lpu.codigoLpu : '-';
             const lpuNome = item.lpu ? item.lpu.nomeLpu : '-';
-            const valorUnit = item.lpu ? item.lpu.valor : 0;
-            const valorTotal = item.valorTotal || (item.quantidade * valorUnit);
+            const valorTotal = item.valorTotal || 0;
 
             const tr = document.createElement('tr');
             tr.className = rowClass;
@@ -357,7 +314,6 @@ const AprovacoesComplementares = {
                 <td class="fw-bold">${lpuCodigo}</td>
                 <td class="text-truncate" style="max-width: 200px;" title="${lpuNome}">${lpuNome}</td>
                 <td class="text-center fw-bold">${item.quantidade}</td>
-                <td class="text-end small text-muted">${AprovacoesComplementares.formatarMoeda(valorUnit)}</td>
                 <td class="text-end fw-bold text-dark">${AprovacoesComplementares.formatarMoeda(valorTotal)}</td>
                 <td class="text-center">${statusBadge}</td>
                 <td class="text-center">
@@ -386,13 +342,16 @@ const AprovacoesComplementares = {
             text: `Deseja alterar para ${novoStatus}?`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Sim'
+            confirmButtonText: 'Sim',
+            // CORREÇÃO DE Z-INDEX
+            didOpen: () => { Swal.getContainer().style.zIndex = '9999'; }
         });
 
         if (!result.isConfirmed) return;
 
         try {
             Swal.showLoading();
+            // Ação no MONÓLITO (API_BASE_URL)
             const response = await fetch(`${API_BASE_URL}/os/detalhe/${id}/status`, {
                 method: 'PATCH',
                 headers: {
@@ -404,17 +363,22 @@ const AprovacoesComplementares = {
 
             if (!response.ok) throw new Error("Erro ao atualizar status");
 
-            Swal.fire('Sucesso', 'Status atualizado!', 'success');
-            // Recarrega o modal para atualizar a tabela
+            Swal.fire({
+                title: 'Sucesso', text: 'Status atualizado!', icon: 'success',
+                didOpen: () => { Swal.getContainer().style.zIndex = '9999'; }
+            });
+            // Recarrega o modal usando o ID da solicitação atual
             const solicitacaoId = document.getElementById('analiseSolicitacaoId').value;
             AprovacoesComplementares.abrirModalAnalise(solicitacaoId);
 
         } catch (error) {
-            Swal.fire('Erro', error.message, 'error');
+            Swal.fire({
+                title: 'Erro', text: error.message, icon: 'error',
+                didOpen: () => { Swal.getContainer().style.zIndex = '9999'; }
+            });
         }
     },
 
-    // --- CORREÇÃO: EDIÇÃO DE ITEM COM CHOICES.JS E SELECT COMPLETO ---
     editarItemExistente: async (id) => {
         const item = AprovacoesComplementares.currentOsCompleta.detalhes.find(d => d.id === id);
         if (!item) return;
@@ -423,7 +387,6 @@ const AprovacoesComplementares = {
         const currentQtd = item.quantidade || 0;
         const currentBoq = item.boq || '';
 
-        // 1. Carrega TODAS as LPUs
         const todasLpus = await AprovacoesComplementares.carregarTodasLpus();
 
         let options = `<option value="">Selecione...</option>`;
@@ -432,14 +395,12 @@ const AprovacoesComplementares = {
             options += `<option value="${l.id}" ${selected}>${l.nome}</option>`;
         });
 
-        // 2. HTML do Modal (Apenas Select, sem busca manual)
         const htmlContent = `
             <div class="text-start">
                 <label class="form-label fw-bold small">Item LPU</label>
                 <select id="swal-edit-lpu-select" class="form-select form-select-sm mb-3">
                     ${options}
                 </select>
-
                 <div class="row g-2">
                     <div class="col-6">
                         <label class="form-label fw-bold small">Quantidade</label>
@@ -453,7 +414,6 @@ const AprovacoesComplementares = {
             </div>
         `;
 
-        // 3. Abre o SweetAlert com Choices.js
         const result = await Swal.fire({
             title: 'Editar Item da OS',
             html: htmlContent,
@@ -461,18 +421,18 @@ const AprovacoesComplementares = {
             confirmButtonText: 'Salvar',
             cancelButtonText: 'Cancelar',
             width: '600px',
-            // Inicializa o Choices dentro do Alert
+            // --- CORREÇÃO DO Z-INDEX AQUI ---
             didOpen: () => {
+                // Força o SweetAlert a ficar acima do Bootstrap Modal
+                const container = Swal.getContainer();
+                if(container) container.style.zIndex = '9999';
+
+                // Inicializa o Choices dentro do Alert
                 const selectEl = document.getElementById('swal-edit-lpu-select');
                 new Choices(selectEl, {
-                    searchEnabled: true,
-                    itemSelectText: '',
-                    placeholder: true,
-                    placeholderValue: 'Pesquisar LPU...',
-                    shouldSort: false,
-                    position: 'bottom' // Abre para baixo
+                    searchEnabled: true, itemSelectText: '', placeholder: true, 
+                    placeholderValue: 'Pesquisar LPU...', shouldSort: false, position: 'bottom'
                 });
-                // Garante overflow visível no container do swal para o dropdown
                 const content = selectEl.closest('.swal2-html-container');
                 if(content) content.style.overflow = 'visible';
             },
@@ -488,17 +448,16 @@ const AprovacoesComplementares = {
             }
         });
 
-        // 4. Salva se confirmado
         if (result.isConfirmed) {
             const dados = result.value;
-
-            if (dados.lpuId === currentLpuId && dados.quantidade === currentQtd && dados.boq === currentBoq) {
-                return;
-            }
+            if (dados.lpuId === currentLpuId && dados.quantidade === currentQtd && dados.boq === currentBoq) return;
 
             try {
-                Swal.fire({ title: 'A atualizar...', didOpen: () => Swal.showLoading() });
+                Swal.fire({
+                    title: 'A atualizar...', didOpen: () => { Swal.showLoading(); Swal.getContainer().style.zIndex = '9999'; }
+                });
 
+                // Ação no MONÓLITO
                 const response = await fetch(`${API_BASE_URL}/os/detalhe/${id}`, {
                     method: 'PUT',
                     headers: {
@@ -514,12 +473,19 @@ const AprovacoesComplementares = {
 
                 if (!response.ok) throw new Error("Erro ao atualizar item");
 
-                Swal.fire('Sucesso', 'Item atualizado!', 'success');
+                Swal.fire({
+                    title: 'Sucesso', text: 'Item atualizado!', icon: 'success',
+                    didOpen: () => { Swal.getContainer().style.zIndex = '9999'; }
+                });
+                
                 const solicitacaoId = document.getElementById('analiseSolicitacaoId').value;
                 AprovacoesComplementares.abrirModalAnalise(solicitacaoId);
 
             } catch (error) {
-                Swal.fire('Erro', error.message, 'error');
+                Swal.fire({
+                    title: 'Erro', text: error.message, icon: 'error',
+                    didOpen: () => { Swal.getContainer().style.zIndex = '9999'; }
+                });
             }
         }
     },
@@ -550,7 +516,8 @@ const AprovacoesComplementares = {
         try {
             Swal.fire({ title: 'Salvando...', didOpen: () => Swal.showLoading() });
 
-            const response = await fetch(`${API_BASE_URL}/aprovacoes/complementares/${id}/coordenador/aprovar`, {
+            // Ação no MICROSSERVIÇO
+            const response = await fetch(`${AprovacoesComplementares.MS_URL}/${id}/coordenador/aprovar`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -593,10 +560,12 @@ const AprovacoesComplementares = {
         Swal.fire({ title: 'Processando...', didOpen: () => Swal.showLoading() });
         try {
             let url, body;
+            const usuarioId = localStorage.getItem('usuarioId');
+
             if (status === 'APROVADO') {
-                url = `${API_BASE_URL}/aprovacoes/complementares/${id}/coordenador/aprovar`;
+                url = `${AprovacoesComplementares.MS_URL}/${id}/coordenador/aprovar`;
                 body = {
-                    aprovadorId: localStorage.getItem('usuarioId'),
+                    aprovadorId: usuarioId,
                     lpuId: null,
                     quantidade: null,
                     boq: "-",
@@ -604,8 +573,8 @@ const AprovacoesComplementares = {
                     justificativa: "Aprovação em lote/rápida"
                 };
             } else {
-                url = `${API_BASE_URL}/aprovacoes/complementares/${id}/rejeitar`;
-                body = motivo ? { motivoRecusa: motivo } : {};
+                url = `${AprovacoesComplementares.MS_URL}/${id}/coordenador/rejeitar`;
+                body = { aprovadorId: usuarioId, motivo: motivo || "Rejeitado pelo usuário" };
             }
 
             const response = await fetch(url, {
@@ -614,7 +583,7 @@ const AprovacoesComplementares = {
                 body: JSON.stringify(body)
             });
 
-            if (!response.ok) throw new Error('Erro ao processar');
+            if (!response.ok) throw new Error('Erro ao processar solicitação');
 
             Swal.fire('Sucesso', `Solicitação ${status.toLowerCase()}!`, 'success');
             AprovacoesComplementares.carregarPendencias();
@@ -633,47 +602,6 @@ const AprovacoesComplementares = {
             inputValidator: (value) => { if (!value) return 'Você precisa escrever um motivo!'; }
         });
         if (motivo) AprovacoesComplementares.enviarDecisao(id, 'REJEITADO', motivo);
-    },
-
-    processarLote: async (acao) => {
-        const checked = document.querySelectorAll('.check-item-comp:checked');
-        if (checked.length === 0) { Swal.fire('Atenção', 'Selecione pelo menos um item.', 'warning'); return; }
-        const ids = Array.from(checked).map(c => parseInt(c.value));
-
-        const confirmResult = await Swal.fire({
-            title: `${acao === 'APROVAR' ? 'Aprovar' : 'Rejeitar'} em Lote`,
-            text: `Confirmar ação para ${ids.length} itens?`,
-            icon: 'warning', showCancelButton: true, confirmButtonText: 'Sim'
-        });
-        if (!confirmResult.isConfirmed) return;
-
-        let motivo = null;
-        if (acao === 'REJEITAR') {
-            const { value: text } = await Swal.fire({
-                title: 'Motivo da Rejeição em Lote', input: 'textarea',
-                inputValidator: (value) => !value && 'Motivo obrigatório'
-            });
-            if (!text) return;
-            motivo = text;
-        }
-
-        Swal.fire({ title: 'Processando...', didOpen: () => Swal.showLoading() });
-        try {
-            const endpoint = acao === 'APROVAR' ? 'aprovar-lote' : 'rejeitar-lote';
-            const payload = { ids: ids, motivoRecusa: motivo, aprovadorId: localStorage.getItem('usuarioId') };
-
-            const response = await fetch(`${API_BASE_URL}/aprovacoes/complementares/${endpoint}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) throw new Error('Erro ao processar lote');
-            Swal.fire('Sucesso', 'Lote processado!', 'success');
-            AprovacoesComplementares.carregarPendencias();
-        } catch (error) {
-            Swal.fire('Erro', error.message, 'error');
-        }
     }
 };
 

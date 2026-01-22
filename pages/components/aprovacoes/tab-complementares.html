@@ -6,13 +6,7 @@
                 <i class="bi bi-list-check me-2"></i> Solicitações Complementares
             </h5>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-success btn-sm" id="btnAprovarMassaComp" title="Aprovar Selecionados">
-                    <i class="bi bi-check-all"></i> Aprovar Lote
-                </button>
-                <button class="btn btn-outline-danger btn-sm" id="btnRejeitarMassaComp" title="Rejeitar Selecionados">
-                    <i class="bi bi-x-circle"></i> Rejeitar Lote
-                </button>
-            </div>
+                </div>
         </div>
         
         <div class="card-body p-0">
@@ -20,12 +14,8 @@
                 <table class="table modern-table align-middle table-hover mb-0" id="tableAprovacoesComplementares">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-center" style="width: 50px;">
-                                <div class="form-check d-flex justify-content-center">
-                                    <input class="form-check-input" type="checkbox" id="checkAllComp">
-                                </div>
-                            </th>
-                            <th>OS / Referência</th> <th>Item (LPU)</th>
+                            <th>OS / Referência</th>
+                            <th>Item (LPU)</th>
                             <th class="text-center">Qtd</th>
                             <th class="text-end">Valor Total</th>
                             <th>Justificativa</th>
@@ -52,6 +42,7 @@
     </div>
 
 </div> 
+
 <div class="modal fade" id="modalAnaliseCoordenador" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable"> 
         <div class="modal-content">
@@ -138,9 +129,8 @@
                                     
                                     <div class="mb-3 position-relative">
                                         <label class="form-label fw-bold">LPU Aprovada</label>
-                                        <div class="input-group">
-                                            <input type="text" class="form-control" id="editLpuBusca" placeholder="Buscar código ou nome...">
-                                            <button class="btn btn-outline-secondary" type="button" id="btnBuscarLpu"><i class="fas fa-search"></i></button>
+                                        <div class="input-group d-none">
+                                            <input type="text" class="form-control" id="editLpuBusca">
                                         </div>
                                         <select class="form-select mt-1" id="editLpuSelect"></select>
                                     </div>
