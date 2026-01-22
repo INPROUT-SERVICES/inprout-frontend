@@ -379,3 +379,21 @@ tr.selected {
 .toast-container {
     z-index: 20005 !important;
 }
+
+/* FORÇA O SWEETALERT ACIMA DE QUALQUER MODAL BOOTSTRAP */
+.swal2-container {
+    z-index: 20000 !important;
+}
+
+/* PERMITE QUE O DROPDOWN DO CHOICES.JS SAIA PRA FORA DO SWEETALERT */
+.swal2-popup {
+    overflow: visible !important;
+}
+.swal2-html-container {
+    overflow: visible !important;
+}
+
+/* AJUSTE PARA O CHOICES.JS DENTRO DE MODAIS */
+.choices__list--dropdown {
+    z-index: 30000 !important;
+}

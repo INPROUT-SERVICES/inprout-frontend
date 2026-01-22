@@ -406,3 +406,11 @@ body:has(.overview-card[style*="display: none"]) .container-fluid.my-4 {
     border: 1px solid #e9ecef;
     display: inline-block;
 }
+
+/* Correção para o SweetAlert aparecer sobre o Modal do Bootstrap */
+.swal2-container {
+    z-index: 2000 !important;
+}
+.swal2-popup {
+    font-size: 0.9rem !important; /* Ajuste opcional para ficar mais harmônico */
+}

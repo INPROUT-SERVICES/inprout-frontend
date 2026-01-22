@@ -1,54 +1,63 @@
-<div class="card shadow-sm">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 card-title-modern">
-            <i class="bi bi-list-check me-2"></i> Solicitações Complementares
-        </h5>
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-success btn-sm" id="btnAprovarMassaComp" title="Aprovar Selecionados">
-                <i class="bi bi-check-all"></i> Aprovar Lote
-            </button>
-            <button class="btn btn-outline-danger btn-sm" id="btnRejeitarMassaComp" title="Rejeitar Selecionados">
-                <i class="bi bi-x-circle"></i> Rejeitar Lote
-            </button>
-        </div>
-    </div>
-    
-    <div class="card-body p-0">
-        <div class="table-responsive custom-scroll">
-            <table class="table modern-table align-middle table-hover mb-0" id="tableAprovacoesComplementares">
-                <thead class="table-light">
-                    <tr>
-                        <th class="text-center" style="width: 50px;">
-                            <div class="form-check d-flex justify-content-center">
-                                <input class="form-check-input" type="checkbox" id="checkAllComp">
-                            </div>
-                        </th>
-                        <th>OS / Referência</th> <th>Item (LPU)</th>
-                        <th class="text-center">Qtd</th>
-                        <th class="text-end">Valor Total</th>
-                        <th>Justificativa</th>
-                        <th class="text-center">Data</th>
-                        <th class="text-center">Status</th>
-                        <th class="text-center" style="width: 100px;">Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="tbodyAprovacoesComplementares">
-                    </tbody>
-            </table>
+<div class="content-loader-container">
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 card-title-modern">
+                <i class="bi bi-list-check me-2"></i> Solicitações Complementares
+            </h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-success btn-sm" id="btnAprovarMassaComp" title="Aprovar Selecionados">
+                    <i class="bi bi-check-all"></i> Aprovar Lote
+                </button>
+                <button class="btn btn-outline-danger btn-sm" id="btnRejeitarMassaComp" title="Rejeitar Selecionados">
+                    <i class="bi bi-x-circle"></i> Rejeitar Lote
+                </button>
+            </div>
         </div>
         
-        <div id="msg-sem-complementares" class="alert alert-light text-center text-muted shadow-sm m-3 d-none">
-            <i class="bi bi-inbox me-2"></i>Nenhuma solicitação pendente encontrada.
+        <div class="card-body p-0">
+            <div class="table-responsive custom-scroll">
+                <table class="table modern-table align-middle table-hover mb-0" id="tableAprovacoesComplementares">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center" style="width: 50px;">
+                                <div class="form-check d-flex justify-content-center">
+                                    <input class="form-check-input" type="checkbox" id="checkAllComp">
+                                </div>
+                            </th>
+                            <th>OS / Referência</th> <th>Item (LPU)</th>
+                            <th class="text-center">Qtd</th>
+                            <th class="text-end">Valor Total</th>
+                            <th>Justificativa</th>
+                            <th class="text-center">Data</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center" style="width: 100px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyAprovacoesComplementares">
+                        </tbody>
+                </table>
+            </div>
+            
+            <div id="msg-sem-complementares" class="alert alert-light text-center text-muted shadow-sm m-3 d-none">
+                <i class="bi bi-inbox me-2"></i>Nenhuma solicitação pendente encontrada.
+            </div>
         </div>
     </div>
-</div>
 
+    <div class="overlay-loader d-none" id="loader-complementares">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+    </div>
+
+</div> 
 <div class="modal fade" id="modalAnaliseCoordenador" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable"> 
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">
-                    <i class="fas fa-tasks me-2"></i>Análise de Solicitação Complementar
+                    <i class="fas fa-tasks me-2"></i>Gerenciar OS e Analisar Solicitação
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -58,13 +67,39 @@
                 <div class="card mb-3 shadow-sm">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center cursor-pointer" 
                          data-bs-toggle="collapse" data-bs-target="#collapseOsDetails">
-                        <h6 class="mb-0 text-primary"><i class="fas fa-info-circle me-2"></i>Dados da OS (Referência)</h6>
+                        <h6 class="mb-0 text-primary"><i class="fas fa-info-circle me-2"></i>Dados da OS</h6>
                         <i class="fas fa-chevron-down text-muted"></i>
                     </div>
-                    <div id="collapseOsDetails" class="collapse show"> <div class="card-body" style="font-size: 0.9rem;">
+                    <div id="collapseOsDetails" class="collapse show"> 
+                        <div class="card-body" style="font-size: 0.9rem;">
                             <div class="row g-3" id="osDetailsContainer">
                                 <div class="text-center py-3"><div class="spinner-border text-primary"></div></div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3 shadow-sm border-0">
+                    <div class="card-header bg-secondary text-white">
+                        <strong><i class="bi bi-list-ul me-2"></i>Itens Já Existentes na OS</strong>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>LPU</th>
+                                        <th>Descrição</th>
+                                        <th class="text-center">Qtd</th>
+                                        <th class="text-end">Valor Unit.</th>
+                                        <th class="text-end">Total</th>
+                                        <th class="text-center">Status</th>
+                                        <th class="text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyItensExistentes">
+                                    </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -73,7 +108,7 @@
                     <div class="col-md-5">
                         <div class="card h-100 shadow-sm border-warning">
                             <div class="card-header bg-warning bg-opacity-10 text-dark">
-                                <strong>Solicitação Original (Manager)</strong>
+                                <strong><i class="bi bi-arrow-right-circle me-1"></i> Solicitação Pendente (Manager)</strong>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
@@ -95,7 +130,7 @@
                     <div class="col-md-7">
                         <div class="card h-100 shadow-sm border-success">
                             <div class="card-header bg-success text-white">
-                                <strong><i class="fas fa-edit me-1"></i> Dados para Aprovação (Edição)</strong>
+                                <strong><i class="fas fa-check-circle me-1"></i> Decisão da Solicitação</strong>
                             </div>
                             <div class="card-body">
                                 <form id="formAnaliseCoordenador">
@@ -104,11 +139,10 @@
                                     <div class="mb-3 position-relative">
                                         <label class="form-label fw-bold">LPU Aprovada</label>
                                         <div class="input-group">
-                                            <input type="text" class="form-control" id="editLpuBusca" placeholder="Digite código ou nome para buscar...">
+                                            <input type="text" class="form-control" id="editLpuBusca" placeholder="Buscar código ou nome...">
                                             <button class="btn btn-outline-secondary" type="button" id="btnBuscarLpu"><i class="fas fa-search"></i></button>
                                         </div>
-                                        <select class="form-select mt-1" id="editLpuSelect">
-                                            </select>
+                                        <select class="form-select mt-1" id="editLpuSelect"></select>
                                     </div>
 
                                     <div class="row g-3 mb-3">
@@ -117,7 +151,7 @@
                                             <input type="number" class="form-control" id="editQuantidade" min="1">
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-bold">BOQ <span class="text-muted fw-light">(Opcional)</span></label>
+                                            <label class="form-label fw-bold">BOQ</label>
                                             <input type="text" class="form-control" id="editBoq" placeholder="-">
                                         </div>
                                         <div class="col-md-4">
@@ -130,8 +164,8 @@
                                     </div>
 
                                     <div class="mb-3">
-                                        <label class="form-label fw-bold">Justificativa da Aprovação/Edição <span class="text-danger">*</span></label>
-                                        <textarea class="form-control" id="editJustificativaCoordenador" rows="3" placeholder="Explique as alterações ou o motivo da aprovação..."></textarea>
+                                        <label class="form-label fw-bold">Justificativa da Decisão <span class="text-danger">*</span></label>
+                                        <textarea class="form-control" id="editJustificativaCoordenador" rows="3" placeholder="Motivo da aprovação ou alteração..."></textarea>
                                     </div>
                                 </form>
                             </div>
@@ -146,7 +180,7 @@
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
                 <button type="button" class="btn btn-success" onclick="AprovacoesComplementares.salvarAprovacao()">
-                    <i class="fas fa-check"></i> Aprovar e Enviar p/ Controller
+                    <i class="fas fa-check"></i> Finalizar Solicitação
                 </button>
             </div>
         </div>

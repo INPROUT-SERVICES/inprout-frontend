@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             // Renderiza o conteúdo da aba que o usuário está vendo AGORA
             if (painelAtivoId === '#atividades-pane') {
                 renderizarAcordeonPendencias(window.todasPendenciasAtividades);
-            } 
+            }
             else if (painelAtivoId === '#materiais-pane') {
                 // CORREÇÃO: Chama o carregamento completo para exibir o spinner/loader inicial
                 if (typeof carregarDadosMateriais === 'function') {
@@ -68,14 +68,14 @@ document.addEventListener('DOMContentLoaded', async function () {
                 } else {
                     renderizarCardsPedidos(window.todasPendenciasMateriais);
                 }
-            } 
+            }
             else if (painelAtivoId === '#complementares-pane') {
                 renderizarTabelaPendentesComplementares(window.todasPendenciasComplementares);
-            } 
-            else if (painelAtivoId === '#cps-pendencias-pane') { 
-                initFiltrosCPS(); 
-                carregarPendenciasCPS(); 
-            } 
+            }
+            else if (painelAtivoId === '#cps-pendencias-pane') {
+                initFiltrosCPS();
+                carregarPendenciasCPS();
+            }
             else if (painelAtivoId === '#minhas-docs-pane') {
                 initDocumentacaoTab();
             }
@@ -92,16 +92,21 @@ document.addEventListener('DOMContentLoaded', async function () {
             // Abas de Pendências (usam dados globais já carregados)
             if (targetPaneId === '#atividades-pane') {
                 renderizarAcordeonPendencias(window.todasPendenciasAtividades);
-            } 
+            }
             else if (targetPaneId === '#materiais-pane') {
                 // CORREÇÃO CRUCIAL: Ao trocar para a aba Materiais, forçamos o carregarDadosMateriais()
                 // Isso ativa o spinner definido em aprovacoes-materiais.js antes de mostrar o resultado.
                 if (typeof carregarDadosMateriais === 'function') {
                     carregarDadosMateriais();
                 }
-            } 
+            }
             else if (targetPaneId === '#complementares-pane') {
-                renderizarTabelaPendentesComplementares(window.todasPendenciasComplementares);
+                // Força a busca de dados novos, o que ativa o loader configurado no outro arquivo
+                if (window.AprovacoesComplementares && typeof window.AprovacoesComplementares.carregarPendencias === 'function') {
+                    window.AprovacoesComplementares.carregarPendencias();
+                } else {
+                    renderizarTabelaPendentesComplementares(window.todasPendenciasComplementares);
+                }
             }
 
             // Abas de Histórico (carregam sob demanda)
@@ -427,11 +432,11 @@ document.addEventListener('DOMContentLoaded', async function () {
             mostrarToast('Solicitação de material aprovada!', 'success');
             modalAprovarMaterial.hide();
             await carregarDashboardEBadges();
-            
+
             // CORREÇÃO: Usa carregarDadosMateriais() para dar refresh visual correto
             if (typeof carregarDadosMateriais === 'function') carregarDadosMateriais();
             else renderizarCardsPedidos(window.todasPendenciasMateriais);
-            
+
         } catch (e) { mostrarToast(e.message, 'error'); }
         finally { setButtonLoading(this, false); toggleLoader(false, '#materiais-pane'); }
     });
@@ -446,12 +451,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         toggleLoader(true, '#materiais-pane');
         setButtonLoading(btn, true);
         try {
-             // Usa API_MATERIALS_URL que vem de aprovacoes-materiais.js
+            // Usa API_MATERIALS_URL que vem de aprovacoes-materiais.js
             await fetchComAuth(`${API_MATERIALS_URL}${endpoint}`, { method: 'POST', body: JSON.stringify({ aprovadorId: userId, observacao: motivo }) });
             mostrarToast('Solicitação de material recusada.', 'success');
             modalRecusarMaterial.hide();
             await carregarDashboardEBadges();
-            
+
             // CORREÇÃO: Usa carregarDadosMateriais() para dar refresh visual correto
             if (typeof carregarDadosMateriais === 'function') carregarDadosMateriais();
             else renderizarCardsPedidos(window.todasPendenciasMateriais);
@@ -664,12 +669,12 @@ async function carregarDashboardEBadges() {
             fetchComAuth(`${API_BASE_URL}/lancamentos`),
             fetchComAuth(`${API_BASE_URL}/lancamentos/pendentes/${userId}`),
             fetchComAuth(`${API_BASE_URL}/lancamentos/pendencias-por-coordenador`),
-            
+
             // CORREÇÃO DA URL DO MONÓLITO/SERVIÇO DE MATERIAIS
             // Garante que usamos a rota completa: host + /api/materiais/solicitacoes/pendentes
             fetchComAuth(`${API_MATERIALS_URL}/api/materiais/solicitacoes/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } }),
-            
-            fetchComAuth(`${API_BASE_URL}/aprovacoes/complementares/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } })  
+
+            fetchComAuth(`${API_BASE_URL}/aprovacoes/complementares/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } })
         ]);
 
         if (!resGeral.ok) throw new Error('Falha no dashboard.');
@@ -713,12 +718,12 @@ async function carregarDashboardEBadges() {
         if (abaAtivaAgora) {
             const painelAtivoId = abaAtivaAgora.getAttribute('data-bs-target');
             if (painelAtivoId === '#atividades-pane') renderizarAcordeonPendencias(window.todasPendenciasAtividades);
-            
+
             else if (painelAtivoId === '#materiais-pane') {
-                 // CORREÇÃO: Chama a nova função de Cards
-                 renderizarCardsPedidos(window.todasPendenciasMateriais);
+                // CORREÇÃO: Chama a nova função de Cards
+                renderizarCardsPedidos(window.todasPendenciasMateriais);
             }
-            
+
             else if (painelAtivoId === '#complementares-pane') renderizarTabelaPendentesComplementares(window.todasPendenciasComplementares);
             else if (painelAtivoId === '#cps-pendencias-pane') { initFiltrosCPS(); carregarPendenciasCPS(); }
             else if (painelAtivoId === '#minhas-docs-pane') {
