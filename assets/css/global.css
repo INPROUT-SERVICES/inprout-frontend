@@ -380,20 +380,17 @@ tr.selected {
     z-index: 20005 !important;
 }
 
-/* FORÇA O SWEETALERT ACIMA DE QUALQUER MODAL BOOTSTRAP */
+/* CORREÇÃO DEFINITIVA: SweetAlert sempre acima de Modais Bootstrap */
 .swal2-container {
     z-index: 20000 !important;
 }
 
-/* PERMITE QUE O DROPDOWN DO CHOICES.JS SAIA PRA FORA DO SWEETALERT */
 .swal2-popup {
-    overflow: visible !important;
-}
-.swal2-html-container {
-    overflow: visible !important;
+    font-size: 0.9rem !important; /* Ajuste opcional para ficar harmônico */
 }
 
-/* AJUSTE PARA O CHOICES.JS DENTRO DE MODAIS */
-.choices__list--dropdown {
-    z-index: 30000 !important;
+/* Garante que o dropdown do Choices.js dentro do SweetAlert apareça corretamente */
+.choices__list--dropdown, 
+.choices__list[aria-expanded] {
+    z-index: 20001 !important;
 }

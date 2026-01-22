@@ -407,10 +407,17 @@ body:has(.overview-card[style*="display: none"]) .container-fluid.my-4 {
     display: inline-block;
 }
 
-/* Correção para o SweetAlert aparecer sobre o Modal do Bootstrap */
+/* CORREÇÃO DEFINITIVA: SweetAlert sempre acima de Modais Bootstrap */
 .swal2-container {
-    z-index: 2000 !important;
+    z-index: 20000 !important;
 }
+
 .swal2-popup {
-    font-size: 0.9rem !important; /* Ajuste opcional para ficar mais harmônico */
+    font-size: 0.9rem !important; /* Ajuste opcional para ficar harmônico */
+}
+
+/* Garante que o dropdown do Choices.js dentro do SweetAlert apareça corretamente */
+.choices__list--dropdown, 
+.choices__list[aria-expanded] {
+    z-index: 20001 !important;
 }
