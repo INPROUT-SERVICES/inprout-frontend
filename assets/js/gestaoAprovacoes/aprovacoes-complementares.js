@@ -7,87 +7,46 @@ const AprovacoesComplementares = {
     alteracoesBuffer: {}, 
     listenersConfigurados: false,
     listaCompletaLpus: null,
-    mapaDetalhesOs: {}, 
+    mapaDetalhesOs: {}, // Cache de OS
+    
     choicesMain: null,
     choicesEdit: null,
 
     init: () => {
         if (!AprovacoesComplementares.listenersConfigurados) {
             AprovacoesComplementares.listenersConfigurados = true;
-            
-            // CSS INJETADO (TEMA VERDE & MODERNO)
-            const style = document.createElement('style');
-            style.innerHTML = `
-                /* Define a cor primária como Verde Sucesso do Bootstrap */
-                :root {
-                    --app-primary: #198754; 
-                    --app-primary-light: #d1e7dd;
-                    --app-bg: #fff;
-                }
-
-                .swal2-container { z-index: 20000 !important; }
-                
-                /* Highlights de Edição */
-                .item-modificado { background-color: #fff3cd !important; } 
-                .valor-antigo { text-decoration: line-through; color: var(--bs-danger); margin-right: 6px; font-size: 0.85em; }
-                .valor-novo { color: var(--app-primary); font-weight: bold; }
-
-                /* Cards & Widgets */
-                .card-modern {
-                    background: var(--app-bg);
-                    border: 1px solid rgba(0,0,0,0.08);
-                    border-radius: 12px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-                    margin-bottom: 1.5rem;
-                }
-                .card-header-modern { padding: 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.05); }
-                .title-modern { font-weight: 700; margin: 0; color: #212529; }
-
-                .info-widget {
-                    background-color: var(--bs-light);
-                    border: 1px solid rgba(0,0,0,0.05);
-                    border-radius: 8px;
-                    padding: 1rem;
-                    position: relative;
-                    overflow: hidden;
-                }
-                .info-widget i {
-                    position: absolute; right: -5px; top: -5px; font-size: 3rem;
-                    color: var(--app-primary); opacity: 0.1; transform: rotate(10deg);
-                }
-                .info-widget-label { font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #6c757d; display: block; margin-bottom: 4px; }
-                .info-widget-value { font-size: 0.95rem; font-weight: 700; color: var(--app-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;}
-
-                /* Abas Modernas (Pills) */
-                .nav-pills.modern-tabs .nav-link {
-                    color: #6c757d;
-                    background: transparent;
-                    border: 1px solid rgba(0,0,0,0.1);
-                    margin: 0 5px;
-                    border-radius: 8px;
-                    transition: all 0.2s;
-                }
-                .nav-pills.modern-tabs .nav-link:hover { background: rgba(0,0,0,0.03); }
-                .nav-pills.modern-tabs .nav-link.active {
-                    background-color: var(--app-primary);
-                    color: white;
-                    box-shadow: 0 4px 10px rgba(25, 135, 84, 0.3);
-                    border-color: var(--app-primary);
-                }
-
-                /* Comparação */
-                .comparison-card { border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; height: 100%; }
-                .comparison-header { padding: 10px 15px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; }
-                .comparison-header.original { background: #fff3cd; color: #664d03; border-bottom: 1px solid #ffecb5; }
-                .comparison-header.proposal { background: var(--app-primary); color: #fff; border-bottom: 1px solid var(--app-primary); }
-
-                /* Form */
-                .form-control-modern { border-radius: 6px; padding: 8px 12px; border: 1px solid #ced4da; }
-                .form-control-modern:focus { border-color: var(--app-primary); box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.15); }
-            `;
-            document.head.appendChild(style);
+            AprovacoesComplementares.injetarCSS();
             console.log("Módulo Complementares Iniciado.");
         }
+    },
+
+    injetarCSS: () => {
+        const style = document.createElement('style');
+        style.innerHTML = `
+            :root { --app-primary: #198754; --app-primary-light: #d1e7dd; --app-bg: #fff; }
+            .swal2-container { z-index: 20000 !important; }
+            .item-modificado { background-color: #fff3cd !important; } 
+            .valor-antigo { text-decoration: line-through; color: var(--bs-danger); margin-right: 6px; font-size: 0.85em; }
+            .valor-novo { color: var(--app-primary); font-weight: bold; }
+            .card-modern { background: var(--app-bg); border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 1.5rem; }
+            .card-header-modern { padding: 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.05); }
+            .title-modern { font-weight: 700; margin: 0; color: #212529; }
+            .info-widget { background-color: var(--bs-light); border: 1px solid rgba(0,0,0,0.05); border-radius: 8px; padding: 1rem; position: relative; overflow: hidden; }
+            .info-widget i { position: absolute; right: -5px; top: -5px; font-size: 3rem; color: var(--app-primary); opacity: 0.1; transform: rotate(10deg); }
+            .info-widget-label { font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #6c757d; display: block; margin-bottom: 4px; }
+            .info-widget-value { font-size: 0.95rem; font-weight: 700; color: var(--app-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;}
+            .nav-pills.modern-tabs .nav-link { color: #6c757d; background: transparent; border: 1px solid rgba(0,0,0,0.1); margin: 0 5px; border-radius: 8px; transition: all 0.2s; }
+            .nav-pills.modern-tabs .nav-link:hover { background: rgba(0,0,0,0.03); }
+            .nav-pills.modern-tabs .nav-link.active { background-color: var(--app-primary); color: white; box-shadow: 0 4px 10px rgba(25, 135, 84, 0.3); border-color: var(--app-primary); }
+            .comparison-card { border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; height: 100%; }
+            .comparison-header { padding: 10px 15px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; }
+            .comparison-header.original { background: #fff3cd; color: #664d03; border-bottom: 1px solid #ffecb5; }
+            .comparison-header.proposal { background: var(--app-primary); color: #fff; border-bottom: 1px solid var(--app-primary); }
+            .form-control-modern { border-radius: 6px; padding: 8px 12px; border: 1px solid #ced4da; }
+            .form-control-modern:focus { border-color: var(--app-primary); box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.15); }
+            .loading-text { font-style: italic; color: #adb5bd; font-size: 0.85rem; }
+        `;
+        document.head.appendChild(style);
     },
 
     formatarMoeda: (valor) => {
@@ -108,7 +67,6 @@ const AprovacoesComplementares = {
         }
     },
 
-    // --- CARREGAMENTO ---
     carregarTodasLpus: async () => {
         if (AprovacoesComplementares.listaCompletaLpus) return AprovacoesComplementares.listaCompletaLpus;
         try {
@@ -132,10 +90,13 @@ const AprovacoesComplementares = {
         } catch (error) { return []; }
     },
 
-    fetchDetalhesOs: async (osId) => {
+    // Busca detalhes individualmente sem travar a UI
+    fetchDetalhesOsESalvar: async (osId) => {
         if (AprovacoesComplementares.mapaDetalhesOs[osId]) return AprovacoesComplementares.mapaDetalhesOs[osId];
         try {
-            const res = await fetch(`${API_BASE_URL}/os/${osId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+            const res = await fetch(`${API_BASE_URL}/os/${osId}`, { 
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } 
+            });
             if(res.ok) {
                 const dados = await res.json();
                 let site = dados.site || '-';
@@ -146,12 +107,27 @@ const AprovacoesComplementares = {
                     if (site === '-') site = det.site || '-';
                     if (projeto === '-') projeto = det.regional || '-';
                 }
-                const info = { osCodigo: dados.os, projeto: projeto, site: site };
+                const info = { osCodigo: dados.os, projeto: projeto, site: site, loaded: true };
                 AprovacoesComplementares.mapaDetalhesOs[osId] = info;
+                
+                // Atualiza a interface especificamente para esta OS
+                AprovacoesComplementares.atualizarLinhasTabela(osId, info);
+                
                 return info;
             }
-        } catch(e) { }
-        return { osCodigo: 'ID: '+osId, projeto: '-', site: '-' };
+        } catch(e) { console.error("Erro fetch OS:", e); }
+        return { osCodigo: 'OS #'+osId, projeto: '-', site: '-', loaded: false };
+    },
+
+    atualizarLinhasTabela: (osId, info) => {
+        // Encontra todos os spans que estão esperando dados desta OS
+        const spansSite = document.querySelectorAll(`.site-placeholder-${osId}`);
+        const spansProjeto = document.querySelectorAll(`.projeto-placeholder-${osId}`);
+        const spansOs = document.querySelectorAll(`.os-placeholder-${osId}`);
+
+        spansSite.forEach(el => { el.innerText = info.site; el.classList.remove('loading-text'); });
+        spansProjeto.forEach(el => { el.innerText = info.projeto; el.classList.remove('loading-text'); });
+        spansOs.forEach(el => { el.innerText = info.osCodigo; el.classList.remove('fw-light'); el.classList.add('fw-bold'); });
     },
 
     carregarPendencias: async () => {
@@ -164,19 +140,26 @@ const AprovacoesComplementares = {
         tbody.innerHTML = '';
 
         try {
+            // Carrega LPU primeiro pois é leve e necessário para o cálculo
             await AprovacoesComplementares.carregarTodasLpus();
+
             const userRole = localStorage.getItem('role') || 'COORDINATOR';
-            const response = await fetch(`${AprovacoesComplementares.MS_URL}/pendentes?role=${userRole}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+            const response = await fetch(`${AprovacoesComplementares.MS_URL}/pendentes?role=${userRole}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
             
             if (!response.ok) throw new Error("Erro ao buscar pendências");
             const lista = await response.json();
             
             AprovacoesComplementares.atualizarBadge(lista.length);
 
-            const osIds = [...new Set(lista.map(item => item.osId))];
-            await Promise.all(osIds.map(id => AprovacoesComplementares.fetchDetalhesOs(id)));
-            
+            // CORREÇÃO CRÍTICA: Renderiza IMEDIATAMENTE, depois busca os detalhes
             AprovacoesComplementares.renderizarTabelaPrincipal(lista);
+
+            // Inicia busca de detalhes em background (sem await no loop principal)
+            const osIds = [...new Set(lista.map(item => item.osId))];
+            osIds.forEach(id => AprovacoesComplementares.fetchDetalhesOsESalvar(id));
+
         } catch (error) {
             tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Erro: ${error.message}</td></tr>`;
         } finally {
@@ -206,10 +189,19 @@ const AprovacoesComplementares = {
         lista.forEach(item => {
             const tr = document.createElement('tr');
             
-            const osInfo = AprovacoesComplementares.mapaDetalhesOs[item.osId] || { osCodigo: item.osId, projeto: '-', site: '-' };
+            // Verifica se já temos em cache
+            const cache = AprovacoesComplementares.mapaDetalhesOs[item.osId];
+            
+            const osDisplay = cache ? cache.osCodigo : `OS #${item.osId}`;
+            const siteDisplay = cache ? cache.site : 'Carregando...';
+            const projetoDisplay = cache ? cache.projeto : 'Carregando...';
+            const loadingClass = cache ? '' : 'loading-text'; // Classe CSS para estilo itálico cinza
+
+            // Busca nome da LPU
             const lpuInfo = AprovacoesComplementares.listaCompletaLpus.find(l => l.id === item.lpuOriginalId);
             const nomeLpu = lpuInfo ? lpuInfo.nome.split('|')[1] || lpuInfo.nome : `LPU ID: ${item.lpuOriginalId}`;
             
+            // Calcula valor total se vier zerado
             let valorTotal = item.valorTotalEstimado;
             if (!valorTotal || valorTotal === 0) {
                 const valorUnit = lpuInfo ? lpuInfo.valor : 0;
@@ -217,14 +209,14 @@ const AprovacoesComplementares = {
             }
 
             const isController = item.status === 'PENDENTE_CONTROLLER';
-            const btnClass = isController ? 'btn-success' : 'btn-outline-success'; // Botão verde
+            const btnClass = isController ? 'btn-success' : 'btn-outline-success';
             const btnIcon = isController ? 'bi-check-lg' : 'bi-pencil-square';
             const btnTitle = isController ? 'Aprovar' : 'Analisar';
 
             tr.innerHTML = `
-                <td><span class="fw-bold text-dark">${osInfo.osCodigo}</span></td>
-                <td><small>${osInfo.site}</small></td>
-                <td><small>${osInfo.projeto}</small></td>
+                <td><span class="os-placeholder-${item.osId} text-dark fw-bold">${osDisplay}</span></td>
+                <td><small class="site-placeholder-${item.osId} ${loadingClass}">${siteDisplay}</small></td>
+                <td><small class="projeto-placeholder-${item.osId} ${loadingClass}">${projetoDisplay}</small></td>
                 <td><small class="text-truncate d-inline-block" style="max-width: 250px;" title="${nomeLpu}">${nomeLpu}</small></td>
                 <td class="text-center"><span class="badge bg-light text-dark border">${item.quantidadeOriginal}</span></td>
                 <td class="text-end fw-bold text-success">${AprovacoesComplementares.formatarMoeda(valorTotal)}</td>
@@ -243,7 +235,7 @@ const AprovacoesComplementares = {
         try {
             const btn = document.activeElement;
             const originalIcon = btn.innerHTML;
-            if(btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            if(btn && btn.tagName === 'BUTTON') btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
 
             AprovacoesComplementares.alteracoesBuffer = {};
 
@@ -264,7 +256,7 @@ const AprovacoesComplementares = {
             const osCompleta = respOs.ok ? await respOs.json() : null;
             AprovacoesComplementares.currentOsCompleta = osCompleta;
 
-            if(btn) btn.innerHTML = originalIcon;
+            if(btn && btn.tagName === 'BUTTON') btn.innerHTML = originalIcon;
 
             const isController = solicitacao.status === 'PENDENTE_CONTROLLER';
 
@@ -303,7 +295,7 @@ const AprovacoesComplementares = {
             } else {
                 btnSalvar.innerHTML = '<i class="bi bi-send-fill me-1"></i> Enviar Proposta';
             }
-            btnSalvar.className = 'btn btn-success px-4 fw-bold shadow-sm'; // Força verde
+            btnSalvar.className = 'btn btn-success px-4 fw-bold shadow-sm';
 
             const lpuSelect = document.getElementById('editLpuSelect');
             if (AprovacoesComplementares.choicesMain) { AprovacoesComplementares.choicesMain.destroy(); }
@@ -319,12 +311,10 @@ const AprovacoesComplementares = {
             AprovacoesComplementares.choicesMain = new Choices(lpuSelect, { searchEnabled: true, itemSelectText: '', shouldSort: false });
             if (isController) AprovacoesComplementares.choicesMain.disable();
 
-            // Abre o modal e reseta a aba ativa para a primeira (Análise)
             const modalEl = document.getElementById('modalAnaliseCoordenador');
             let modalInstance = bootstrap.Modal.getInstance(modalEl);
             if (!modalInstance) { modalInstance = new bootstrap.Modal(modalEl); }
             
-            // Ativa a primeira aba (Análise) sempre que abrir
             const triggerEl = document.querySelector('#pills-analise-tab');
             if(triggerEl) bootstrap.Tab.getOrCreateInstance(triggerEl).show();
 
@@ -555,7 +545,6 @@ const AprovacoesComplementares = {
                 if(alerta) alerta.hide();
 
                 AprovacoesComplementares.carregarPendencias();
-                // Exibe toast ou reload opcional
             } else { throw new Error('Erro ao processar'); }
         } catch (e) { alert('Erro: ' + e.message); }
     },
