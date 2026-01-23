@@ -3,13 +3,13 @@ if (!window.API_COMPLEMENTARES_URL) {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         window.API_COMPLEMENTARES_URL = 'http://localhost:8082';
     } else {
-        // Se estiver no servidor (pega o IP ou Domínio atual e adiciona a porta 8082)
-        window.API_COMPLEMENTARES_URL = window.location.protocol + '//' + window.location.hostname + ':8082';
+        window.API_COMPLEMENTARES_URL = window.location.origin + '/atividades';
     }
 }
 
 const AprovacoesComplementares = {
 
+    // Caminho da API concatenado com a URL base dinâmica
     MS_URL: window.API_COMPLEMENTARES_URL + "/v1/solicitacoes-complementares",
 
     currentSolicitacao: null,
