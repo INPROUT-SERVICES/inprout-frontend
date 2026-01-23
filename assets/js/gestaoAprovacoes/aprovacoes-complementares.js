@@ -1,6 +1,16 @@
+if (!window.API_COMPLEMENTARES_URL) {
+    // Se estiver rodando no PC do desenvolvedor
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        window.API_COMPLEMENTARES_URL = 'http://localhost:8082';
+    } else {
+        // Se estiver no servidor (pega o IP ou Domínio atual e adiciona a porta 8082)
+        window.API_COMPLEMENTARES_URL = window.location.protocol + '//' + window.location.hostname + ':8082';
+    }
+}
+
 const AprovacoesComplementares = {
 
-    MS_URL: "http://localhost:8082/v1/solicitacoes-complementares",
+    MS_URL: window.API_COMPLEMENTARES_URL + "/v1/solicitacoes-complementares",
 
     currentSolicitacao: null,
     currentOsCompleta: null,

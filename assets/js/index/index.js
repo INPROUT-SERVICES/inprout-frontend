@@ -1991,7 +1991,16 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Enviando...`;
 
             // URL do Microsserviço (Porta 8082)
-            const MS_URL = "http://localhost:8082/v1/solicitacoes-complementares";
+            let baseUrlComplementar = '';
+            
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                baseUrlComplementar = 'http://localhost:8082';
+            } else {
+                // No servidor: Usa o mesmo IP do navegador, mas na porta 8082
+                baseUrlComplementar = window.location.protocol + '//' + window.location.hostname + ':8082';
+            }
+
+            const MS_URL = `${baseUrlComplementar}/v1/solicitacoes-complementares`;
 
             try {
                 // Usa fetch nativo para garantir a URL absoluta (evita prefixo do fetchComAuth se houver)
