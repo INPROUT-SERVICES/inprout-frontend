@@ -4,7 +4,10 @@ const AprovacoesComplementares = {
 
     currentSolicitacao: null,
     currentOsCompleta: null,
+    
+    // Buffer para armazenar edições (Novas ou Carregadas do Backend)
     alteracoesBuffer: {}, 
+
     listenersConfigurados: false,
     listaCompletaLpus: null,
     choicesMain: null,
@@ -14,25 +17,19 @@ const AprovacoesComplementares = {
         if (!AprovacoesComplementares.listenersConfigurados) {
             AprovacoesComplementares.listenersConfigurados = true;
             
-            // CSS Apenas para cores da tabela (Amarelo/Riscado)
-            // Z-Index agora é gerenciado pelos modais Bootstrap
             const style = document.createElement('style');
             style.innerHTML = `
+                .swal2-container { z-index: 20000 !important; }
+                .swal2-popup { font-size: 0.9rem !important; }
                 .item-modificado { background-color: #fff8d1 !important; border-left: 4px solid #ffc107; }
                 .valor-antigo { text-decoration: line-through; color: #dc3545; margin-right: 6px; font-size: 0.85em; }
                 .valor-novo { color: #198754; font-weight: bold; }
             `;
             document.head.appendChild(style);
-            console.log("Módulo Complementares Iniciado.");
         }
     },
 
-    // --- UTILITÁRIOS ---
-    mostrarAlerta: (mensagem) => {
-        document.getElementById('textoAlerta').innerText = mensagem;
-        new bootstrap.Modal(document.getElementById('modalAlerta')).show();
-    },
-
+    // --- UTILS ---
     parseDataBR: (dataStr) => {
         if (!dataStr) return null;
         if (dataStr.includes('T')) return new Date(dataStr);
@@ -43,6 +40,11 @@ const AprovacoesComplementares = {
 
     formatarMoeda: (valor) => {
         return parseFloat(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    },
+
+    mostrarAlerta: (msg) => {
+        document.getElementById('textoAlerta').innerText = msg;
+        new bootstrap.Modal(document.getElementById('modalAlerta')).show();
     },
 
     // --- CARREGAMENTO ---
@@ -62,10 +64,7 @@ const AprovacoesComplementares = {
             lpus.sort((a, b) => a.nome.localeCompare(b.nome));
             AprovacoesComplementares.listaCompletaLpus = lpus;
             return lpus;
-        } catch (error) {
-            console.error("Erro LPUs:", error);
-            return [];
-        }
+        } catch (error) { return []; }
     },
 
     carregarPendencias: async () => {
@@ -78,13 +77,18 @@ const AprovacoesComplementares = {
         tbody.innerHTML = '';
 
         try {
-            const response = await fetch(`${AprovacoesComplementares.MS_URL}/pendentes`, {
+            // CORREÇÃO: Enviamos a ROLE para filtrar a fila correta
+            const userRole = localStorage.getItem('role') || 'COORDINATOR'; // Fallback se não tiver no storage
+            const response = await fetch(`${AprovacoesComplementares.MS_URL}/pendentes?role=${userRole}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
+            
             if (!response.ok) throw new Error("Erro ao buscar pendências");
+            
             const lista = await response.json();
             AprovacoesComplementares.renderizarTabelaPrincipal(lista);
         } catch (error) {
+            console.error(error);
             tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Erro: ${error.message}</td></tr>`;
         } finally {
             loader.classList.add('d-none');
@@ -131,11 +135,32 @@ const AprovacoesComplementares = {
         try {
             Swal.fire({ title: 'Carregando...', didOpen: () => Swal.showLoading() });
 
+            // 1. Zera o buffer
             AprovacoesComplementares.alteracoesBuffer = {};
 
+            // 2. Busca dados
             const respSol = await fetch(`${AprovacoesComplementares.MS_URL}/${id}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
             const solicitacao = await respSol.json();
             AprovacoesComplementares.currentSolicitacao = solicitacao;
+
+            // 3. CORREÇÃO: Se houver JSON de propostas, carrega no buffer!
+            // Assim o Controller vê o que o Coordenador editou.
+            if (solicitacao.alteracoesPropostasJson) {
+                try {
+                    const propostas = JSON.parse(solicitacao.alteracoesPropostasJson);
+                    // O backend devolve array, convertemos para objeto chaveado por ID
+                    propostas.forEach(p => {
+                        AprovacoesComplementares.alteracoesBuffer[p.itemId] = {
+                            novaQtd: p.novaQtd,
+                            novaLpuId: p.novaLpuId,
+                            novoBoq: p.novoBoq,
+                            novoStatus: p.novoStatus
+                        };
+                    });
+                } catch (errJson) {
+                    console.error("Erro ao ler propostas anteriores:", errJson);
+                }
+            }
 
             const respOs = await fetch(`${API_BASE_URL}/os/${solicitacao.osId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
             const osCompleta = respOs.ok ? await respOs.json() : null;
@@ -145,28 +170,38 @@ const AprovacoesComplementares = {
 
             if (osCompleta) {
                 AprovacoesComplementares.renderizarDetalhesOs(osCompleta);
+                // Renderiza, e como o buffer já foi populado acima, vai pintar de amarelo!
                 AprovacoesComplementares.renderizarItensExistentesComBuffer();
             } else {
                 document.getElementById('osDetailsContainer').innerHTML = '<div class="alert alert-warning">OS não encontrada.</div>';
             }
 
+            // Preenche Formulário da Direita
+            // Se já tiver aprovação (Controller vendo), mostra os dados aprovados pelo coordenador
+            const isControllerView = solicitacao.status === 'PENDENTE_CONTROLLER';
+            
             document.getElementById('viewLpuOriginal').value = `ID: ${solicitacao.lpuOriginalId}`;
             document.getElementById('viewQtdOriginal').value = solicitacao.quantidadeOriginal;
             document.getElementById('viewJustificativaManager').value = solicitacao.justificativa;
             
             document.getElementById('analiseSolicitacaoId').value = solicitacao.id;
-            document.getElementById('editQuantidade').value = solicitacao.quantidadeAprovada || solicitacao.quantidadeOriginal;
-            document.getElementById('editBoq').value = solicitacao.boqAprovado || '';
-            document.getElementById('editStatusRegistro').value = solicitacao.statusRegistroAprovado || 'ATIVO';
+            
+            // Se for Controller, mostra o que o Coordenador aprovou. Se for Coord, mostra original.
+            document.getElementById('editQuantidade').value = isControllerView ? solicitacao.quantidadeAprovada : (solicitacao.quantidadeAprovada || solicitacao.quantidadeOriginal);
+            document.getElementById('editBoq').value = isControllerView ? solicitacao.boqAprovado : (solicitacao.boqAprovado || '');
+            document.getElementById('editStatusRegistro').value = isControllerView ? solicitacao.statusRegistroAprovado : (solicitacao.statusRegistroAprovado || 'ATIVO');
             document.getElementById('editJustificativaCoordenador').value = solicitacao.justificativaCoordenador || '';
 
+            // Carrega LPUs
             const lpuSelect = document.getElementById('editLpuSelect');
             const todasLpus = await AprovacoesComplementares.carregarTodasLpus();
             
             if (AprovacoesComplementares.choicesMain) { AprovacoesComplementares.choicesMain.destroy(); }
             
             let html = '<option value="">Selecione...</option>';
-            const selectedId = solicitacao.lpuAprovadaId || solicitacao.lpuOriginalId;
+            // Seleciona a LPU correta (Aprovada se existir, ou Original)
+            const selectedId = isControllerView ? solicitacao.lpuAprovadaId : (solicitacao.lpuAprovadaId || solicitacao.lpuOriginalId);
+            
             todasLpus.forEach(l => {
                 html += `<option value="${l.id}" ${l.id == selectedId ? 'selected' : ''}>${l.nome}</option>`;
             });
@@ -225,7 +260,7 @@ const AprovacoesComplementares = {
                 : `<span class="badge ${statusOriginal === 'ATIVO' ? 'bg-success' : 'bg-secondary'}">${statusOriginal}</span>`;
 
             const htmlLpu = lpuAlterada 
-                ? `<span class="valor-novo"><i class="bi bi-pencil-fill me-1"></i>Editado</span>` 
+                ? `<span class="valor-novo"><i class="bi bi-pencil-fill me-1"></i>(Editado)</span>` 
                 : `<span class="text-truncate d-inline-block" style="max-width:150px;">${lpuNomeOriginal}</span>`;
 
             const btnIcon = statusFinal === 'ATIVO' ? 'bi-slash-circle' : 'bi-check-lg';
@@ -297,11 +332,7 @@ const AprovacoesComplementares = {
         const qtd = document.getElementById('modalEditQtd').value;
         const boq = document.getElementById('modalEditBoq').value;
 
-        if(!lpuId || !qtd) { 
-            // Substituímos o Swal por um modal Bootstrap aqui também
-            AprovacoesComplementares.mostrarAlerta("Preencha LPU e Quantidade.");
-            return; 
-        }
+        if(!lpuId || !qtd) { AprovacoesComplementares.mostrarAlerta("Preencha LPU e Quantidade."); return; }
 
         if (!AprovacoesComplementares.alteracoesBuffer[id]) {
             AprovacoesComplementares.alteracoesBuffer[id] = {};
@@ -314,17 +345,23 @@ const AprovacoesComplementares = {
         AprovacoesComplementares.renderizarItensExistentesComBuffer();
     },
 
+    // --- ENVIAR PARA O SERVIDOR ---
     salvarAprovacao: async () => {
         const id = document.getElementById('analiseSolicitacaoId').value;
         const justificativa = document.getElementById('editJustificativaCoordenador').value;
         const lpuId = document.getElementById('editLpuSelect').value;
 
-        // SUBSTITUIÇÃO DO SWAL POR MODAL BOOTSTRAP
+        // Detecta qual rota chamar com base no status da solicitação
+        const isController = AprovacoesComplementares.currentSolicitacao.status === 'PENDENTE_CONTROLLER';
+        // Se for Controller, a ação é "aprovar" (finalizar). Se for Coord, é "aprovar" (enviar para controller).
+        // A rota é a mesma, mas a role de quem chama muda no token.
+        
+        // Verifica campos
         if (!justificativa || justificativa.trim().length < 3) {
-            AprovacoesComplementares.mostrarAlerta('A justificativa é obrigatória e deve conter detalhes.');
+            AprovacoesComplementares.mostrarAlerta('Preencha a Justificativa.');
             return;
         }
-        if (!lpuId) {
+        if (!isController && !lpuId) { // Coordenador precisa definir LPU
             AprovacoesComplementares.mostrarAlerta('Selecione a LPU da decisão.');
             return;
         }
@@ -338,7 +375,7 @@ const AprovacoesComplementares = {
 
         const payload = {
             aprovadorId: localStorage.getItem('usuarioId'),
-            lpuId: parseInt(lpuId),
+            lpuId: lpuId ? parseInt(lpuId) : null,
             quantidade: parseInt(document.getElementById('editQuantidade').value),
             boq: document.getElementById('editBoq').value,
             statusRegistro: document.getElementById('editStatusRegistro').value,
@@ -346,10 +383,12 @@ const AprovacoesComplementares = {
             alteracoesItensExistentesJson: JSON.stringify(alteracoesArray)
         };
 
+        const endpointAction = isController ? 'controller/aprovar' : 'coordenador/aprovar';
+
         try {
             Swal.fire({ title: 'Enviando...', didOpen: () => Swal.showLoading() });
 
-            const resp = await fetch(`${AprovacoesComplementares.MS_URL}/${id}/coordenador/aprovar`, {
+            const resp = await fetch(`${AprovacoesComplementares.MS_URL}/${id}/${endpointAction}`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -357,22 +396,18 @@ const AprovacoesComplementares = {
 
             if (resp.ok) {
                 bootstrap.Modal.getInstance(document.getElementById('modalAnaliseCoordenador')).hide();
-                Swal.fire('Sucesso', 'Proposta enviada!', 'success');
+                Swal.fire('Sucesso', isController ? 'Finalizado com Sucesso!' : 'Enviado para Controller!', 'success');
                 AprovacoesComplementares.carregarPendencias();
-            } else { throw new Error('Erro ao enviar'); }
+            } else { throw new Error('Erro ao processar'); }
         } catch (e) { Swal.fire('Erro', e.message, 'error'); }
     },
 
-    // --- REJEIÇÃO (NOVO FLUXO COM BOOTSTRAP MODAL) ---
-    prepararRejeicao: () => {
-        // Abre o modal de rejeição em cima do modal principal
-        document.getElementById('textoMotivoRecusa').value = '';
-        new bootstrap.Modal(document.getElementById('modalRejeitar')).show();
+    prepararRejeicaoInicial: (id) => {
+        document.getElementById('analiseSolicitacaoId').value = id;
+        AprovacoesComplementares.prepararRejeicao();
     },
 
-    prepararRejeicaoInicial: (id) => {
-        // Caso clique em rejeitar direto da tabela
-        document.getElementById('analiseSolicitacaoId').value = id;
+    prepararRejeicao: () => {
         document.getElementById('textoMotivoRecusa').value = '';
         new bootstrap.Modal(document.getElementById('modalRejeitar')).show();
     },
@@ -382,26 +417,26 @@ const AprovacoesComplementares = {
         const motivo = document.getElementById('textoMotivoRecusa').value;
 
         if (!motivo || motivo.trim().length < 3) {
-            alert("Digite o motivo da recusa."); // Alert simples para esse modal
-            return;
+            alert("Digite o motivo."); return;
         }
+
+        const isController = AprovacoesComplementares.currentSolicitacao?.status === 'PENDENTE_CONTROLLER';
+        const endpointAction = isController ? 'controller/devolver' : 'coordenador/rejeitar';
 
         try {
             const usuarioId = localStorage.getItem('usuarioId');
-            await fetch(`${AprovacoesComplementares.MS_URL}/${id}/coordenador/rejeitar`, {
+            await fetch(`${AprovacoesComplementares.MS_URL}/${id}/${endpointAction}`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ aprovadorId: usuarioId, motivo: motivo })
             });
             
-            // Fecha modais
-            const modalRej = bootstrap.Modal.getInstance(document.getElementById('modalRejeitar'));
-            if(modalRej) modalRej.hide();
-            
-            const modalMain = bootstrap.Modal.getInstance(document.getElementById('modalAnaliseCoordenador'));
-            if(modalMain) modalMain.hide();
+            bootstrap.Modal.getInstance(document.getElementById('modalRejeitar')).hide();
+            // Fecha modal principal se estiver aberto
+            const mainModal = bootstrap.Modal.getInstance(document.getElementById('modalAnaliseCoordenador'));
+            if(mainModal) mainModal.hide();
 
-            Swal.fire('Recusado!', '', 'success');
+            Swal.fire('Sucesso', isController ? 'Devolvido para Coordenador!' : 'Rejeitado!', 'success');
             AprovacoesComplementares.carregarPendencias();
         } catch(e) {
             alert("Erro ao rejeitar");
