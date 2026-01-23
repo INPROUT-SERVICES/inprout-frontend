@@ -665,16 +665,21 @@ document.addEventListener('DOMContentLoaded', async function () {
 async function carregarDashboardEBadges() {
     toggleLoader(true, '.overview-card');
     try {
+        // Garante URLs corretas baseadas nos arquivos específicos
+        const URL_MATERIAIS = window.API_MATERIALS_URL || (window.location.origin.includes('localhost') ? 'http://localhost:8081' : window.location.origin);
+        const URL_COMPLEMENTARES = window.API_COMPLEMENTARES_URL || (window.location.origin.includes('localhost') ? 'http://localhost:8082' : window.location.origin + '/atividades');
+
         const [resGeral, resPendAtiv, resPendCoord, resPendMat, resPendCompl] = await Promise.all([
             fetchComAuth(`${API_BASE_URL}/lancamentos`),
             fetchComAuth(`${API_BASE_URL}/lancamentos/pendentes/${userId}`),
             fetchComAuth(`${API_BASE_URL}/lancamentos/pendencias-por-coordenador`),
 
-            // CORREÇÃO DA URL DO MONÓLITO/SERVIÇO DE MATERIAIS
-            // Garante que usamos a rota completa: host + /api/materiais/solicitacoes/pendentes
-            fetchComAuth(`${API_MATERIALS_URL}/api/materiais/solicitacoes/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } }),
+            // URL MATERIAIS CORRETA (Aponta para o serviço de materiais)
+            fetchComAuth(`${URL_MATERIAIS}/api/materiais/solicitacoes/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } }),
 
-            fetchComAuth(`${API_BASE_URL}/aprovacoes/complementares/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } })
+            // URL COMPLEMENTARES CORRETA (Aponta para o serviço de complementares)
+            // A rota correta é /v1/solicitacoes-complementares/pendentes
+            fetchComAuth(`${URL_COMPLEMENTARES}/v1/solicitacoes-complementares/pendentes?role=${userRole}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
         ]);
 
         if (!resGeral.ok) throw new Error('Falha no dashboard.');
@@ -699,11 +704,17 @@ async function carregarDashboardEBadges() {
         if (resPendMat.ok) {
             window.todasPendenciasMateriais = await resPendMat.json();
         } else {
-            console.warn('Falha ao carregar materiais (possível erro 404/500), assumindo lista vazia.');
+            console.warn('Serviço de Materiais indisponível ou rota 404.');
             window.todasPendenciasMateriais = [];
         }
 
-        window.todasPendenciasComplementares = await resPendCompl.json();
+        // Tratamento de erro seguro para Complementares
+        if (resPendCompl.ok) {
+            window.todasPendenciasComplementares = await resPendCompl.json();
+        } else {
+            console.warn('Serviço Complementar indisponível ou rota 404.');
+            window.todasPendenciasComplementares = [];
+        }
 
         // Renderiza Cards do Dashboard
         renderizarCardsDashboard(window.todosOsLancamentosGlobais, pendenciasPorCoordenador, window.todasPendenciasMateriais.length, window.todasPendenciasComplementares.length);
@@ -718,12 +729,10 @@ async function carregarDashboardEBadges() {
         if (abaAtivaAgora) {
             const painelAtivoId = abaAtivaAgora.getAttribute('data-bs-target');
             if (painelAtivoId === '#atividades-pane') renderizarAcordeonPendencias(window.todasPendenciasAtividades);
-
             else if (painelAtivoId === '#materiais-pane') {
-                // CORREÇÃO: Chama a nova função de Cards
-                renderizarCardsPedidos(window.todasPendenciasMateriais);
+                if (typeof carregarDadosMateriais === 'function') carregarDadosMateriais();
+                else renderizarCardsPedidos(window.todasPendenciasMateriais);
             }
-
             else if (painelAtivoId === '#complementares-pane') renderizarTabelaPendentesComplementares(window.todasPendenciasComplementares);
             else if (painelAtivoId === '#cps-pendencias-pane') { initFiltrosCPS(); carregarPendenciasCPS(); }
             else if (painelAtivoId === '#minhas-docs-pane') {

@@ -269,7 +269,6 @@ async function initFiltrosCPS() {
 
     // --- CORREÇÃO IMPORTANTE ---
     // Adiciona os listeners APENAS DEPOIS de preencher tudo.
-    // Isso evita que o preenchimento dispare o 'change' e recarregue a tela.
     if (selectMesPend) selectMesPend.addEventListener('change', carregarPendenciasCPS);
     if (selectsSeg[0]) selectsSeg[0].addEventListener('change', carregarPendenciasCPS);
 
@@ -287,6 +286,9 @@ async function initFiltrosCPS() {
 
 async function carregarPendenciasCPS() {
     toggleLoader(true, '#cps-pendencias-pane');
+    
+    // CORREÇÃO: Pega o ID do usuário corretamente
+    const userId = localStorage.getItem('usuarioId');
 
     await atualizarHeaderKpiCPS();
 
@@ -326,7 +328,8 @@ async function carregarPendenciasCPS() {
 async function atualizarHeaderKpiCPS() {
     const els = document.querySelectorAll('.kpi-cps-total-mes-value');
     if (!els.length) return;
-
+    
+    const userId = localStorage.getItem('usuarioId');
     const mesVal = document.getElementById('cps-filtro-mes-ref')?.value;
     const segId = document.getElementById('cps-filtro-segmento')?.value || '';
     const prestId = document.getElementById('cps-filtro-prestador')?.value || '';
@@ -362,6 +365,8 @@ async function carregarHistoricoCPS(append = false) {
     toggleLoader(true, '#cps-historico-pane');
     const btn = document.getElementById('btn-carregar-mais-historico-cps');
     if (btn) btn.disabled = true;
+    
+    const userId = localStorage.getItem('usuarioId');
 
     // CORREÇÃO: Ler o valor do mês selecionado
     const mesRefSelect = document.getElementById('cps-hist-filtro-mes-ref');
@@ -386,8 +391,7 @@ async function carregarHistoricoCPS(append = false) {
         const acc = document.getElementById('accordionHistoricoCPS');
         if (acc) acc.innerHTML = '';
     } else {
-        // Lógica de "Carregar Mais" (exemplo: volta mais 30 dias a partir do inicio atual)
-        // Ajuste conforme sua necessidade de paginação real
+        // Lógica de "Carregar Mais"
         const novaDataFim = new Date(window.cpsHistDataInicio);
         novaDataFim.setDate(novaDataFim.getDate() - 1);
         window.cpsHistDataFim = novaDataFim;
@@ -429,7 +433,8 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
     if (!container) return;
     container.innerHTML = '';
 
-    const userRole = (localStorage.getItem("userRole") || "").trim().toUpperCase();
+    // CORREÇÃO: Tenta pegar 'role' ou 'userRole' para garantir compatibilidade
+    const userRole = (localStorage.getItem("role") || localStorage.getItem("userRole") || "").trim().toUpperCase();
 
     // Filtros de visualização por perfil
     if (isPendencia) {
@@ -633,7 +638,9 @@ function registrarEventosCps() {
 function atualizarBotoesLoteCPS() {
     const selecionados = document.querySelectorAll('.cps-check:checked');
     const qtd = selecionados.length;
-    const userRole = (localStorage.getItem("userRole") || "").trim().toUpperCase();
+    
+    // CORREÇÃO: Tenta pegar 'role' ou 'userRole'
+    const userRole = (localStorage.getItem("role") || localStorage.getItem("userRole") || "").trim().toUpperCase();
 
     let toolbar = document.getElementById('cps-toolbar-lote');
     if (!toolbar) {

@@ -112,7 +112,7 @@ function renderizarAcordeonPendencias(dados) {
                 id: osId,
                 os: lancamento.os.os,
                 projeto: lancamento.os.projeto,
-                totalOs: lancamento.totalOs,
+                totalOs: lancamento.totalOs, // Será recalculado abaixo
                 valorCps: lancamento.valorCps,
                 valorPendente: lancamento.valorPendente,
                 custoTotalMateriais: lancamento.os.custoTotalMateriais,
@@ -163,15 +163,11 @@ function renderizarAcordeonPendencias(dados) {
         "ETAPA GERAL": (lancamento) => get(lancamento, 'etapa.codigoGeral', '') + ' - ' + get(lancamento, 'etapa.nomeGeral', ''),
         "ETAPA DETALHADA": (lancamento) => get(lancamento, 'etapa.indiceDetalhado', '') + ' - ' + get(lancamento, 'etapa.nomeDetalhado', ''),
         "STATUS": (lancamento) => get(lancamento, 'status'), "SITUAÇÃO": (lancamento) => get(lancamento, 'situacao'),
-
-        // --- CORREÇÃO: Exibe o texto truncado e clica para ver ---
         "DETALHE DIÁRIO": (lancamento) => {
             const texto = get(lancamento, 'detalheDiario', '');
             if (!texto) return '-';
-            // Usa classe CSS para cortar o texto (ellipsis)
             return `<div class="detalhe-diario-truncate" onclick="verDetalheDiario(${lancamento.id})" title="Clique para ler completo">${texto}</div>`;
         },
-
         "CÓD. PRESTADOR": (lancamento) => get(lancamento, 'prestador.codigo'),
         "PRESTADOR": (lancamento) => get(lancamento, 'prestador.nome'), "GESTOR": (lancamento) => get(lancamento, 'manager.nome'),
     };
@@ -199,15 +195,34 @@ function renderizarAcordeonPendencias(dados) {
 
         const buttonClass = isVencido ? 'accordion-button collapsed accordion-button-vencido' : 'accordion-button collapsed';
 
-        // --- CÁLCULOS DE KPI E PREVISÃO ---
-        const valorTotalOS = grupo.totalOs || 0;
+        // --- CÁLCULOS DE KPI ATUALIZADOS (CORREÇÃO AQUI) ---
+        // Recalcular Total OS ignorando INATIVOS e separando Em Análise
+        let valorTotalOSCalculado = 0;
+        let valorEmAnalise = 0;
+        const detalhes = get(dadosOS, 'detalhes', []);
+
+        detalhes.forEach(det => {
+            // Se INATIVO, pula (não soma no Total OS, mas CPS continua somando normal via grupo.valorCps)
+            if (det.statusRegistro === 'INATIVO') return;
+
+            const val = det.valorTotal || 0;
+            const boq = det.boq ? String(det.boq).trim() : '-';
+
+            if (boq === '-' || boq === '') {
+                valorEmAnalise += val;
+            } else {
+                valorTotalOSCalculado += val;
+            }
+        });
+
+        // Substitui o valor estático pelo calculado
+        const valorTotalOS = valorTotalOSCalculado;
         const valorTotalCPS = grupo.valorCps || 0;
         const custoTotalMateriais = grupo.custoTotalMateriais || 0;
         const valorCpsLegado = dadosOS.valorCpsLegado || 0;
         const valorTransporte = dadosOS.transporte || 0;
 
         const totalPendenteGrupo = grupo.linhas.reduce((acc, l) => acc + (l.valor || 0), 0);
-
         const totalConsumidoAtual = valorTotalCPS + custoTotalMateriais + valorCpsLegado + valorTransporte;
 
         const previsaoCps = valorTotalCPS + totalPendenteGrupo;
@@ -216,7 +231,6 @@ function renderizarAcordeonPendencias(dados) {
         const percentualAtual = valorTotalOS > 0 ? (totalConsumidoAtual / valorTotalOS) * 100 : 0;
         const percentualPrevisto = valorTotalOS > 0 ? (totalPrevisto / valorTotalOS) * 100 : 0;
 
-        // --- APLICAÇÃO DAS CORES NOS PERCENTUAIS ---
         const classeCorAtual = getClassePorcentagem(percentualAtual);
         const classeCorPrevisto = getClassePorcentagem(percentualPrevisto);
 
@@ -226,6 +240,10 @@ function renderizarAcordeonPendencias(dados) {
                 <div class="header-kpi">
                     <span class="kpi-label">Total OS</span>
                     <span class="kpi-value text-dark">${formatarMoeda(valorTotalOS)}</span>
+                </div>
+                <div class="header-kpi">
+                    <span class="kpi-label text-info">Em Análise</span>
+                    <span class="kpi-value text-info">${formatarMoeda(valorEmAnalise)}</span>
                 </div>
                 ${valorCpsLegado > 0 ? `<div class="header-kpi"><span class="kpi-label text-warning">Legado</span><span class="kpi-value text-warning">${formatarMoeda(valorCpsLegado)}</span></div>` : ''}
             </div>
@@ -253,8 +271,10 @@ function renderizarAcordeonPendencias(dados) {
 
             <div class="kpi-divider"></div>
 
-            <div class="kpi-group"> <div class="header-kpi">
-                    <span class="kpi-label">Previsão CPS</span> <span class="kpi-value">${formatarMoeda(previsaoCps)}</span> </div>
+            <div class="kpi-group"> 
+                <div class="header-kpi">
+                    <span class="kpi-label">Previsão CPS</span> <span class="kpi-value">${formatarMoeda(previsaoCps)}</span> 
+                </div>
                 <div class="header-kpi">
                     <span class="kpi-label">% Previsto</span> <span class="kpi-value ${classeCorPrevisto}">${percentualPrevisto.toFixed(2)}%</span>
                 </div>
@@ -292,7 +312,6 @@ function renderizarAcordeonPendencias(dados) {
         const bodyRowsHTML = grupo.linhas.map(lancamento => {
             const cellsHTML = colunasParaRenderizar.map(header => {
                 if (header === 'AÇÕES') {
-                    // ... (lógica de botões mantida - omitida para brevidade)
                     let acoesHtml = '';
                     if ((userRole === 'COORDINATOR' || userRole === 'MANAGER') && lancamento.situacaoAprovacao === 'PENDENTE_COORDENADOR') {
                         acoesHtml = `<button class="btn btn-sm btn-outline-success me-1" onclick="aprovarLancamento(${lancamento.id})" title="Aprovar"><i class="bi bi-check-lg"></i></button><button class="btn btn-sm btn-outline-danger me-1" onclick="recusarLancamento(${lancamento.id})" title="Recusar"><i class="bi bi-x-lg"></i></button><button class="btn btn-sm btn-outline-warning" onclick="comentarLancamento(${lancamento.id})" title="Solicitar Prazo"><i class="bi bi-clock-history"></i></button>`;

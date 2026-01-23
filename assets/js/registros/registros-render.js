@@ -91,7 +91,7 @@ const RegistrosRender = {
         let valorTotalOS = 0;
         let valorEmAnalise = 0;
 
-        // Filtra inativos e processa o BOQ
+        // Filtra inativos para o Total OS (regra: INATIVO desabilita Total OS)
         const detalhesAtivos = RegistrosUtils.get(grupo.linhas[0], 'os.detalhes', [])
             .filter(d => d.statusRegistro !== 'INATIVO');
 
@@ -111,8 +111,9 @@ const RegistrosRender = {
             }
         });
 
+        // CORREÇÃO AQUI: Removemos o filtro de INATIVO para o cálculo de CPS
         const valorTotalCPS = grupo.linhas.flatMap(linha => {
-             if(RegistrosUtils.get(linha, 'detalhe.statusRegistro') === 'INATIVO') return [];
+             // Se o registro for INATIVO, ainda assim contabilizamos os custos realizados (CPS)
              return RegistrosUtils.get(linha, 'detalhe.lancamentos', []);
         })
         .filter(lanc => ['APROVADO', 'APROVADO_CPS_LEGADO'].includes(lanc.situacaoAprovacao))
