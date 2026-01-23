@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const API_BASE_URL = 'http://localhost:8080';
+    const API_BASE_URL = 'https://www.inproutservices.com.br/api';
     verificarMensagemAnoNovo();
     const toastElement = document.getElementById('toastMensagem');
     const toastBody = document.getElementById('toastTexto');
@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         toggleLoader(true);
         try {
-            const response = await fetchComAuth('http://localhost:8080/lancamentos');
+            const response = await fetchComAuth('https://www.inproutservices.com.br/api/lancamentos');
             if (!response.ok) throw new Error(`Erro na rede: ${response.statusText}`);
             const lancamentosDaApi = await response.json();
             todosLancamentos = filtrarLancamentosParaUsuario(lancamentosDaApi);
@@ -727,7 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 osLpuDetalheId: osLpuDetalheIdCorreto
             };
 
-            const url = editingId ? `http://localhost:8080/lancamentos/${editingId}` : 'http://localhost:8080/lancamentos';
+            const url = editingId ? `https://www.inproutservices.com.br/api/lancamentos/${editingId}` : 'https://www.inproutservices.com.br/api/lancamentos';
             const method = editingId ? 'PUT' : 'POST';
 
             try {
@@ -761,7 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
             selectLPU.disabled = true;
             try {
                 selectLPU.innerHTML = '<option value="" selected disabled>Selecione a LPU...</option>';
-                const response = await fetchComAuth(`http://localhost:8080/os/${osId}`);
+                const response = await fetchComAuth(`https://www.inproutservices.com.br/api/os/${osId}`);
                 if (!response.ok) throw new Error('Falha ao buscar detalhes da OS.');
                 const osData = await response.json();
                 const lpusParaExibir = osData.detalhes;
@@ -854,7 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const usuarioId = localStorage.getItem('usuarioId');
                     if (!usuarioId) throw new Error('ID do usuário não encontrado.');
-                    const response = await fetchComAuth(`http://localhost:8080/os/por-usuario/${usuarioId}`);
+                    const response = await fetchComAuth(`https://www.inproutservices.com.br/api/os/por-usuario/${usuarioId}`);
                     if (!response.ok) throw new Error('Falha ao carregar Ordens de Serviço.');
                     todasAsOS = await response.json();
 
@@ -878,12 +878,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Carrega Prestadores (se ainda não carregou)
             if (!todosOsPrestadores || todosOsPrestadores.length === 0) {
-                todosOsPrestadores = await popularSelect(document.getElementById('prestadorId'), 'http://localhost:8080/index/prestadores/ativos', 'id', item => `${item.codigoPrestador} - ${item.prestador}`);
+                todosOsPrestadores = await popularSelect(document.getElementById('prestadorId'), 'https://www.inproutservices.com.br/api/index/prestadores/ativos', 'id', item => `${item.codigoPrestador} - ${item.prestador}`);
             }
 
             // Carrega Etapas (se ainda não carregou)
             if (todasAsEtapas.length === 0) {
-                todasAsEtapas = await popularSelect(document.getElementById('etapaGeralSelect'), 'http://localhost:8080/index/etapas', 'id', item => `${item.codigo} - ${item.nome}`);
+                todasAsEtapas = await popularSelect(document.getElementById('etapaGeralSelect'), 'https://www.inproutservices.com.br/api/index/etapas', 'id', item => `${item.codigo} - ${item.nome}`);
             }
 
             // --- CARREGAMENTO DE DOCUMENTAÇÃO (CORRIGIDO) ---
@@ -892,7 +892,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Só carrega se a lista estiver vazia
             if (tiposDocumentacaoCache.length === 0) {
                 try {
-                    const res = await fetchComAuth('http://localhost:8080/tipos-documentacao');
+                    const res = await fetchComAuth('https://www.inproutservices.com.br/api/tipos-documentacao');
                     if (res.ok) {
                         tiposDocumentacaoCache = await res.json();
                     }
@@ -927,7 +927,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!tipoId || tipoId === "") {
                 // Se "Não se aplica" ou vazio, opcional: carregar todos ou deixar vazio
                 // Aqui vamos carregar todos os documentistas como fallback
-                fetchComAuth('http://localhost:8080/usuarios/documentistas')
+                fetchComAuth('https://www.inproutservices.com.br/api/usuarios/documentistas')
                     .then(r => r.json())
                     .then(docs => {
                         docs.forEach(d => selectDocumentista.add(new Option(d.nome, d.id)));
@@ -945,7 +945,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } else {
                 // Se não houver restrição (lista vazia), busca todos
-                fetchComAuth('http://localhost:8080/usuarios/documentistas')
+                fetchComAuth('https://www.inproutservices.com.br/api/usuarios/documentistas')
                     .then(r => r.json())
                     .then(docs => {
                         docs.forEach(d => selectDocumentista.add(new Option(d.nome, d.id)));
@@ -1041,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 try {
                     // Busca dados completos da OS para preencher campos read-only
-                    const response = await fetchComAuth(`http://localhost:8080/os/${lancamento.os.id}`);
+                    const response = await fetchComAuth(`https://www.inproutservices.com.br/api/os/${lancamento.os.id}`);
                     if (!response.ok) throw new Error('Falha ao recarregar dados da OS para edição.');
                     const osDataCompleta = await response.json();
                     preencherCamposOS(osDataCompleta);
@@ -1081,7 +1081,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const selectPrestadorEl = document.getElementById('prestadorId');
             if (selectPrestadorEl) {
                 if (selectPrestadorEl.choices) selectPrestadorEl.choices.destroy();
-                const prestadores = await fetchComAuth('http://localhost:8080/index/prestadores/ativos').then(res => res.json());
+                const prestadores = await fetchComAuth('https://www.inproutservices.com.br/api/index/prestadores/ativos').then(res => res.json());
                 const choices = new Choices(selectPrestadorEl, { searchEnabled: true, placeholder: true, placeholderValue: 'Digite para buscar o prestador...', itemSelectText: '', noResultsText: 'Nenhum resultado', });
                 const choicesData = prestadores.map(item => ({ value: item.id, label: `${item.codigoPrestador} - ${item.prestador}` }));
                 choices.setChoices(choicesData, 'value', 'label', false);
@@ -1293,7 +1293,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 confirmButton.disabled = true;
                 confirmButton.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Enviando...`;
-                const resposta = await fetchComAuth(`http://localhost:8080/lancamentos/${id}/submeter`, { method: 'POST' });
+                const resposta = await fetchComAuth(`https://www.inproutservices.com.br/api/lancamentos/${id}/submeter`, { method: 'POST' });
                 if (!resposta.ok) throw new Error('Erro ao submeter.');
                 mostrarToast('Lançamento submetido com sucesso!', 'success');
                 await carregarLancamentos();
@@ -1527,7 +1527,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function popularSelectMateriais(selectElement) {
             if (todosOsMateriais.length === 0) {
                 selectElement.innerHTML = '<option value="" selected disabled>Carregando materiais...</option>';
-                fetchComAuth('http://localhost:8080/materiais')
+                fetchComAuth('https://www.inproutservices.com.br/api/materiais')
                     .then(res => res.json())
                     .then(data => {
                         todosOsMateriais = data;
@@ -1674,10 +1674,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 let urlOS = '';
-                if (isAdminOrController) urlOS = `http://localhost:8080/os?completo=true`;
+                if (isAdminOrController) urlOS = `https://www.inproutservices.com.br/api/os?completo=true`;
                 else {
                     const usuarioId = localStorage.getItem('usuarioId');
-                    urlOS = `http://localhost:8080/os/por-usuario/${usuarioId}`;
+                    urlOS = `https://www.inproutservices.com.br/api/os/por-usuario/${usuarioId}`;
                 }
 
                 const response = await fetchComAuth(urlOS);
@@ -1733,7 +1733,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             try {
-                const response = await fetchComAuth(`http://localhost:8080/os/${osId}/lpus`);
+                const response = await fetchComAuth(`https://www.inproutservices.com.br/api/os/${osId}/lpus`);
                 if (!response.ok) throw new Error('Falha ao buscar LPUs.');
                 const lpus = await response.json();
                 selectLPU.innerHTML = '<option value="" selected disabled>Selecione a LPU...</option>';
@@ -1807,7 +1807,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                const response = await fetchComAuth('http://localhost:8080/solicitacoes', {
+                const response = await fetchComAuth('https://www.inproutservices.com.br/api/solicitacoes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)

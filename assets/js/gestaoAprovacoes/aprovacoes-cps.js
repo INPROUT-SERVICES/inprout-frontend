@@ -293,8 +293,20 @@ async function carregarPendenciasCPS() {
     try {
         const segmentoId = document.getElementById('cps-filtro-segmento')?.value || '';
         const prestadorId = document.getElementById('cps-filtro-prestador')?.value || '';
+        const mesVal = document.getElementById('cps-filtro-mes-ref')?.value; // Captura o valor do mês
 
         const params = new URLSearchParams({ segmentoId, prestadorId });
+
+        // Lógica para adicionar as datas na requisição
+        if (mesVal) {
+            const [ano, mes] = mesVal.split('-');
+            // Define o primeiro e o último dia do mês selecionado
+            const dataInicio = `${ano}-${mes}-01`;
+            const dataFim = `${ano}-${mes}-${new Date(ano, mes, 0).getDate()}`;
+
+            params.append('inicio', dataInicio);
+            params.append('fim', dataFim);
+        }
 
         const res = await fetchComAuth(`${API_BASE_URL}/controle-cps?${params}`, { headers: { 'X-User-ID': userId } });
         if (!res.ok) throw new Error('Erro ao buscar pendências.');
@@ -417,7 +429,7 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
     if (!container) return;
     container.innerHTML = '';
 
-    const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
+    const userRole = (localStorage.getItem("userRole") || "").trim().toUpperCase();
 
     // Filtros de visualização por perfil
     if (isPendencia) {
@@ -440,17 +452,17 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
     const gruposMap = lista.reduce((acc, l) => {
         const id = l.os?.id || 0;
         if (!acc[id]) {
-            acc[id] = { 
-                os: l.os?.os, projeto: l.os?.projeto, 
-                totalCps: l.valorCps || 0, 
-                totalPago: 0, totalAdiantado: 0, totalConfirmado: 0, itens: [] 
+            acc[id] = {
+                os: l.os?.os, projeto: l.os?.projeto,
+                totalCps: l.valorCps || 0,
+                totalPago: 0, totalAdiantado: 0, totalConfirmado: 0, itens: []
             };
         }
-        
+
         if (l.valorAdiantamento) acc[id].totalAdiantado += parseFloat(l.valorAdiantamento) || 0;
         if (['FECHADO', 'ALTERACAO_SOLICITADA', 'PAGO', 'CONCLUIDO'].includes(l.statusPagamento)) acc[id].totalConfirmado += parseFloat(l.valorPagamento || l.valor) || 0;
         if (['PAGO', 'CONCLUIDO'].includes(l.statusPagamento)) acc[id].totalPago += parseFloat(l.valorPagamento || l.valor) || 0;
-        
+
         acc[id].itens.push(l);
         return acc;
     }, {});
@@ -463,7 +475,7 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         // Verifica se existe solicitação de adiantamento dentro do grupo
         const aTemAdiant = a.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
         const bTemAdiant = b.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
-        
+
         // Prioridade 1: Grupos com Solicitação de Adiantamento (Para Controller)
         if (userRole === 'CONTROLLER') {
             if (aTemAdiant && !bTemAdiant) return -1; // A vem primeiro
@@ -476,7 +488,7 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
 
     listaGrupos.forEach((grp, idx) => {
         const uid = `cps-${isPendencia ? 'pend' : 'hist'}-${idx}`;
-        
+
         // Ordenação interna dos itens (Rows)
         grp.itens.sort((a, b) => {
             if (a.statusPagamento === 'SOLICITACAO_ADIANTAMENTO') return -1;
@@ -490,10 +502,10 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         // --- 2. DEFINE COR DO CONTAINER (HEADER DO ACORDEÃO) ---
         let headerStyleClass = '';
         let headerStyleInline = '';
-        
+
         if (isPendencia && userRole === 'CONTROLLER' && temSolicitacaoAdiantamento) {
             // Amarelo claro para chamar atenção (bg-warning-subtle é do Bootstrap 5.3+, fallback com style)
-            headerStyleClass = 'bg-warning-subtle'; 
+            headerStyleClass = 'bg-warning-subtle';
             headerStyleInline = 'background-color: #fff3cd !important; color: #664d03;';
         }
 
@@ -524,7 +536,7 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         const linhas = grp.itens.map(l => {
             let btns = `<button class="btn btn-sm btn-outline-info me-1" title="Ver" onclick="verComentarios(${l.id})"><i class="bi bi-eye"></i></button>`;
             let showRowCheck = false;
-            
+
             const isConfirmado = l.statusPagamento === 'FECHADO' || l.statusPagamento === 'ALTERACAO_SOLICITADA';
             const isPago = l.statusPagamento === 'PAGO' || l.statusPagamento === 'CONCLUIDO';
             const isAdiantado = (parseFloat(l.valorAdiantamento) || 0) > 0;
@@ -593,7 +605,7 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
 
     if (isPendencia) {
         registrarEventosCps();
-        atualizarBotoesLoteCPS(); 
+        atualizarBotoesLoteCPS();
         configurarBuscaCps('input-busca-cps-pendencias', 'accordionPendenciasCPS');
     } else {
         configurarBuscaCps('input-busca-cps-historico', 'accordionHistoricoCPS');
@@ -621,7 +633,7 @@ function registrarEventosCps() {
 function atualizarBotoesLoteCPS() {
     const selecionados = document.querySelectorAll('.cps-check:checked');
     const qtd = selecionados.length;
-    const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
+    const userRole = (localStorage.getItem("userRole") || "").trim().toUpperCase();
 
     let toolbar = document.getElementById('cps-toolbar-lote');
     if (!toolbar) {
