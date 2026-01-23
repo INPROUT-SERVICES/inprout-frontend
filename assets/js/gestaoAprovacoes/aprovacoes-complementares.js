@@ -119,10 +119,7 @@ const AprovacoesComplementares = {
                 }
                 const info = { osCodigo: dados.os, projeto: projeto, site: site, loaded: true };
                 AprovacoesComplementares.mapaDetalhesOs[osId] = info;
-                
-                // Atualiza a interface especificamente para esta OS
                 AprovacoesComplementares.atualizarLinhasTabela(osId, info);
-                
                 return info;
             }
         } catch(e) { console.error("Erro fetch OS:", e); }
@@ -130,7 +127,6 @@ const AprovacoesComplementares = {
     },
 
     atualizarLinhasTabela: (osId, info) => {
-        // Encontra todos os spans que estão esperando dados desta OS
         const spansSite = document.querySelectorAll(`.site-placeholder-${osId}`);
         const spansProjeto = document.querySelectorAll(`.projeto-placeholder-${osId}`);
         const spansOs = document.querySelectorAll(`.os-placeholder-${osId}`);
@@ -150,9 +146,7 @@ const AprovacoesComplementares = {
         tbody.innerHTML = '';
 
         try {
-            // Carrega LPU primeiro pois é leve e necessário para o cálculo
             await AprovacoesComplementares.carregarTodasLpus();
-
             const userRole = localStorage.getItem('role') || 'COORDINATOR';
             const response = await fetch(`${AprovacoesComplementares.MS_URL}/pendentes?role=${userRole}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -162,11 +156,8 @@ const AprovacoesComplementares = {
             const lista = await response.json();
             
             AprovacoesComplementares.atualizarBadge(lista.length);
-
-            // CORREÇÃO CRÍTICA: Renderiza IMEDIATAMENTE, depois busca os detalhes
             AprovacoesComplementares.renderizarTabelaPrincipal(lista);
 
-            // Inicia busca de detalhes em background (sem await no loop principal)
             const osIds = [...new Set(lista.map(item => item.osId))];
             osIds.forEach(id => AprovacoesComplementares.fetchDetalhesOsESalvar(id));
 
@@ -174,6 +165,52 @@ const AprovacoesComplementares = {
             tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Erro: ${error.message}</td></tr>`;
         } finally {
             loader.classList.add('d-none');
+        }
+    },
+
+    // FUNÇÃO QUE FALTAVA (Correção do Erro JS)
+    carregarDadosHistoricoComplementares: async () => {
+        AprovacoesComplementares.init();
+        const tbody = document.getElementById('tbodyHistoricoComplementares');
+        if(!tbody) return;
+        
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center"><span class="spinner-border spinner-border-sm"></span> Carregando...</td></tr>';
+        
+        try {
+            const usuarioId = localStorage.getItem('usuarioId');
+            const response = await fetch(`${AprovacoesComplementares.MS_URL}/usuario/${usuarioId}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            
+            if (!response.ok) throw new Error("Erro ao buscar histórico");
+            const lista = await response.json();
+            
+            tbody.innerHTML = '';
+            if(!lista || lista.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Nenhum registro encontrado.</td></tr>';
+                return;
+            }
+            
+            // Reutiliza a lógica de renderização se possível, ou cria uma simplificada
+            // Aqui faremos uma renderização simples para o histórico
+            lista.forEach(item => {
+                const tr = document.createElement('tr');
+                const dataCriacao = new Date(item.dataCriacao).toLocaleDateString('pt-BR');
+                const statusBadge = item.status === 'APROVADO' ? 'bg-success' : (item.status === 'REJEITADO' ? 'bg-danger' : 'bg-warning');
+                
+                tr.innerHTML = `
+                    <td>${item.id}</td>
+                    <td>${dataCriacao}</td>
+                    <td>OS #${item.osId}</td>
+                    <td>${item.quantidadeOriginal} -> ${item.quantidadeAprovada || '-'}</td>
+                    <td><span class="badge ${statusBadge}">${item.status}</span></td>
+                    <td>${item.justificativa || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Erro: ${e.message}</td></tr>`;
         }
     },
 
@@ -199,19 +236,15 @@ const AprovacoesComplementares = {
         lista.forEach(item => {
             const tr = document.createElement('tr');
             
-            // Verifica se já temos em cache
             const cache = AprovacoesComplementares.mapaDetalhesOs[item.osId];
-            
             const osDisplay = cache ? cache.osCodigo : `OS #${item.osId}`;
             const siteDisplay = cache ? cache.site : 'Carregando...';
             const projetoDisplay = cache ? cache.projeto : 'Carregando...';
-            const loadingClass = cache ? '' : 'loading-text'; // Classe CSS para estilo itálico cinza
+            const loadingClass = cache ? '' : 'loading-text'; 
 
-            // Busca nome da LPU
             const lpuInfo = AprovacoesComplementares.listaCompletaLpus.find(l => l.id === item.lpuOriginalId);
             const nomeLpu = lpuInfo ? lpuInfo.nome.split('|')[1] || lpuInfo.nome : `LPU ID: ${item.lpuOriginalId}`;
             
-            // Calcula valor total se vier zerado
             let valorTotal = item.valorTotalEstimado;
             if (!valorTotal || valorTotal === 0) {
                 const valorUnit = lpuInfo ? lpuInfo.valor : 0;
@@ -240,7 +273,7 @@ const AprovacoesComplementares = {
         });
     },
 
-    // --- MODAL DE ANÁLISE ---
+    // --- MODAL DE ANÁLISE (Mantido igual) ---
     abrirModalAnalise: async (id) => {
         try {
             const btn = document.activeElement;
@@ -298,7 +331,6 @@ const AprovacoesComplementares = {
                 document.getElementById(fid).disabled = isController;
             });
 
-            // Botão Principal (Verde)
             const btnSalvar = document.querySelector('#modalAnaliseCoordenador .btn-success') || document.querySelector('#modalAnaliseCoordenador .btn-primary');
             if (isController) {
                 btnSalvar.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Aprovar Alterações';
@@ -604,3 +636,4 @@ const AprovacoesComplementares = {
 
 window.AprovacoesComplementares = AprovacoesComplementares;
 window.renderizarTabelaPendentesComplementares = AprovacoesComplementares.carregarPendencias;
+window.carregarDadosHistoricoComplementares = AprovacoesComplementares.carregarDadosHistoricoComplementares;

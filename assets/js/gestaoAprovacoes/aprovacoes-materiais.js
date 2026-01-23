@@ -162,7 +162,6 @@ async function carregarDadosMateriais() {
         }
 
         // 2. CORREÇÃO: Envia o ID do Usuário para filtro de segmento
-        // Tenta pegar de variável global ou do localStorage (como fallback)
         const currentUserId = (typeof userId !== 'undefined' && userId) ? userId : localStorage.getItem('usuarioId');
         
         if (currentUserId) {
@@ -223,7 +222,13 @@ function renderizarCardsPedidos(lista) {
     lista.forEach((solicitacao, index) => {
         const pedidoId = solicitacao.id;
         const osObj = solicitacao.os || {};
-        const osReal = osObj.os || osObj.numero || osObj.numeroOS || osObj.id || 'N/A';
+        
+        // --- CORREÇÃO AQUI ---
+        // Tenta pegar o código da OS de todas as propriedades possíveis.
+        // Se todas falharem, usa o ID como último recurso.
+        const osReal = solicitacao.osCodigo || osObj.os || osObj.codigo || osObj.osCodigo || osObj.numero || osObj.numeroOS || osObj.id || 'N/A';
+        // ---------------------
+
         const solicitante = solicitacao.nomeSolicitante && solicitacao.nomeSolicitante !== 'null' ? solicitacao.nomeSolicitante : 'Solicitante Desconhecido';
         const dataStr = formatarDataHora(solicitacao.dataSolicitacao);
 

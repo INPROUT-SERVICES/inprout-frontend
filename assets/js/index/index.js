@@ -1992,11 +1992,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // URL do Microsserviço (Porta 8082)
             let baseUrlComplementar = '';
-            
             if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                 baseUrlComplementar = 'http://localhost:8082';
             } else {
-                // Em produção, usa o Proxy Reverso (/atividades) para garantir HTTPS
+                // Produção: Usa o proxy /atividades
                 baseUrlComplementar = window.location.origin + '/atividades';
             }
 
