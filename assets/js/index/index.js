@@ -1828,6 +1828,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const modalSolicitarComplementarEl = document.getElementById('modalSolicitarComplementar');
+
     if (modalSolicitarComplementarEl) {
         const modalSolicitarComplementar = new bootstrap.Modal(modalSolicitarComplementarEl);
         const form = document.getElementById('formSolicitarComplementar');
@@ -1837,35 +1838,57 @@ document.addEventListener('DOMContentLoaded', () => {
         let todasAsOSComplementar = [];
         let choicesLPU;
 
+        // --- 1. Evento ao abrir o Modal ---
         modalSolicitarComplementarEl.addEventListener('show.bs.modal', async () => {
             form.reset();
             document.getElementById('siteComplementar').value = '';
+
+            // Inicializa ou limpa o Choices.js
             if (!choicesLPU) {
-                choicesLPU = new Choices(selectLPUComplementar, { searchEnabled: true, itemSelectText: '', noResultsText: 'Nenhuma LPU encontrada', placeholder: true, placeholderValue: 'Busque ou selecione uma LPU' });
+                choicesLPU = new Choices(selectLPUComplementar, {
+                    searchEnabled: true,
+                    itemSelectText: '',
+                    noResultsText: 'Nenhuma LPU encontrada',
+                    placeholder: true,
+                    placeholderValue: 'Busque ou selecione uma LPU'
+                });
             }
+
             selectProjetoComplementar.innerHTML = '<option value="">Carregando...</option>';
             selectOSComplementar.innerHTML = '<option value="">Carregando...</option>';
             choicesLPU.clearStore();
             choicesLPU.disable();
 
             try {
+                // Carrega OSs do usuário (Monólito)
                 if (todasAsOSComplementar.length === 0) {
                     const usuarioId = localStorage.getItem('usuarioId');
                     if (!usuarioId) throw new Error('ID do usuário não encontrado.');
+
                     const response = await fetchComAuth(`${API_BASE_URL}/os/por-usuario/${usuarioId}`);
                     if (!response.ok) throw new Error('Falha ao carregar OSs do usuário.');
+
                     todasAsOSComplementar = await response.json();
                 }
+
+                // Popula Projetos
                 const projetosUnicos = [...new Set(todasAsOSComplementar.map(os => os.projeto))];
                 selectProjetoComplementar.innerHTML = '<option value="" selected disabled>Selecione o projeto...</option>';
                 projetosUnicos.forEach(projeto => selectProjetoComplementar.add(new Option(projeto, projeto)));
+
+                // Popula OSs
                 selectOSComplementar.innerHTML = '<option value="" selected disabled>Selecione a OS...</option>';
                 todasAsOSComplementar.forEach(os => {
                     const option = new Option(os.os, os.os);
                     option.dataset.id = os.id;
                     option.dataset.projeto = os.projeto;
+                    // Salva o primeiro detalhe para pegar o site
+                    if (os.detalhes && os.detalhes.length > 0) {
+                        option.dataset.site = os.detalhes[0].site;
+                    }
                     selectOSComplementar.add(option);
                 });
+
             } catch (error) {
                 mostrarToast(error.message, 'error');
                 selectProjetoComplementar.innerHTML = '<option value="">Erro ao carregar</option>';
@@ -1873,9 +1896,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // --- 2. Filtro Cruzado: Projeto -> OS ---
         selectProjetoComplementar.addEventListener('change', () => {
             const projetoSelecionado = selectProjetoComplementar.value;
             if (!projetoSelecionado) return;
+
+            // Tenta selecionar automaticamente a primeira OS do projeto
             const osCorrespondente = todasAsOSComplementar.find(os => os.projeto === projetoSelecionado);
             if (osCorrespondente && selectOSComplementar.value !== osCorrespondente.os) {
                 selectOSComplementar.value = osCorrespondente.os;
@@ -1883,68 +1909,114 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // --- 3. Ao selecionar OS: Preenche Site e Carrega LPUs ---
         selectOSComplementar.addEventListener('change', async () => {
             const osCodigo = selectOSComplementar.value;
             if (!osCodigo) return;
+
             const inputSite = document.getElementById('siteComplementar');
-            const osSelecionada = todasAsOSComplementar.find(os => os.os === osCodigo);
-            if (osSelecionada && osSelecionada.detalhes && osSelecionada.detalhes.length > 0) inputSite.value = osSelecionada.detalhes[0].site || '-';
-            else inputSite.value = '';
-
             const selectedOption = selectOSComplementar.options[selectOSComplementar.selectedIndex];
-            const projetoDaOS = selectedOption.dataset.projeto;
-            if (projetoDaOS && selectProjetoComplementar.value !== projetoDaOS) selectProjetoComplementar.value = projetoDaOS;
 
+            // Preenche Site
+            inputSite.value = selectedOption.dataset.site || '-';
+
+            // Sincroniza Projeto
+            const projetoDaOS = selectedOption.dataset.projeto;
+            if (projetoDaOS && selectProjetoComplementar.value !== projetoDaOS) {
+                selectProjetoComplementar.value = projetoDaOS;
+            }
+
+            // Prepara Load de LPUs
             choicesLPU.clearStore();
             choicesLPU.disable();
             choicesLPU.setChoices([{ value: '', label: 'Carregando LPUs...', disabled: true }]);
 
             try {
+                // Busca Contratos/LPUs (Monólito)
                 const response = await fetchComAuth(`${API_BASE_URL}/contrato`);
                 if (!response.ok) throw new Error('Falha ao buscar LPUs.');
+
                 const contratos = await response.json();
                 const lpuChoices = [{ value: '', label: 'Selecione o item LPU...', selected: true, disabled: true }];
+
                 contratos.forEach(contrato => {
                     if (contrato.lpus && contrato.lpus.length > 0) {
                         contrato.lpus.forEach(lpu => {
                             if (lpu.ativo) {
-                                lpuChoices.push({ value: lpu.id, label: `Contrato: ${contrato.nome} | ${lpu.codigoLpu} - ${lpu.nomeLpu}` });
+                                // Adiciona o valor unitário no customProperties para uso futuro se precisar
+                                lpuChoices.push({
+                                    value: lpu.id,
+                                    label: `Contrato: ${contrato.nome} | ${lpu.codigoLpu} - ${lpu.nomeLpu}`,
+                                    customProperties: { valor: lpu.valor }
+                                });
                             }
                         });
                     }
                 });
+
                 choicesLPU.setChoices(lpuChoices, 'value', 'label', false);
                 choicesLPU.enable();
+
             } catch (error) {
                 mostrarToast('Erro ao carregar a lista de LPUs.', 'error');
                 choicesLPU.setChoices([{ value: '', label: 'Erro ao carregar', disabled: true }]);
             }
         });
 
+        // --- 4. Enviar Solicitação (CORRIGIDO PARA MICROSSERVIÇO) ---
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+
             const btnSubmit = document.getElementById('btnEnviarSolicitacaoComplementar');
             const selectedOption = selectOSComplementar.options[selectOSComplementar.selectedIndex];
             const osIdParaApi = selectedOption ? selectedOption.dataset.id : null;
+
+            if (!osIdParaApi) {
+                mostrarToast('Erro: OS não identificada.', 'error');
+                return;
+            }
+
+            // Monta o Payload
             const payload = {
-                osId: osIdParaApi,
-                lpuId: selectLPUComplementar.value,
-                quantidade: document.getElementById('quantidadeComplementar').value,
+                osId: parseInt(osIdParaApi),
+                lpuId: parseInt(selectLPUComplementar.value),
+                quantidade: parseInt(document.getElementById('quantidadeComplementar').value),
                 justificativa: document.getElementById('justificativaComplementar').value,
-                solicitanteId: localStorage.getItem('usuarioId')
+                solicitanteId: parseInt(localStorage.getItem('usuarioId')),
+                solicitanteNome: localStorage.getItem('usuarioNome') || 'Usuário'
             };
+
+            // UI Loading
             btnSubmit.disabled = true;
             btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Enviando...`;
+
+            // URL do Microsserviço (Porta 8082)
+            const MS_URL = "http://localhost:8082/v1/solicitacoes-complementares";
+
             try {
-                const response = await fetchComAuth(`${API_BASE_URL}/aprovacoes/complementares`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                // Usa fetch nativo para garantir a URL absoluta (evita prefixo do fetchComAuth se houver)
+                const response = await fetch(MS_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Erro ao enviar solicitação.');
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Erro ao enviar solicitação.');
                 }
+
+                // Sucesso
+                const data = await response.json(); // Só pra consumir o body
                 mostrarToast('Solicitação de atividade complementar enviada com sucesso!', 'success');
                 modalSolicitarComplementar.hide();
+
             } catch (error) {
-                mostrarToast(error.message, 'error');
+                console.error(error);
+                mostrarToast(`Erro: ${error.message}`, 'error');
             } finally {
                 btnSubmit.disabled = false;
                 btnSubmit.innerHTML = '<i class="bi bi-send me-1"></i> Enviar para Aprovação';

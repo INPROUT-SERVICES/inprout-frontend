@@ -421,3 +421,164 @@ body:has(.overview-card[style*="display: none"]) .container-fluid.my-4 {
 .choices__list[aria-expanded] {
     z-index: 20001 !important;
 }
+
+/* --- TEMA MODERNO (Cores do Sistema) --- */
+:root {
+    /* Usa as cores definidas no root.css do sistema */
+    --sys-primary: var(--bs-primary, #0d6efd); 
+    --sys-success: var(--bs-success, #198754);
+    --sys-danger: var(--bs-danger, #dc3545);
+    --sys-text: var(--bs-body-color, #212529);
+    --sys-bg-light: var(--bs-light, #f8f9fa);
+    
+    /* Configurações Modernas de UI */
+    --border-radius-lg: 12px;
+    --border-radius-sm: 8px;
+    --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
+    --shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* CARDS FLUTUANTES */
+.card-modern {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.05); /* Borda sutil */
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-soft);
+    margin-bottom: 1.5rem;
+}
+
+.card-header-modern {
+    background: transparent;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 1.25rem 1.5rem;
+}
+
+.title-modern {
+    font-weight: 700;
+    color: var(--sys-text);
+    font-size: 1.1rem;
+    margin-bottom: 0;
+}
+
+/* TABELA CLEAN */
+.table.modern-table thead th {
+    border-bottom: 2px solid rgba(0,0,0,0.05);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #6c757d; /* Text muted do sistema */
+    padding: 1rem;
+    background-color: transparent;
+}
+
+.table.modern-table tbody tr {
+    transition: background-color 0.2s;
+}
+
+.table.modern-table tbody tr:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.03) !important; /* Highlight sutil com a cor do sistema */
+}
+
+.table.modern-table td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    font-size: 0.9rem;
+}
+
+/* BADGES (Estilo Pilula Suave) */
+.badge-modern {
+    padding: 0.5em 1em;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.75em;
+}
+
+/* WIDGETS DE INFORMAÇÃO NO MODAL */
+.info-widget {
+    background-color: var(--sys-bg-light);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: var(--border-radius-sm);
+    padding: 1rem;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Ícone de fundo sutil */
+.info-widget i {
+    color: var(--sys-primary);
+    opacity: 0.1;
+    font-size: 3rem;
+    position: absolute;
+    right: -5px;
+    top: -5px;
+    transform: rotate(15deg);
+}
+
+.info-widget-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+    z-index: 1;
+}
+
+.info-widget-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--sys-primary); /* Usa cor do sistema */
+    z-index: 1;
+    word-wrap: break-word;
+}
+
+/* COMPARAÇÃO (ANTES x DEPOIS) */
+.comparison-card {
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    height: 100%;
+}
+
+.comparison-header {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Cores de fundo baseadas no sistema */
+.comparison-header.original {
+    background-color: #fff3cd; /* Amarelo padrão bootstrap warning */
+    color: #664d03;
+    border-bottom: 1px solid #ffecb5;
+}
+
+.comparison-header.proposal {
+    background-color: var(--sys-primary); /* Azul do sistema */
+    color: #fff;
+    border-bottom: 1px solid var(--sys-primary);
+}
+
+/* INPUTS MAIS MODERNOS */
+.form-control-modern, .form-select-modern {
+    padding: 0.6rem 1rem;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid #ced4da;
+    background-color: #fff;
+}
+
+.form-control-modern:focus {
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+    border-color: var(--sys-primary);
+}
+
+.form-control-modern:disabled {
+    background-color: #e9ecef;
+    opacity: 1;
+}

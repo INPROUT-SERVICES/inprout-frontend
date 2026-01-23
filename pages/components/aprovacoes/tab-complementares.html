@@ -1,158 +1,172 @@
-<div class="content-loader-container">
+<div class="content-loader-container p-3">
 
-    <div class="card shadow-sm">
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 card-title-modern">
-                <i class="bi bi-list-check me-2"></i> Solicitações Complementares
-            </h5>
-            <div class="d-flex gap-2"></div>
+    <div class="card-modern">
+        <div class="card-header-modern d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <i class="bi bi-list-check fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="title-modern">Atividades Complementares</h5>
+                    <small class="text-muted">Aprovações pendentes de análise</small>
+                </div>
+            </div>
         </div>
         
         <div class="card-body p-0">
             <div class="table-responsive custom-scroll">
-                <table class="table modern-table align-middle table-hover mb-0" id="tableAprovacoesComplementares">
-                    <thead class="table-light">
+                <table class="table modern-table w-100 mb-0" id="tableAprovacoesComplementares">
+                    <thead>
                         <tr>
-                            <th>OS / Referência</th>
-                            <th>Item (LPU)</th>
+                            <th>OS</th>
+                            <th>Site</th>
+                            <th>Projeto</th>
+                            <th>Item LPU</th>
                             <th class="text-center">Qtd</th>
                             <th class="text-end">Valor Total</th>
-                            <th>Justificativa</th>
-                            <th class="text-center">Data</th>
                             <th class="text-center">Status</th>
-                            <th class="text-center" style="width: 100px;">Ações</th>
+                            <th class="text-center" style="width: 110px;">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tbodyAprovacoesComplementares"></tbody>
                 </table>
             </div>
-            <div id="msg-sem-complementares" class="alert alert-light text-center text-muted shadow-sm m-3 d-none">
-                <i class="bi bi-inbox me-2"></i>Nenhuma solicitação pendente encontrada.
+            
+            <div id="msg-sem-complementares" class="text-center py-5 d-none">
+                <div class="text-muted opacity-50 mb-2">
+                    <i class="bi bi-clipboard-check" style="font-size: 3rem;"></i>
+                </div>
+                <h6 class="text-muted fw-bold">Nenhuma pendência encontrada</h6>
+                <small class="text-muted">Você está em dia com as aprovações.</small>
             </div>
         </div>
     </div>
 
     <div class="overlay-loader d-none" id="loader-complementares">
-        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-            <span class="visually-hidden">Carregando...</span>
-        </div>
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
     </div>
 </div> 
 
-<div class="modal fade" id="modalAnaliseCoordenador" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalAnaliseCoordenador" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-scrollable"> 
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="fas fa-tasks me-2"></i>Análise e Proposta</h5>
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+            <div class="modal-header bg-primary text-white border-0 py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-pencil-square fs-5"></i>
+                    <h5 class="modal-title fw-bold">Análise e Proposta</h5>
+                </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             
-            <div class="modal-body bg-light">
-                <div class="card mb-3 shadow-sm">
-                    <div class="card-header bg-white py-2" data-bs-toggle="collapse" data-bs-target="#collapseOsDetails" style="cursor: pointer;">
-                        <h6 class="mb-0 text-primary fw-bold"><i class="fas fa-info-circle me-2"></i>Dados da OS</h6>
-                    </div>
-                    <div id="collapseOsDetails" class="collapse show"> 
-                        <div class="card-body py-2" style="font-size: 0.9rem;">
-                            <div class="row g-3" id="osDetailsContainer">
-                                <div class="text-center"><div class="spinner-border spinner-border-sm text-primary"></div></div>
-                            </div>
-                        </div>
-                    </div>
+            <div class="modal-body bg-light px-4 py-4">
+                
+                <div class="row g-3 mb-4" id="osDetailsContainer">
+                    <div class="col-12 text-center py-3"><div class="spinner-border text-primary"></div></div>
                 </div>
 
-                <div class="card mb-3 shadow-sm border-0">
-                    <div class="card-header bg-secondary text-white py-2 d-flex justify-content-between align-items-center">
-                        <small><strong><i class="bi bi-pencil-square me-1"></i> Propor alterações nos Itens Existentes</strong></small>
-                        <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">Modo Proposta</span>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
-                            <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th>LPU</th> <th>Descrição</th> <th class="text-center">Qtd</th>
-                                        <th class="text-end">Vlr. Unit.</th> <th class="text-end">Total</th>
-                                        <th class="text-center">Status</th> 
-                                        <th class="text-center" style="width: 100px;">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbodyItensExistentes"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-5">
-                        <div class="card h-100 shadow-sm border-warning">
-                            <div class="card-header bg-warning bg-opacity-10 text-dark">
-                                <strong><i class="bi bi-arrow-right-circle me-1"></i> Item Solicitado</strong>
+                <div class="row g-4">
+                    <div class="col-lg-5">
+                        <div class="comparison-card bg-white shadow-sm">
+                            <div class="comparison-header original">
+                                <i class="bi bi-file-earmark-text me-1"></i> Solicitação Original
                             </div>
-                            <div class="card-body bg-white">
-                                <div class="mb-2">
-                                    <label class="text-muted small">LPU</label>
-                                    <input type="text" class="form-control form-control-sm bg-light" id="viewLpuOriginal" readonly>
+                            <div class="p-3">
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-bold">LPU Solicitada</label>
+                                    <input type="text" class="form-control form-control-modern bg-light" id="viewLpuOriginal" readonly>
                                 </div>
-                                <div class="mb-2">
-                                    <label class="text-muted small">Quantidade</label>
-                                    <input type="text" class="form-control form-control-sm bg-light" id="viewQtdOriginal" readonly>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-bold">Quantidade</label>
+                                    <input type="text" class="form-control form-control-modern bg-light" id="viewQtdOriginal" readonly>
                                 </div>
-                                <div class="mb-0">
-                                    <label class="text-muted small">Justificativa</label>
-                                    <textarea class="form-control form-control-sm bg-light" id="viewJustificativaManager" rows="3" readonly></textarea>
+                                <div>
+                                    <label class="form-label text-muted small fw-bold">Justificativa</label>
+                                    <div class="p-3 bg-light rounded border text-muted small" style="min-height: 80px;" id="viewJustificativaManagerText"></div>
+                                    <input type="hidden" id="viewJustificativaManager">
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-md-7">
-                        <div class="card h-100 shadow-sm border-success">
-                            <div class="card-header bg-success text-white">
-                                <strong><i class="fas fa-edit me-1"></i> Decisão sobre o Item Solicitado</strong>
+                    <div class="col-lg-1 d-none d-lg-flex align-items-center justify-content-center">
+                        <i class="bi bi-arrow-right-circle-fill text-primary fs-1 opacity-25"></i>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="comparison-card bg-white shadow-sm" style="border-color: rgba(var(--bs-primary-rgb), 0.3);">
+                            <div class="comparison-header proposal">
+                                <i class="bi bi-check-circle me-1"></i> Decisão Final
                             </div>
-                            <div class="card-body">
+                            <div class="p-3">
                                 <form id="formAnaliseCoordenador">
                                     <input type="hidden" id="analiseSolicitacaoId">
-                                    <div class="mb-2 position-relative">
-                                        <label class="form-label fw-bold small">Item LPU Final</label>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small text-dark">Item LPU Aprovado</label>
                                         <div class="input-group d-none"><input type="text" id="editLpuBusca"></div>
-                                        <select class="form-select form-select-sm mt-1" id="editLpuSelect"></select>
+                                        <select class="form-select form-select-modern" id="editLpuSelect"></select>
                                     </div>
-                                    <div class="row g-2 mb-2">
-                                        <div class="col-md-4">
-                                            <label class="form-label fw-bold small">Quantidade</label>
-                                            <input type="number" class="form-control form-control-sm" id="editQuantidade" min="1">
+
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-6">
+                                            <label class="form-label fw-bold small text-dark">Quantidade</label>
+                                            <input type="number" class="form-control form-control-modern" id="editQuantidade" min="1">
                                         </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label fw-bold small">BOQ</label>
-                                            <input type="text" class="form-control form-control-sm" id="editBoq" placeholder="-">
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label fw-bold small">Status</label>
-                                            <select class="form-select form-select-sm" id="editStatusRegistro">
+                                        <div class="col-6">
+                                            <label class="form-label fw-bold small text-dark">Status</label>
+                                            <select class="form-select form-select-modern" id="editStatusRegistro">
                                                 <option value="ATIVO" selected>ATIVO</option>
                                                 <option value="INATIVO">INATIVO</option>
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="mb-0">
-                                        <label class="form-label fw-bold small">Justificativa da Decisão <span class="text-danger">*</span></label>
-                                        <textarea class="form-control form-control-sm" id="editJustificativaCoordenador" rows="2" placeholder="Explique suas alterações..."></textarea>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small text-dark">BOQ</label>
+                                        <input type="text" class="form-control form-control-modern" id="editBoq" placeholder="-">
+                                    </div>
+
+                                    <div>
+                                        <label class="form-label fw-bold small text-dark">Justificativa da Decisão <span class="text-danger">*</span></label>
+                                        <textarea class="form-control form-control-modern" id="editJustificativaCoordenador" rows="2" placeholder="Digite aqui..."></textarea>
                                     </div>
                                 </form>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <div class="mt-4">
+                    <button class="btn btn-light btn-sm w-100 border text-muted fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseItensExistentes">
+                        <i class="bi bi-clock-history me-1"></i> Ver Itens Existentes na OS (Histórico) <i class="bi bi-chevron-down ms-1"></i>
+                    </button>
+                    <div class="collapse mt-2" id="collapseItensExistentes">
+                        <div class="card card-body border shadow-sm p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>LPU</th> <th>Descrição</th> <th class="text-center">Qtd</th>
+                                            <th class="text-end">Unit.</th> <th class="text-end">Total</th>
+                                            <th class="text-center">Status</th> <th class="text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyItensExistentes"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
-            <div class="modal-footer bg-light py-2">
-                <button type="button" class="btn btn-outline-danger btn-sm me-auto" onclick="AprovacoesComplementares.prepararRejeicao()">
-                    <i class="fas fa-times me-1"></i> Rejeitar
+            
+            <div class="modal-footer border-0 pt-0 pb-4 px-4 bg-light">
+                <button type="button" class="btn btn-outline-danger me-auto" onclick="AprovacoesComplementares.prepararRejeicao()">
+                    <i class="bi bi-x-circle me-1"></i> Rejeitar
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
-                <button type="button" class="btn btn-success btn-sm" onclick="AprovacoesComplementares.salvarAprovacao()">
-                    <i class="fas fa-paper-plane me-1"></i> Enviar Proposta
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary px-4" onclick="AprovacoesComplementares.salvarAprovacao()">
+                    <i class="bi bi-send-fill me-1"></i> Confirmar e Enviar
                 </button>
             </div>
         </div>
@@ -161,35 +175,33 @@
 
 <div class="modal fade" id="modalEditarItemOs" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-primary">
+        <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Propor Edição</h5>
+                <h6 class="modal-title fw-bold">Propor Edição</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <form id="formEditarItemOs">
                     <input type="hidden" id="editItemIdHidden">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Novo Item LPU</label>
+                        <label class="form-label small fw-bold">Novo Item LPU</label>
                         <select class="form-select" id="modalEditLpuSelect"></select>
                     </div>
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Nova Quantidade</label>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Nova Qtd</label>
                             <input type="number" id="modalEditQtd" class="form-control" min="1">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Novo BOQ</label>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Novo BOQ</label>
                             <input type="text" id="modalEditBoq" class="form-control">
                         </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="AprovacoesComplementares.salvarEdicaoBuffer()">
-                    <i class="bi bi-check-circle me-1"></i> Confirmar Edição (Local)
-                </button>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="AprovacoesComplementares.salvarEdicaoBuffer()">Salvar Alteração</button>
             </div>
         </div>
     </div>
@@ -197,16 +209,11 @@
 
 <div class="modal fade" id="modalAlerta" tabindex="-1" aria-hidden="true" style="z-index: 10600;">
     <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-dark py-2">
-                <h6 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Atenção</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center py-3">
-                <p class="mb-0" id="textoAlerta">Mensagem de erro aqui.</p>
-            </div>
-            <div class="modal-footer justify-content-center bg-light py-1">
-                <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal">OK</button>
+        <div class="modal-content shadow border-0">
+            <div class="modal-body text-center p-4">
+                <i class="bi bi-exclamation-circle text-warning fs-1 mb-2"></i>
+                <p class="mb-3 fw-bold" id="textoAlerta">Mensagem.</p>
+                <button type="button" class="btn btn-dark btn-sm px-4" data-bs-dismiss="modal">OK</button>
             </div>
         </div>
     </div>
@@ -214,21 +221,18 @@
 
 <div class="modal fade" id="modalRejeitar" tabindex="-1" aria-hidden="true" style="z-index: 10600;">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-danger">
+        <div class="modal-content border-0 shadow">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title"><i class="bi bi-x-circle me-2"></i>Rejeitar Solicitação</h5>
+                <h6 class="modal-title fw-bold">Rejeitar Solicitação</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p class="small text-muted">A solicitação será encerrada e devolvida.</p>
-                <label class="form-label fw-bold">Motivo da Recusa <span class="text-danger">*</span></label>
-                <textarea class="form-control" id="textoMotivoRecusa" rows="3" placeholder="Descreva o motivo..."></textarea>
+            <div class="modal-body p-4">
+                <label class="form-label fw-bold small">Motivo</label>
+                <textarea class="form-control" id="textoMotivoRecusa" rows="3"></textarea>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" onclick="AprovacoesComplementares.executarRejeicao()">
-                    Confirmar Rejeição
-                </button>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="AprovacoesComplementares.executarRejeicao()">Confirmar</button>
             </div>
         </div>
     </div>
