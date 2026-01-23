@@ -3,12 +3,12 @@
     <div class="card-modern">
         <div class="card-header-modern d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
-                <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                <div class="bg-success bg-opacity-10 text-success rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
                     <i class="bi bi-list-check fs-5"></i>
                 </div>
                 <div>
-                    <h5 class="title-modern">Atividades Complementares</h5>
-                    <small class="text-muted">Aprovações pendentes de análise</small>
+                    <h5 class="title-modern">Solicitações Complementares</h5>
+                    <small class="text-muted">Gerencie aprovações e edições pendentes</small>
                 </div>
             </div>
         </div>
@@ -34,26 +34,27 @@
             
             <div id="msg-sem-complementares" class="text-center py-5 d-none">
                 <div class="text-muted opacity-50 mb-2">
-                    <i class="bi bi-clipboard-check" style="font-size: 3rem;"></i>
+                    <i class="bi bi-check-circle" style="font-size: 3rem;"></i>
                 </div>
-                <h6 class="text-muted fw-bold">Nenhuma pendência encontrada</h6>
-                <small class="text-muted">Você está em dia com as aprovações.</small>
+                <h6 class="text-muted fw-bold">Tudo limpo!</h6>
+                <small class="text-muted">Nenhuma solicitação pendente.</small>
             </div>
         </div>
     </div>
 
     <div class="overlay-loader d-none" id="loader-complementares">
-        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+        <div class="spinner-border text-success" style="width: 3rem; height: 3rem;" role="status"></div>
     </div>
 </div> 
 
 <div class="modal fade" id="modalAnaliseCoordenador" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-scrollable"> 
         <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
-            <div class="modal-header bg-primary text-white border-0 py-3">
+            
+            <div class="modal-header bg-success text-white border-0 py-3">
                 <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-pencil-square fs-5"></i>
-                    <h5 class="modal-title fw-bold">Análise e Proposta</h5>
+                    <i class="bi bi-clipboard-data fs-5"></i>
+                    <h5 class="modal-title fw-bold">Central de Análise</h5>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -61,103 +62,124 @@
             <div class="modal-body bg-light px-4 py-4">
                 
                 <div class="row g-3 mb-4" id="osDetailsContainer">
-                    <div class="col-12 text-center py-3"><div class="spinner-border text-primary"></div></div>
+                    <div class="col-12 text-center py-3"><div class="spinner-border text-success"></div></div>
                 </div>
 
-                <div class="row g-4">
-                    <div class="col-lg-5">
-                        <div class="comparison-card bg-white shadow-sm">
-                            <div class="comparison-header original">
-                                <i class="bi bi-file-earmark-text me-1"></i> Solicitação Original
-                            </div>
-                            <div class="p-3">
-                                <div class="mb-3">
-                                    <label class="form-label text-muted small fw-bold">LPU Solicitada</label>
-                                    <input type="text" class="form-control form-control-modern bg-light" id="viewLpuOriginal" readonly>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label text-muted small fw-bold">Quantidade</label>
-                                    <input type="text" class="form-control form-control-modern bg-light" id="viewQtdOriginal" readonly>
-                                </div>
-                                <div>
-                                    <label class="form-label text-muted small fw-bold">Justificativa</label>
-                                    <div class="p-3 bg-light rounded border text-muted small" style="min-height: 80px;" id="viewJustificativaManagerText"></div>
-                                    <input type="hidden" id="viewJustificativaManager">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <ul class="nav nav-pills nav-fill mb-4 modern-tabs" id="pills-tab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold" id="pills-analise-tab" data-bs-toggle="pill" data-bs-target="#pills-analise" type="button">
+                            <i class="bi bi-lightning-charge-fill me-2"></i>Análise da Solicitação
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="pills-itens-tab" data-bs-toggle="pill" data-bs-target="#pills-itens" type="button">
+                            <i class="bi bi-list-ul me-2"></i>Itens Existentes na OS (Histórico)
+                        </button>
+                    </li>
+                </ul>
 
-                    <div class="col-lg-1 d-none d-lg-flex align-items-center justify-content-center">
-                        <i class="bi bi-arrow-right-circle-fill text-primary fs-1 opacity-25"></i>
-                    </div>
-
-                    <div class="col-lg-6">
-                        <div class="comparison-card bg-white shadow-sm" style="border-color: rgba(var(--bs-primary-rgb), 0.3);">
-                            <div class="comparison-header proposal">
-                                <i class="bi bi-check-circle me-1"></i> Decisão Final
-                            </div>
-                            <div class="p-3">
-                                <form id="formAnaliseCoordenador">
-                                    <input type="hidden" id="analiseSolicitacaoId">
-                                    
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold small text-dark">Item LPU Aprovado</label>
-                                        <div class="input-group d-none"><input type="text" id="editLpuBusca"></div>
-                                        <select class="form-select form-select-modern" id="editLpuSelect"></select>
+                <div class="tab-content" id="pills-tabContent">
+                    
+                    <div class="tab-pane fade show active" id="pills-analise">
+                        <div class="row g-4">
+                            <div class="col-lg-5">
+                                <div class="comparison-card bg-white shadow-sm h-100">
+                                    <div class="comparison-header original">
+                                        <i class="bi bi-person-fill me-2"></i> Solicitação (Manager)
                                     </div>
-
-                                    <div class="row g-3 mb-3">
-                                        <div class="col-6">
-                                            <label class="form-label fw-bold small text-dark">Quantidade</label>
-                                            <input type="number" class="form-control form-control-modern" id="editQuantidade" min="1">
+                                    <div class="p-4">
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small fw-bold">LPU Solicitada</label>
+                                            <input type="text" class="form-control form-control-modern bg-light" id="viewLpuOriginal" readonly>
                                         </div>
-                                        <div class="col-6">
-                                            <label class="form-label fw-bold small text-dark">Status</label>
-                                            <select class="form-select form-select-modern" id="editStatusRegistro">
-                                                <option value="ATIVO" selected>ATIVO</option>
-                                                <option value="INATIVO">INATIVO</option>
-                                            </select>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small fw-bold">Quantidade</label>
+                                            <input type="text" class="form-control form-control-modern bg-light" id="viewQtdOriginal" readonly>
+                                        </div>
+                                        <div>
+                                            <label class="form-label text-muted small fw-bold">Justificativa</label>
+                                            <div class="p-3 bg-light rounded border text-muted small fst-italic" style="min-height: 80px;" id="viewJustificativaManagerText"></div>
+                                            <input type="hidden" id="viewJustificativaManager">
                                         </div>
                                     </div>
-                                    
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold small text-dark">BOQ</label>
-                                        <input type="text" class="form-control form-control-modern" id="editBoq" placeholder="-">
-                                    </div>
+                                </div>
+                            </div>
 
-                                    <div>
-                                        <label class="form-label fw-bold small text-dark">Justificativa da Decisão <span class="text-danger">*</span></label>
-                                        <textarea class="form-control form-control-modern" id="editJustificativaCoordenador" rows="2" placeholder="Digite aqui..."></textarea>
+                            <div class="col-lg-1 d-none d-lg-flex align-items-center justify-content-center">
+                                <i class="bi bi-arrow-right-circle-fill text-success fs-1 opacity-25"></i>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="comparison-card bg-white shadow-sm h-100" style="border-color: #198754;">
+                                    <div class="comparison-header proposal bg-success text-white">
+                                        <i class="bi bi-check-circle-fill me-2"></i> Decisão Final
                                     </div>
-                                </form>
+                                    <div class="p-4">
+                                        <form id="formAnaliseCoordenador">
+                                            <input type="hidden" id="analiseSolicitacaoId">
+                                            
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold small text-dark">Item LPU Aprovado</label>
+                                                <div class="input-group d-none"><input type="text" id="editLpuBusca"></div>
+                                                <select class="form-select form-select-modern w-100" id="editLpuSelect"></select>
+                                            </div>
+
+                                            <div class="row g-3 mb-3">
+                                                <div class="col-6">
+                                                    <label class="form-label fw-bold small text-dark">Quantidade</label>
+                                                    <input type="number" class="form-control form-control-modern" id="editQuantidade" min="1">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label fw-bold small text-dark">Status</label>
+                                                    <select class="form-select form-select-modern" id="editStatusRegistro">
+                                                        <option value="ATIVO" selected>ATIVO</option>
+                                                        <option value="INATIVO">INATIVO</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold small text-dark">BOQ</label>
+                                                <input type="text" class="form-control form-control-modern" id="editBoq" placeholder="-">
+                                            </div>
+
+                                            <div>
+                                                <label class="form-label fw-bold small text-dark">Justificativa da Decisão <span class="text-danger">*</span></label>
+                                                <textarea class="form-control form-control-modern" id="editJustificativaCoordenador" rows="2" placeholder="Digite aqui..."></textarea>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="mt-4">
-                    <button class="btn btn-light btn-sm w-100 border text-muted fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseItensExistentes">
-                        <i class="bi bi-clock-history me-1"></i> Ver Itens Existentes na OS (Histórico) <i class="bi bi-chevron-down ms-1"></i>
-                    </button>
-                    <div class="collapse mt-2" id="collapseItensExistentes">
-                        <div class="card card-body border shadow-sm p-0">
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>LPU</th> <th>Descrição</th> <th class="text-center">Qtd</th>
-                                            <th class="text-end">Unit.</th> <th class="text-end">Total</th>
-                                            <th class="text-center">Status</th> <th class="text-center">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tbodyItensExistentes"></tbody>
-                                </table>
+                    <div class="tab-pane fade" id="pills-itens">
+                        <div class="card-modern">
+                            <div class="card-body p-0">
+                                <div class="alert alert-success border-0 bg-success bg-opacity-10 d-flex align-items-center m-3 p-2 rounded-3">
+                                    <i class="bi bi-info-circle-fill text-success me-2 fs-5"></i>
+                                    <small class="text-success-emphasis">
+                                        Estes são os itens já cadastrados nesta OS. Você pode propor alterações neles usando os botões de ação.
+                                    </small>
+                                </div>
+                                <div class="table-responsive" style="max-height: 400px;">
+                                    <table class="table modern-table table-hover mb-0 w-100">
+                                        <thead class="bg-light sticky-top">
+                                            <tr>
+                                                <th>LPU</th> <th>Descrição</th> <th class="text-center">Qtd</th>
+                                                <th class="text-end">Unit.</th> <th class="text-end">Total</th>
+                                                <th class="text-center">Status</th> <th class="text-center" style="width: 120px;">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbodyItensExistentes"></tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
+                </div>
             </div>
             
             <div class="modal-footer border-0 pt-0 pb-4 px-4 bg-light">
@@ -165,8 +187,8 @@
                     <i class="bi bi-x-circle me-1"></i> Rejeitar
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary px-4" onclick="AprovacoesComplementares.salvarAprovacao()">
-                    <i class="bi bi-send-fill me-1"></i> Confirmar e Enviar
+                <button type="button" class="btn btn-success px-4 fw-bold shadow-sm" onclick="AprovacoesComplementares.salvarAprovacao()">
+                    <i class="bi bi-check-lg me-1"></i> Confirmar e Enviar
                 </button>
             </div>
         </div>
@@ -176,7 +198,7 @@
 <div class="modal fade" id="modalEditarItemOs" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header bg-success text-white">
                 <h6 class="modal-title fw-bold">Propor Edição</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -201,7 +223,7 @@
             </div>
             <div class="modal-footer bg-light border-0">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="AprovacoesComplementares.salvarEdicaoBuffer()">Salvar Alteração</button>
+                <button type="button" class="btn btn-success" onclick="AprovacoesComplementares.salvarEdicaoBuffer()">Salvar Alteração</button>
             </div>
         </div>
     </div>

@@ -38,21 +38,21 @@ const RegistrosIO = {
         const btn = document.getElementById('btnDownloadTemplate');
         if (btn) {
             btn.addEventListener('click', () => {
-                 // Usa as colunas definidas no render, que agora incluem STATUS REGISTRO
-                 const headers = RegistrosRender.colunasCompletas;
-                 
-                 // Cria o arquivo Excel na memória
-                 const wb = XLSX.utils.book_new();
-                 const ws = XLSX.utils.aoa_to_sheet([headers]);
-                 
-                 // Ajusta largura das colunas (opcional, mas fica melhor visualmente)
-                 const wscols = headers.map(() => ({wch: 20}));
-                 ws['!cols'] = wscols;
+                // Usa as colunas definidas no render, que agora incluem STATUS REGISTRO
+                const headers = RegistrosRender.colunasCompletas;
 
-                 XLSX.utils.book_append_sheet(wb, ws, "Template");
-                 
-                 // Baixa o arquivo
-                 XLSX.writeFile(wb, "template_importacao_os.xlsx");
+                // Cria o arquivo Excel na memória
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet([headers]);
+
+                // Ajusta largura das colunas (opcional, mas fica melhor visualmente)
+                const wscols = headers.map(() => ({ wch: 20 }));
+                ws['!cols'] = wscols;
+
+                XLSX.utils.book_append_sheet(wb, ws, "Template");
+
+                // Baixa o arquivo
+                XLSX.writeFile(wb, "template_importacao_os.xlsx");
             });
         }
     },
@@ -376,8 +376,19 @@ const RegistrosIO = {
                         const detalhesHeaders = [...RegistrosRender.getHeaders(), "VALOR CPS LEGADO"];
                         const detalhesRows = linhasParaExportar.map(linha => {
                             return detalhesHeaders.map(h => {
+                                // CORREÇÃO: Tratamento especial para Situação de itens cancelados
+                                if (h === 'SITUAÇÃO' && linha.detalhe && linha.detalhe.statusRegistro === 'INATIVO') {
+                                    return 'CANCELADO';
+                                }
+
+                                // CORREÇÃO: Tratamento especial para Status
+                                if (h === 'STATUS' && linha.detalhe && linha.detalhe.statusRegistro === 'INATIVO') {
+                                    return 'INATIVO';
+                                }
+
                                 const func = RegistrosRender.dataMapping[h];
                                 let val = func ? func(linha) : '-';
+
                                 if (h.includes('VALOR') || h === 'QUANTIDADE') {
                                     if (typeof val === 'string') val = val.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
                                     return parseFloat(val) || 0;
@@ -423,11 +434,16 @@ const RegistrosIO = {
             }
 
             if (os.detalhes && os.detalhes.length > 0) {
-                const detalhesAtivos = os.detalhes.filter(d => d.statusRegistro !== 'INATIVO');
+                // CORREÇÃO: Não filtramos mais os inativos. Pegamos todos.
+                // const detalhesAtivos = os.detalhes.filter(d => d.statusRegistro !== 'INATIVO'); (REMOVIDO)
 
-                detalhesAtivos.forEach(detalhe => {
+                os.detalhes.forEach(detalhe => {
                     let lancamentoParaExibir = detalhe.ultimoLancamento;
-                    if (!lancamentoParaExibir && detalhe.lancamentos && detalhe.lancamentos.length > 0) {
+
+                    // Se for INATIVO, não buscamos lançamentos operacionais, apenas mantemos o registro
+                    const isInativo = detalhe.statusRegistro === 'INATIVO';
+
+                    if (!isInativo && !lancamentoParaExibir && detalhe.lancamentos && detalhe.lancamentos.length > 0) {
                         const operacionais = detalhe.lancamentos.filter(l => l.situacaoAprovacao !== 'APROVADO_LEGADO');
                         if (operacionais.length > 0) {
                             lancamentoParaExibir = operacionais.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
@@ -436,11 +452,22 @@ const RegistrosIO = {
                         }
                     }
 
-                    linhasProcessadas.push({
+                    // Cria o objeto da linha
+                    const linhaObj = {
                         os: os,
                         detalhe: detalhe,
                         ultimoLancamento: lancamentoParaExibir
-                    });
+                    };
+
+                    // Se estiver inativo, forçamos a situação para CANCELADO visualmente
+                    if (isInativo) {
+                        // Criamos uma propriedade virtual para o renderizador usar
+                        if (!linhaObj.detalhe) linhaObj.detalhe = {};
+                        // Sobrescrevemos a situação atual apenas para o Excel
+                        linhaObj.detalhe.situacaoAtualVirtual = 'CANCELADO';
+                    }
+
+                    linhasProcessadas.push(linhaObj);
                 });
             }
         });

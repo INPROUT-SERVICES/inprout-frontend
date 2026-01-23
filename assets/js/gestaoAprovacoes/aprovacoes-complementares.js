@@ -15,34 +15,34 @@ const AprovacoesComplementares = {
         if (!AprovacoesComplementares.listenersConfigurados) {
             AprovacoesComplementares.listenersConfigurados = true;
             
-            // CSS INJETADO (COM CORES DO SISTEMA)
+            // CSS INJETADO (TEMA VERDE & MODERNO)
             const style = document.createElement('style');
             style.innerHTML = `
-                /* Variáveis derivadas do Bootstrap/Sistema */
+                /* Define a cor primária como Verde Sucesso do Bootstrap */
                 :root {
-                    --sys-bg: var(--bs-body-bg, #fff);
-                    --sys-border: var(--bs-border-color, #dee2e6);
+                    --app-primary: #198754; 
+                    --app-primary-light: #d1e7dd;
+                    --app-bg: #fff;
                 }
 
                 .swal2-container { z-index: 20000 !important; }
                 
-                /* Tabela com Highlight */
+                /* Highlights de Edição */
                 .item-modificado { background-color: #fff3cd !important; } 
                 .valor-antigo { text-decoration: line-through; color: var(--bs-danger); margin-right: 6px; font-size: 0.85em; }
-                .valor-novo { color: var(--bs-success); font-weight: bold; }
+                .valor-novo { color: var(--app-primary); font-weight: bold; }
 
-                /* Card Moderno */
+                /* Cards & Widgets */
                 .card-modern {
-                    background: var(--sys-bg);
+                    background: var(--app-bg);
                     border: 1px solid rgba(0,0,0,0.08);
                     border-radius: 12px;
                     box-shadow: 0 4px 12px rgba(0,0,0,0.03);
                     margin-bottom: 1.5rem;
                 }
                 .card-header-modern { padding: 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.05); }
-                .title-modern { font-weight: 700; margin: 0; color: var(--bs-body-color); }
+                .title-modern { font-weight: 700; margin: 0; color: #212529; }
 
-                /* Widgets */
                 .info-widget {
                     background-color: var(--bs-light);
                     border: 1px solid rgba(0,0,0,0.05);
@@ -53,20 +53,37 @@ const AprovacoesComplementares = {
                 }
                 .info-widget i {
                     position: absolute; right: -5px; top: -5px; font-size: 3rem;
-                    color: var(--bs-primary); opacity: 0.08; transform: rotate(10deg);
+                    color: var(--app-primary); opacity: 0.1; transform: rotate(10deg);
                 }
                 .info-widget-label { font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #6c757d; display: block; margin-bottom: 4px; }
-                .info-widget-value { font-size: 0.95rem; font-weight: 700; color: var(--bs-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;}
+                .info-widget-value { font-size: 0.95rem; font-weight: 700; color: var(--app-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;}
+
+                /* Abas Modernas (Pills) */
+                .nav-pills.modern-tabs .nav-link {
+                    color: #6c757d;
+                    background: transparent;
+                    border: 1px solid rgba(0,0,0,0.1);
+                    margin: 0 5px;
+                    border-radius: 8px;
+                    transition: all 0.2s;
+                }
+                .nav-pills.modern-tabs .nav-link:hover { background: rgba(0,0,0,0.03); }
+                .nav-pills.modern-tabs .nav-link.active {
+                    background-color: var(--app-primary);
+                    color: white;
+                    box-shadow: 0 4px 10px rgba(25, 135, 84, 0.3);
+                    border-color: var(--app-primary);
+                }
 
                 /* Comparação */
-                .comparison-card { border: 1px solid var(--sys-border); border-radius: 10px; overflow: hidden; height: 100%; }
+                .comparison-card { border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; height: 100%; }
                 .comparison-header { padding: 10px 15px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; }
                 .comparison-header.original { background: #fff3cd; color: #664d03; border-bottom: 1px solid #ffecb5; }
-                .comparison-header.proposal { background: var(--bs-primary); color: #fff; border-bottom: 1px solid var(--bs-primary); }
+                .comparison-header.proposal { background: var(--app-primary); color: #fff; border-bottom: 1px solid var(--app-primary); }
 
-                /* Form Moderno */
+                /* Form */
                 .form-control-modern { border-radius: 6px; padding: 8px 12px; border: 1px solid #ced4da; }
-                .form-control-modern:focus { border-color: var(--bs-primary); box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.15); }
+                .form-control-modern:focus { border-color: var(--app-primary); box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.15); }
             `;
             document.head.appendChild(style);
             console.log("Módulo Complementares Iniciado.");
@@ -200,7 +217,7 @@ const AprovacoesComplementares = {
             }
 
             const isController = item.status === 'PENDENTE_CONTROLLER';
-            const btnClass = isController ? 'btn-success' : 'btn-primary';
+            const btnClass = isController ? 'btn-success' : 'btn-outline-success'; // Botão verde
             const btnIcon = isController ? 'bi-check-lg' : 'bi-pencil-square';
             const btnTitle = isController ? 'Aprovar' : 'Analisar';
 
@@ -224,7 +241,6 @@ const AprovacoesComplementares = {
     // --- MODAL DE ANÁLISE ---
     abrirModalAnalise: async (id) => {
         try {
-            // Spinner suave
             const btn = document.activeElement;
             const originalIcon = btn.innerHTML;
             if(btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
@@ -248,7 +264,7 @@ const AprovacoesComplementares = {
             const osCompleta = respOs.ok ? await respOs.json() : null;
             AprovacoesComplementares.currentOsCompleta = osCompleta;
 
-            if(btn) btn.innerHTML = originalIcon; // Restaura botão
+            if(btn) btn.innerHTML = originalIcon;
 
             const isController = solicitacao.status === 'PENDENTE_CONTROLLER';
 
@@ -261,7 +277,6 @@ const AprovacoesComplementares = {
             document.getElementById('viewLpuOriginal').value = lpuSolicitada ? lpuSolicitada.nome : `ID: ${solicitacao.lpuOriginalId}`;
             document.getElementById('viewQtdOriginal').value = solicitacao.quantidadeOriginal;
             
-            // Preenche o DIV de texto (visual) e o hidden
             document.getElementById('viewJustificativaManagerText').innerText = solicitacao.justificativa || "Sem justificativa.";
             document.getElementById('viewJustificativaManager').value = solicitacao.justificativa;
             
@@ -281,6 +296,15 @@ const AprovacoesComplementares = {
                 document.getElementById(fid).disabled = isController;
             });
 
+            // Botão Principal (Verde)
+            const btnSalvar = document.querySelector('#modalAnaliseCoordenador .btn-success') || document.querySelector('#modalAnaliseCoordenador .btn-primary');
+            if (isController) {
+                btnSalvar.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Aprovar Alterações';
+            } else {
+                btnSalvar.innerHTML = '<i class="bi bi-send-fill me-1"></i> Enviar Proposta';
+            }
+            btnSalvar.className = 'btn btn-success px-4 fw-bold shadow-sm'; // Força verde
+
             const lpuSelect = document.getElementById('editLpuSelect');
             if (AprovacoesComplementares.choicesMain) { AprovacoesComplementares.choicesMain.destroy(); }
             
@@ -295,9 +319,15 @@ const AprovacoesComplementares = {
             AprovacoesComplementares.choicesMain = new Choices(lpuSelect, { searchEnabled: true, itemSelectText: '', shouldSort: false });
             if (isController) AprovacoesComplementares.choicesMain.disable();
 
+            // Abre o modal e reseta a aba ativa para a primeira (Análise)
             const modalEl = document.getElementById('modalAnaliseCoordenador');
             let modalInstance = bootstrap.Modal.getInstance(modalEl);
             if (!modalInstance) { modalInstance = new bootstrap.Modal(modalEl); }
+            
+            // Ativa a primeira aba (Análise) sempre que abrir
+            const triggerEl = document.querySelector('#pills-analise-tab');
+            if(triggerEl) bootstrap.Tab.getOrCreateInstance(triggerEl).show();
+
             modalInstance.show();
 
         } catch (e) {
@@ -317,7 +347,6 @@ const AprovacoesComplementares = {
             if (!site || site === 'null') site = os.detalhes[0].site;
         }
 
-        // Widgets com ícones e design limpo
         const widgets = [
             { label: 'OS', value: os.os || '-', icon: 'bi-hash' },
             { label: 'Projeto', value: os.projeto || '-', icon: 'bi-folder' },
@@ -338,7 +367,6 @@ const AprovacoesComplementares = {
             `;
         });
 
-        // Descrição abaixo
         html += `
             <div class="col-12">
                 <div class="p-3 bg-white rounded border shadow-sm">
@@ -523,11 +551,11 @@ const AprovacoesComplementares = {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('modalAnaliseCoordenador'));
                 if(modal) modal.hide();
                 
-                // Fecha alerta se estiver aberto
                 const alerta = bootstrap.Modal.getInstance(document.getElementById('modalAlerta'));
                 if(alerta) alerta.hide();
 
                 AprovacoesComplementares.carregarPendencias();
+                // Exibe toast ou reload opcional
             } else { throw new Error('Erro ao processar'); }
         } catch (e) { alert('Erro: ' + e.message); }
     },
