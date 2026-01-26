@@ -1,5 +1,4 @@
 if (!window.API_COMPLEMENTARES_URL) {
-    // Se estiver rodando no PC do desenvolvedor
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         window.API_COMPLEMENTARES_URL = 'http://localhost:8082';
     } else {
@@ -9,7 +8,6 @@ if (!window.API_COMPLEMENTARES_URL) {
 
 const AprovacoesComplementares = {
 
-    // Caminho da API concatenado com a URL base dinâmica
     MS_URL: window.API_COMPLEMENTARES_URL + "/v1/solicitacoes-complementares",
 
     currentSolicitacao: null,
@@ -17,7 +15,7 @@ const AprovacoesComplementares = {
     alteracoesBuffer: {}, 
     listenersConfigurados: false,
     listaCompletaLpus: null,
-    mapaDetalhesOs: {}, // Cache de OS
+    mapaDetalhesOs: {}, 
     
     choicesMain: null,
     choicesEdit: null,
@@ -26,6 +24,14 @@ const AprovacoesComplementares = {
         if (!AprovacoesComplementares.listenersConfigurados) {
             AprovacoesComplementares.listenersConfigurados = true;
             AprovacoesComplementares.injetarCSS();
+            
+            // Listeners para filtros do histórico
+            const inputBusca = document.getElementById('buscaHistComp');
+            const selectStatus = document.getElementById('filtroStatusHistComp');
+            
+            if(inputBusca) inputBusca.addEventListener('keyup', AprovacoesComplementares.filtrarHistoricoNaTela);
+            if(selectStatus) selectStatus.addEventListener('change', AprovacoesComplementares.filtrarHistoricoNaTela);
+            
             console.log("Módulo Complementares Iniciado.");
         }
     },
@@ -38,23 +44,10 @@ const AprovacoesComplementares = {
             .item-modificado { background-color: #fff3cd !important; } 
             .valor-antigo { text-decoration: line-through; color: var(--bs-danger); margin-right: 6px; font-size: 0.85em; }
             .valor-novo { color: var(--app-primary); font-weight: bold; }
-            .card-modern { background: var(--app-bg); border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 1.5rem; }
-            .card-header-modern { padding: 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.05); }
-            .title-modern { font-weight: 700; margin: 0; color: #212529; }
-            .info-widget { background-color: var(--bs-light); border: 1px solid rgba(0,0,0,0.05); border-radius: 8px; padding: 1rem; position: relative; overflow: hidden; }
-            .info-widget i { position: absolute; right: -5px; top: -5px; font-size: 3rem; color: var(--app-primary); opacity: 0.1; transform: rotate(10deg); }
-            .info-widget-label { font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #6c757d; display: block; margin-bottom: 4px; }
-            .info-widget-value { font-size: 0.95rem; font-weight: 700; color: var(--app-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;}
-            .nav-pills.modern-tabs .nav-link { color: #6c757d; background: transparent; border: 1px solid rgba(0,0,0,0.1); margin: 0 5px; border-radius: 8px; transition: all 0.2s; }
-            .nav-pills.modern-tabs .nav-link:hover { background: rgba(0,0,0,0.03); }
-            .nav-pills.modern-tabs .nav-link.active { background-color: var(--app-primary); color: white; box-shadow: 0 4px 10px rgba(25, 135, 84, 0.3); border-color: var(--app-primary); }
-            .comparison-card { border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; height: 100%; }
-            .comparison-header { padding: 10px 15px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; }
-            .comparison-header.original { background: #fff3cd; color: #664d03; border-bottom: 1px solid #ffecb5; }
-            .comparison-header.proposal { background: var(--app-primary); color: #fff; border-bottom: 1px solid var(--app-primary); }
-            .form-control-modern { border-radius: 6px; padding: 8px 12px; border: 1px solid #ced4da; }
-            .form-control-modern:focus { border-color: var(--app-primary); box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.15); }
             .loading-text { font-style: italic; color: #adb5bd; font-size: 0.85rem; }
+            .badge-status-aprovado { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+            .badge-status-rejeitado { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+            .badge-status-pendente { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
         `;
         document.head.appendChild(style);
     },
@@ -62,6 +55,11 @@ const AprovacoesComplementares = {
     formatarMoeda: (valor) => {
         if (valor === undefined || valor === null) return 'R$ 0,00';
         return parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    },
+    
+    formatarData: (dataIso) => {
+        if (!dataIso) return '-';
+        return new Date(dataIso).toLocaleDateString('pt-BR') + ' ' + new Date(dataIso).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
     },
 
     mostrarAlerta: (msg) => {
@@ -100,10 +98,20 @@ const AprovacoesComplementares = {
         } catch (error) { return []; }
     },
 
-    // Busca detalhes individualmente sem travar a UI
     fetchDetalhesOsESalvar: async (osId) => {
         if (AprovacoesComplementares.mapaDetalhesOs[osId]) return AprovacoesComplementares.mapaDetalhesOs[osId];
         try {
+            // Tenta buscar no cache global primeiro se existir para evitar chamadas ao monólito
+            if (window.todosOsLancamentosGlobais) {
+                const global = window.todosOsLancamentosGlobais.find(l => l.osId == osId || l.os?.id == osId);
+                if (global && global.os) {
+                    const info = { osCodigo: global.os.os || global.os.numero || `OS #${osId}`, projeto: global.os.projeto || '-', site: '-', loaded: true };
+                    AprovacoesComplementares.mapaDetalhesOs[osId] = info;
+                    AprovacoesComplementares.atualizarLinhasTabela(osId, info);
+                    return info;
+                }
+            }
+
             const res = await fetch(`${API_BASE_URL}/os/${osId}`, { 
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } 
             });
@@ -136,6 +144,156 @@ const AprovacoesComplementares = {
         spansOs.forEach(el => { el.innerText = info.osCodigo; el.classList.remove('fw-light'); el.classList.add('fw-bold'); });
     },
 
+    // =========================================================================
+    // LÓGICA DE HISTÓRICO (CORRIGIDA)
+    // =========================================================================
+    carregarDadosHistoricoComplementares: async () => {
+        AprovacoesComplementares.init();
+        const tbody = document.getElementById('tbodyHistoricoComplementares');
+        const contador = document.getElementById('contadorHistComp');
+        
+        if(!tbody) return;
+        
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Carregando histórico...</p></td></tr>';
+        if(contador) contador.innerText = 'Carregando...';
+
+        try {
+            await AprovacoesComplementares.carregarTodasLpus();
+            
+            const userRole = localStorage.getItem('role') || '';
+            const userId = localStorage.getItem('usuarioId');
+            
+            // CORREÇÃO: Parâmetros enviados via HEADERS, não na URL
+            const headersExtras = { 
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'X-User-Role': userRole,
+                'X-User-Id': userId
+            };
+
+            const url = `${AprovacoesComplementares.MS_URL}/historico`;
+
+            // Tenta fetch principal
+            let lista = [];
+            try {
+                const response = await fetch(url, { headers: headersExtras });
+                if (response.ok) {
+                    lista = await response.json();
+                } else {
+                    throw new Error(`Status ${response.status}`);
+                }
+            } catch (errMain) {
+                console.warn("Falha no endpoint principal de histórico, tentando fallback...", errMain);
+                // Fallback para endpoint específico do usuário se o geral falhar
+                const fallbackUrl = `${AprovacoesComplementares.MS_URL}/usuario/${userId}`;
+                const responseFallback = await fetch(fallbackUrl, { headers: headersExtras });
+                if(responseFallback.ok) {
+                    lista = await responseFallback.json();
+                } else {
+                    throw new Error("Não foi possível carregar o histórico.");
+                }
+            }
+            
+            tbody.innerHTML = '';
+            
+            if(!lista || lista.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-5"><i class="bi bi-inbox fs-1 opacity-25"></i><br>Nenhum registro encontrado.</td></tr>';
+                if(contador) contador.innerText = '0 registros';
+                return;
+            }
+            
+            if(contador) contador.innerText = `${lista.length} registros`;
+
+            // Ordenar por data (mais recente primeiro)
+            lista.sort((a, b) => new Date(b.dataSolicitacao || b.dataCriacao) - new Date(a.dataSolicitacao || a.dataCriacao));
+
+            lista.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'historico-row';
+                tr.setAttribute('data-search', `${item.osId} ${item.id} ${item.justificativa} ${item.status}`.toLowerCase());
+                tr.setAttribute('data-status', item.status);
+
+                // Busca info da OS (Cache ou ID temporário)
+                const cacheOs = AprovacoesComplementares.mapaDetalhesOs[item.osId];
+                const nomeOs = cacheOs ? cacheOs.osCodigo : `OS #${item.osId}`;
+                const classOsLoading = cacheOs ? '' : 'loading-text';
+
+                // Info da LPU
+                const lpu = AprovacoesComplementares.listaCompletaLpus.find(l => l.id === item.lpuOriginalId);
+                const nomeLpu = lpu ? lpu.nome.split('|')[1] || lpu.nome : `LPU ${item.lpuOriginalId}`;
+
+                // Valores
+                let valor = item.valorTotalAprovado || item.valorTotalEstimado;
+                if(!valor) valor = (lpu ? lpu.valor : 0) * (item.quantidadeAprovada || item.quantidadeOriginal);
+
+                // Status Badge
+                let badgeClass = 'badge-status-pendente';
+                let iconeStatus = '<i class="bi bi-hourglass-split me-1"></i>';
+                if(item.status === 'APROVADO' || item.status === 'CONCLUIDO') { 
+                    badgeClass = 'badge-status-aprovado'; 
+                    iconeStatus = '<i class="bi bi-check-circle-fill me-1"></i>';
+                }
+                else if(item.status === 'REJEITADO' || item.status === 'CANCELADO' || item.status === 'DEVOLVIDO') { 
+                    badgeClass = 'badge-status-rejeitado'; 
+                    iconeStatus = '<i class="bi bi-x-circle-fill me-1"></i>';
+                }
+
+                const dataSol = AprovacoesComplementares.formatarData(item.dataSolicitacao || item.dataCriacao);
+                const dataAna = item.dataAnalise ? AprovacoesComplementares.formatarData(item.dataAnalise) : '-';
+
+                tr.innerHTML = `
+                    <td class="fw-bold text-muted small">#${item.id}</td>
+                    <td><span class="os-placeholder-${item.osId} ${classOsLoading} fw-bold text-dark">${nomeOs}</span></td>
+                    <td><small class="text-secondary text-truncate d-inline-block" style="max-width: 200px;" title="${nomeLpu}">${nomeLpu}</small></td>
+                    <td class="text-center">${item.quantidadeAprovada || item.quantidadeOriginal}</td>
+                    <td class="text-end font-monospace text-dark small">${AprovacoesComplementares.formatarMoeda(valor)}</td>
+                    <td><small class="d-inline-block text-truncate" style="max-width: 150px;" title="${item.justificativa}">${item.justificativa || '-'}</small></td>
+                    <td class="small text-muted">${dataSol}</td>
+                    <td class="text-center"><span class="badge ${badgeClass} text-uppercase rounded-pill border-0">${iconeStatus} ${item.status}</span></td>
+                    <td class="small text-muted">${dataAna}</td>
+                    <td><small class="text-danger d-inline-block text-truncate" style="max-width: 150px;" title="${item.motivoRecusa || ''}">${item.motivoRecusa || '-'}</small></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Dispara busca assíncrona das OS que faltam
+            const osIdsFaltantes = [...new Set(lista.map(i => i.osId))].filter(id => !AprovacoesComplementares.mapaDetalhesOs[id]);
+            osIdsFaltantes.forEach(id => AprovacoesComplementares.fetchDetalhesOsESalvar(id));
+
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle"></i> Erro ao carregar: ${e.message}</td></tr>`;
+        }
+    },
+
+    filtrarHistoricoNaTela: () => {
+        const termo = document.getElementById('buscaHistComp').value.toLowerCase();
+        const status = document.getElementById('filtroStatusHistComp').value;
+        const linhas = document.querySelectorAll('#tbodyHistoricoComplementares .historico-row');
+        let visiveis = 0;
+
+        linhas.forEach(tr => {
+            const texto = tr.getAttribute('data-search');
+            const rowStatus = tr.getAttribute('data-status');
+            
+            const matchTermo = termo === '' || texto.includes(termo);
+            const matchStatus = status === '' || rowStatus === status;
+
+            if (matchTermo && matchStatus) {
+                tr.style.display = '';
+                visiveis++;
+            } else {
+                tr.style.display = 'none';
+            }
+        });
+
+        const contador = document.getElementById('contadorHistComp');
+        if(contador) contador.innerText = `${visiveis} registros visíveis`;
+    },
+
+    // =========================================================================
+    // LÓGICA DE PENDÊNCIAS (MANTIDA)
+    // =========================================================================
+
     carregarPendencias: async () => {
         AprovacoesComplementares.init();
         const tbody = document.getElementById('tbodyAprovacoesComplementares');
@@ -165,52 +323,6 @@ const AprovacoesComplementares = {
             tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Erro: ${error.message}</td></tr>`;
         } finally {
             loader.classList.add('d-none');
-        }
-    },
-
-    // FUNÇÃO QUE FALTAVA (Correção do Erro JS)
-    carregarDadosHistoricoComplementares: async () => {
-        AprovacoesComplementares.init();
-        const tbody = document.getElementById('tbodyHistoricoComplementares');
-        if(!tbody) return;
-        
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center"><span class="spinner-border spinner-border-sm"></span> Carregando...</td></tr>';
-        
-        try {
-            const usuarioId = localStorage.getItem('usuarioId');
-            const response = await fetch(`${AprovacoesComplementares.MS_URL}/usuario/${usuarioId}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
-            
-            if (!response.ok) throw new Error("Erro ao buscar histórico");
-            const lista = await response.json();
-            
-            tbody.innerHTML = '';
-            if(!lista || lista.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Nenhum registro encontrado.</td></tr>';
-                return;
-            }
-            
-            // Reutiliza a lógica de renderização se possível, ou cria uma simplificada
-            // Aqui faremos uma renderização simples para o histórico
-            lista.forEach(item => {
-                const tr = document.createElement('tr');
-                const dataCriacao = new Date(item.dataCriacao).toLocaleDateString('pt-BR');
-                const statusBadge = item.status === 'APROVADO' ? 'bg-success' : (item.status === 'REJEITADO' ? 'bg-danger' : 'bg-warning');
-                
-                tr.innerHTML = `
-                    <td>${item.id}</td>
-                    <td>${dataCriacao}</td>
-                    <td>OS #${item.osId}</td>
-                    <td>${item.quantidadeOriginal} -> ${item.quantidadeAprovada || '-'}</td>
-                    <td><span class="badge ${statusBadge}">${item.status}</span></td>
-                    <td>${item.justificativa || '-'}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-        } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Erro: ${e.message}</td></tr>`;
         }
     },
 
@@ -273,7 +385,6 @@ const AprovacoesComplementares = {
         });
     },
 
-    // --- MODAL DE ANÁLISE (Mantido igual) ---
     abrirModalAnalise: async (id) => {
         try {
             const btn = document.activeElement;

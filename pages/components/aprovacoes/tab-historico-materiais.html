@@ -1,89 +1,35 @@
 <div class="aprovacoes-wrapper fade-in">
-
-    <div class="header-toolbar d-flex flex-wrap align-items-center justify-content-between mb-4">
-        
-        <div class="search-box-modern flex-grow-1 me-3">
-            <i class="bi bi-search text-muted"></i>
-            <input type="text" id="filtro-materiais-input" 
-                   class="form-control border-0 bg-transparent shadow-none" 
-                   placeholder="Pesquisar por OS, Solicitante, ID ou Material..." 
-                   onkeyup="filtrarMateriaisNaTela()">
-        </div>
-
-        <div class="actions-group d-flex gap-2">
-            <button class="btn btn-refresh-modern" onclick="carregarDadosMateriais()" title="Atualizar Lista">
-                <i class="bi bi-arrow-clockwise"></i>
-                <span class="d-none d-md-inline ms-1">Atualizar</span>
-            </button>
-            </div>
-    </div>
-
-    <div id="acoes-lote-global" class="floating-action-bar d-none">
-        <div class="d-flex align-items-center justify-content-between w-100">
-            <div class="selection-info">
-                <span class="badge bg-white text-dark rounded-pill me-2"><span id="count-global-check">0</span></span>
-                <span class="text-white small fw-bold">Selecionados</span>
-            </div>
-            <div class="action-buttons gap-2 d-flex">
-                <button class="btn btn-light btn-sm text-danger fw-bold" onclick="rejeitarLoteMateriais()">
-                    <i class="bi bi-x-circle me-1"></i> Rejeitar
-                </button>
-                <button class="btn btn-success btn-sm fw-bold shadow-sm" onclick="aprovarLoteMateriais()">
-                    <i class="bi bi-check-lg me-1"></i> Aprovar
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="container-pedidos-materiais" class="accordion custom-accordion-modern">
-        <div class="loading-state text-center py-5">
-            <div class="spinner-grow text-success mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
-            <h6 class="text-muted fw-normal">Buscando solicitações pendentes...</h6>
-        </div>
-        </div>
-
-</div>
-
-<div class="modal fade" id="modalAprovarLoteMateriais" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 rounded-4 overflow-hidden">
-            <div class="modal-header bg-success text-white border-0 justify-content-center py-4">
-                <div class="text-center">
-                    <i class="bi bi-check-circle-fill fs-1 mb-2 d-block"></i>
-                    <h5 class="modal-title fw-bold">Aprovar</h5>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1">Data Início</label>
+                    <input type="date" class="form-control form-control-sm" id="data-inicio-hist-material">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1">Data Fim</label>
+                    <input type="date" class="form-control form-control-sm" id="data-fim-hist-material">
+                </div>
+                <div class="col-md-4">
+                     <label class="form-label small fw-bold text-muted mb-1">Busca Rápida</label>
+                     <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control border-start-0" id="filtro-historico-materiais-input" placeholder="OS, Solicitante..." onkeyup="filtrarHistoricoMateriaisNaTela()">
+                     </div>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-sm btn-primary w-100" id="btn-filtrar-historico-materiais" onclick="carregarDadosHistoricoMateriais()">
+                        <i class="bi bi-funnel-fill me-1"></i> Filtrar
+                    </button>
                 </div>
             </div>
-            <div class="modal-body text-center px-4 py-4">
-                <p class="text-muted mb-0">Confirma a aprovação de <strong class="text-dark" id="qtd-aprovar-materiais">0</strong> solicitações?</p>
-                <small class="text-muted">O custo será contabilizado na OS.</small>
-            </div>
-            <div class="modal-footer justify-content-center border-0 pb-4">
-                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Não</button>
-                <button type="button" class="btn btn-success rounded-pill px-4" onclick="confirmarAprovacaoLoteMateriais()">Sim, Aprovar</button>
-            </div>
         </div>
     </div>
-</div>
 
-<div class="modal fade" id="modalRejeitarLoteMateriais" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow-lg">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Rejeitar Solicitações</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body px-4 pt-2">
-                <p class="text-muted">Você selecionou <strong id="qtd-rejeitar-materiais">0</strong> itens para devolução.</p>
-                
-                <div class="form-floating mt-3">
-                    <textarea class="form-control border-danger-subtle bg-light" placeholder="Motivo" id="motivoRejeicaoLoteMateriais" style="height: 100px"></textarea>
-                    <label for="motivoRejeicaoLoteMateriais">Motivo da recusa (Obrigatório)</label>
-                </div>
-            </div>
-            <div class="modal-footer border-0 px-4 pb-4">
-                <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger rounded-pill px-4" onclick="confirmarRejeicaoLoteMateriais()">Confirmar Rejeição</button>
-            </div>
+    <div id="container-historico-materiais" class="accordion custom-accordion-modern">
+        <div class="text-center py-5">
+            <i class="bi bi-clock-history fs-1 text-muted opacity-50"></i>
+            <p class="mt-2 text-muted">Utilize os filtros acima para buscar o histórico.</p>
         </div>
     </div>
 </div>

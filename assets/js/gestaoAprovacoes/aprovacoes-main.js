@@ -94,8 +94,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 renderizarAcordeonPendencias(window.todasPendenciasAtividades);
             }
             else if (targetPaneId === '#materiais-pane') {
-                // CORREÇÃO CRUCIAL: Ao trocar para a aba Materiais, forçamos o carregarDadosMateriais()
-                // Isso ativa o spinner definido em aprovacoes-materiais.js antes de mostrar o resultado.
+                // Ativa o loader e chama a função de materiais se existir
                 if (typeof carregarDadosMateriais === 'function') {
                     carregarDadosMateriais();
                 }
@@ -111,11 +110,24 @@ document.addEventListener('DOMContentLoaded', async function () {
 
             // Abas de Histórico (carregam sob demanda)
             else if (targetPaneId === '#historico-atividades-pane' && targetPane.dataset.loaded !== 'true') {
-                carregarDadosHistoricoAtividades().finally(() => { targetPane.dataset.loaded = 'true'; });
-            } else if (targetPaneId === '#historico-materiais-pane' && targetPane.dataset.loaded !== 'true') {
-                carregarDadosHistoricoMateriais().finally(() => { targetPane.dataset.loaded = 'true'; });
-            } else if (targetPaneId === '#historico-complementares-pane' && targetPane.dataset.loaded !== 'true') {
-                carregarDadosHistoricoComplementares().finally(() => { targetPane.dataset.loaded = 'true'; });
+                if (typeof carregarDadosHistoricoAtividades === 'function') {
+                    carregarDadosHistoricoAtividades().finally(() => { targetPane.dataset.loaded = 'true'; });
+                }
+            } 
+            // --- CORREÇÃO AQUI: Verificação de existência da função ---
+            else if (targetPaneId === '#historico-materiais-pane' && targetPane.dataset.loaded !== 'true') {
+                if (typeof window.carregarDadosHistoricoMateriais === 'function') {
+                    carregarDadosHistoricoMateriais().finally(() => { targetPane.dataset.loaded = 'true'; });
+                } else {
+                    console.warn('A função carregarDadosHistoricoMateriais não está definida. Verifique o arquivo aprovacoes-materiais.js');
+                    // Opcional: mostrar mensagem de erro visual no painel
+                    targetPane.innerHTML = `<div class="text-center p-5 text-muted">Funcionalidade carregando... Tente atualizar a página.</div>`;
+                }
+            } 
+            else if (targetPaneId === '#historico-complementares-pane' && targetPane.dataset.loaded !== 'true') {
+                 if (typeof carregarDadosHistoricoComplementares === 'function') {
+                    carregarDadosHistoricoComplementares().finally(() => { targetPane.dataset.loaded = 'true'; });
+                 }
             }
             // Abas CPS (possuem lógica própria)
             else if (targetPaneId === '#cps-pendencias-pane') { initFiltrosCPS(); carregarPendenciasCPS(); }
