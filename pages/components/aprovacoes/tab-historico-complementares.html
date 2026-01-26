@@ -1,66 +1,86 @@
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h5 class="card-title text-secondary m-0">
-                <i class="bi bi-clock-history me-2"></i>Histórico de Atividades Complementares
-            </h5>
-        </div>
-
-        <div class="filter-bar">
-            <div class="row g-3 align-items-end">
+<div class="content-loader-container p-3 fade-in">
+    
+    <div class="card-modern mb-3">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-end">
                 <div class="col-md-3">
-                    <label for="filtroStatusHistComp" class="filter-label"><i class="bi bi-funnel-fill me-1"></i> Status</label>
-                    <select id="filtroStatusHistComp" class="form-select form-select-sm shadow-none">
+                    <label for="filtroStatusHistComp" class="form-label small fw-bold text-muted mb-1">
+                        <i class="bi bi-funnel-fill me-1"></i> Status
+                    </label>
+                    <select id="filtroStatusHistComp" class="form-select form-select-sm shadow-none border-secondary-subtle">
                         <option value="">Todos os Status</option>
                         <option value="APROVADO">Aprovado</option>
                         <option value="REJEITADO">Recusado/Rejeitado</option>
                         <option value="PENDENTE">Pendente</option>
                     </select>
                 </div>
-
+                
                 <div class="col-md-5">
-                    <label for="buscaHistComp" class="filter-label"><i class="bi bi-search me-1"></i> Pesquisar</label>
-                    <div class="input-group input-group-sm search-input-group">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" id="buscaHistComp" class="form-control shadow-none" placeholder="Busque por OS, Valor, ID ou Motivo...">
+                    <label for="buscaHistComp" class="form-label small fw-bold text-muted mb-1">
+                        <i class="bi bi-search me-1"></i> Busca Rápida
+                    </label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0 text-muted border-secondary-subtle">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" id="buscaHistComp" class="form-control border-start-0 border-secondary-subtle shadow-none" placeholder="Busque por OS, ID, Justificativa...">
                     </div>
                 </div>
 
                 <div class="col-md-4 text-end">
-                    <div class="results-counter shadow-sm" id="contadorHistComp">
-                        <i class="bi bi-list-ul me-1"></i> Carregando...
-                    </div>
+                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="carregarDadosHistoricoComplementares()">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Atualizar
+                    </button>
+                    <span class="badge bg-light text-secondary border py-2 px-3 fw-normal" id="contadorHistComp">
+                        <i class="bi bi-list-ul me-1"></i> Aguardando...
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-modern">
+        <div class="card-header-modern d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <i class="bi bi-clock-history fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="title-modern">Histórico de Atividades</h5>
+                    <small class="text-muted">Registro completo de solicitações e análises</small>
                 </div>
             </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table table-hover align-middle border-light" id="tabelaHistoricoComplementares">
-                <thead class="table-light">
-                <tr>
-                    <th class="fw-bold text-secondary text-uppercase small">ID</th>
-                    <th class="fw-bold text-secondary text-uppercase small">OS</th>
-                    <th class="fw-bold text-secondary text-uppercase small">LPU</th>
-                    <th class="fw-bold text-secondary text-uppercase small">Qtd</th>
-                    <th class="fw-bold text-secondary text-uppercase small">Valor</th>
-                    <th class="fw-bold text-secondary text-uppercase small">Justificativa</th>
-                    <th class="fw-bold text-secondary text-uppercase small">Solicitado</th>
-                    <th class="fw-bold text-secondary text-uppercase small">Status</th>
-                    <th class="fw-bold text-secondary text-uppercase small">Analisado</th>
-                    <th class="fw-bold text-secondary text-uppercase small">Motivo Recusa</th>
-                </tr>
-                </thead>
-                <tbody id="tbodyHistoricoComplementares">
-                <tr>
-                    <td colspan="10" class="text-center text-muted py-5">
-                        <div class="d-flex flex-column align-items-center">
-                            <i class="bi bi-inbox fs-1 opacity-25"></i>
-                            <span class="mt-2">Nenhum registro encontrado.</span>
-                        </div>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
+        <div class="card-body p-0">
+            <div class="table-responsive custom-scroll" style="max-height: 650px;">
+                <table class="table modern-table table-hover w-100 mb-0" id="tabelaHistoricoComplementares">
+                    <thead class="sticky-top bg-white shadow-sm">
+                        <tr>
+                            <th class="fw-bold text-secondary small ps-3" style="width: 60px;">ID</th>
+                            <th class="fw-bold text-secondary small">OS</th>
+                            <th class="fw-bold text-secondary small">LPU</th>
+                            <th class="fw-bold text-secondary small text-center">Qtd</th>
+                            <th class="fw-bold text-secondary small text-end">Valor</th>
+                            <th class="fw-bold text-secondary small">Justificativa</th>
+                            <th class="fw-bold text-secondary small">Data Sol.</th>
+                            <th class="fw-bold text-secondary small text-center">Status</th>
+                            <th class="fw-bold text-secondary small">Data Análise</th>
+                            <th class="fw-bold text-secondary small pe-3">Motivo Recusa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyHistoricoComplementares">
+                        <tr>
+                            <td colspan="10" class="text-center py-5">
+                                <div class="d-flex flex-column align-items-center opacity-50">
+                                    <i class="bi bi-arrow-clockwise fs-1 mb-2"></i>
+                                    <span>Carregando histórico...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

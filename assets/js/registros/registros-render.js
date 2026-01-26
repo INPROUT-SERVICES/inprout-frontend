@@ -7,7 +7,6 @@ const RegistrosRender = {
     // Definição das colunas
     colunasCompletas: ["OS", "SITE", "CONTRATO", "SEGMENTO", "PROJETO", "GESTOR TIM", "REGIONAL", "LPU", "LOTE", "BOQ", "PO", "ITEM", "OBJETO CONTRATADO", "UNIDADE", "QUANTIDADE", "VALOR TOTAL OS", "OBSERVAÇÕES", "DATA PO", "VISTORIA", "PLANO VISTORIA", "DESMOBILIZAÇÃO", "PLANO DESMOBILIZAÇÃO", "INSTALAÇÃO", "PLANO INSTALAÇÃO", "ATIVAÇÃO", "PLANO ATIVAÇÃO", "DOCUMENTAÇÃO", "PLANO DOCUMENTAÇÃO", "ETAPA GERAL", "ETAPA DETALHADA", "STATUS", "DETALHE DIÁRIO", "CÓD. PRESTADOR", "PRESTADOR", "VALOR", "GESTOR", "SITUAÇÃO", "DATA ATIVIDADE", "FATURAMENTO", "SOLICIT ID FAT", "RECEB ID FAT", "ID FATURAMENTO", "DATA FAT INPROUT", "SOLICIT FS PORTAL", "DATA FS", "NUM FS", "GATE", "GATE ID", "DATA CRIAÇÃO OS", "KEY", "STATUS REGISTRO"],
 
-    // CORREÇÃO: Removido "HISTÓRICO" daqui, pois ele é adicionado dinamicamente depois
     colunasGestor: [
         "OS", "SITE", "CONTRATO", "SEGMENTO", "PROJETO", "GESTOR TIM", "REGIONAL",
         "LPU", "OBJETO CONTRATADO", "QUANTIDADE",
@@ -326,7 +325,8 @@ const RegistrosRender = {
                     RegistrosUtils.get(linhaData, 'os.projeto', ''),
                     RegistrosUtils.get(linhaData, 'detalhe.lpu.nomeLpu', ''),
                     RegistrosUtils.get(linhaData, 'detalhe.lpu.codigoLpu', ''),
-                    RegistrosUtils.get(linhaData, 'detalhe.key', '')
+                    RegistrosUtils.get(linhaData, 'detalhe.key', ''),
+                    RegistrosUtils.get(linhaData, 'detalhe.lote', '') // <--- ADICIONADO AQUI
                 ].join(' ').toLowerCase();
                 return textoPesquisavel.includes(termoBusca);
             })

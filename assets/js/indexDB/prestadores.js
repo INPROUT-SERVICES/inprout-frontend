@@ -54,7 +54,7 @@ async function inicializarPrestadores() {
             toggleLoader(true);
 
             try {
-                const response = await fetchComAuth("http://localhost:8080/index/prestadores", {
+                const response = await fetchComAuth("https://www.inproutservices.com.br/api/index/prestadores", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(prestador)
@@ -122,7 +122,7 @@ async function carregarTabelaPrestadores(camposOriginais) {
     };
 
     try {
-        const response = await fetchComAuth("http://localhost:8080/index/prestadores");
+        const response = await fetchComAuth("https://www.inproutservices.com.br/api/index/prestadores");
 
         if (!response.ok) {
             throw new Error("Erro ao buscar prestadores.");
@@ -180,7 +180,7 @@ async function carregarTabelaPrestadores(camposOriginais) {
  */
 async function preencherSelectComPrestadores(elementoSelect) {
     // URL do seu endpoint de prestadores
-    const urlPrestadores = "http://localhost:8080/index/prestadores";
+    const urlPrestadores = "https://www.inproutservices.com.br/api/index/prestadores";
 
     try {
         const response = await fetchComAuth(urlPrestadores);
@@ -218,7 +218,7 @@ async function carregarSelectBancosDinamicamente() {
     const selectsIds = ['selectBancoCadastro', 'selectBancoEditar'];
 
     try {
-        const response = await fetchComAuth('http://localhost:8080/geral/bancos');
+        const response = await fetchComAuth('https://www.inproutservices.com.br/api/geral/bancos');
         if (!response.ok) return;
 
         const bancos = await response.json();
@@ -321,7 +321,7 @@ function configurarModalDesativarPrestador() {
         try {
             // --- INÍCIO DA CORREÇÃO ---
             // 1. Busca todos os prestadores para encontrar o código
-            const prestadoresResponse = await fetchComAuth("http://localhost:8080/index/prestadores/ativos");
+            const prestadoresResponse = await fetchComAuth("https://www.inproutservices.com.br/api/index/prestadores/ativos");
             const prestadores = await prestadoresResponse.json();
             const prestadorSelecionado = prestadores.find(p => p.id == prestadorId);
 
@@ -332,7 +332,7 @@ function configurarModalDesativarPrestador() {
             const prestadorCodigo = prestadorSelecionado.codigoPrestador;
 
             // 2. Usa o CÓDIGO na URL, como o backend espera
-            const response = await fetchComAuth(`http://localhost:8080/index/prestadores/desativar/${prestadorCodigo}`, {
+            const response = await fetchComAuth(`https://www.inproutservices.com.br/api/index/prestadores/desativar/${prestadorCodigo}`, {
                 method: 'PUT',
             });
             // --- FIM DA CORREÇÃO ---
@@ -361,7 +361,7 @@ function configurarModalDesativarPrestador() {
  * @param {HTMLSelectElement} elementoSelect - O elemento <select> a ser preenchido.
  */
 async function preencherSelectComPrestadoresDesativados(elementoSelect) {
-    const urlPrestadoresDesativados = "http://localhost:8080/index/prestadores/desativados";
+    const urlPrestadoresDesativados = "https://www.inproutservices.com.br/api/index/prestadores/desativados";
 
     try {
         const response = await fetchComAuth(urlPrestadoresDesativados);
@@ -434,7 +434,7 @@ function configurarModalAtivarPrestador() {
         try {
             // --- INÍCIO DA CORREÇÃO ---
             // 1. Busca os prestadores INATIVOS para encontrar o código
-            const prestadoresResponse = await fetchComAuth("http://localhost:8080/index/prestadores/desativados");
+            const prestadoresResponse = await fetchComAuth("https://www.inproutservices.com.br/api/index/prestadores/desativados");
             const prestadores = await prestadoresResponse.json();
             const prestadorSelecionado = prestadores.find(p => p.id == prestadorId);
 
@@ -445,7 +445,7 @@ function configurarModalAtivarPrestador() {
             const prestadorCodigo = prestadorSelecionado.codigoPrestador;
 
             // 2. Usa o CÓDIGO na URL
-            const response = await fetchComAuth(`http://localhost:8080/index/prestadores/ativar/${prestadorCodigo}`, {
+            const response = await fetchComAuth(`https://www.inproutservices.com.br/api/index/prestadores/ativar/${prestadorCodigo}`, {
                 method: 'PUT',
             });
             // --- FIM DA CORREÇÃO ---
@@ -573,7 +573,7 @@ function configurarModalEditarPrestador() {
             await carregarSelectBancosDinamicamente();
             await preencherSelectComPrestadores(selectEl);
 
-            const response = await fetchComAuth("http://localhost:8080/index/prestadores");
+            const response = await fetchComAuth("https://www.inproutservices.com.br/api/index/prestadores");
             todosOsPrestadores = await response.json();
         } catch (error) {
             mostrarToast("Erro ao preparar modal.", "error");
@@ -652,7 +652,7 @@ function configurarModalEditarPrestador() {
         dadosAtualizados.ativo = todosOsPrestadores.find(p => p.id === prestadorId)?.ativo;
 
         try {
-            const response = await fetchComAuth(`http://localhost:8080/index/prestadores/${prestadorId}`, {
+            const response = await fetchComAuth(`https://www.inproutservices.com.br/api/index/prestadores/${prestadorId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(dadosAtualizados)
