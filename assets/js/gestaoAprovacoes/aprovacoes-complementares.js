@@ -12,11 +12,11 @@ const AprovacoesComplementares = {
 
     currentSolicitacao: null,
     currentOsCompleta: null,
-    alteracoesBuffer: {}, 
+    alteracoesBuffer: {},
     listenersConfigurados: false,
     listaCompletaLpus: null,
-    mapaDetalhesOs: {}, 
-    
+    mapaDetalhesOs: {},
+
     choicesMain: null,
     choicesEdit: null,
 
@@ -24,14 +24,14 @@ const AprovacoesComplementares = {
         if (!AprovacoesComplementares.listenersConfigurados) {
             AprovacoesComplementares.listenersConfigurados = true;
             AprovacoesComplementares.injetarCSS();
-            
+
             // Listeners para filtros do histórico
             const inputBusca = document.getElementById('buscaHistComp');
             const selectStatus = document.getElementById('filtroStatusHistComp');
-            
-            if(inputBusca) inputBusca.addEventListener('keyup', AprovacoesComplementares.filtrarHistoricoNaTela);
-            if(selectStatus) selectStatus.addEventListener('change', AprovacoesComplementares.filtrarHistoricoNaTela);
-            
+
+            if (inputBusca) inputBusca.addEventListener('keyup', AprovacoesComplementares.filtrarHistoricoNaTela);
+            if (selectStatus) selectStatus.addEventListener('change', AprovacoesComplementares.filtrarHistoricoNaTela);
+
             console.log("Módulo Complementares Iniciado.");
         }
     },
@@ -56,15 +56,15 @@ const AprovacoesComplementares = {
         if (valor === undefined || valor === null) return 'R$ 0,00';
         return parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     },
-    
+
     formatarData: (dataIso) => {
         if (!dataIso) return '-';
-        return new Date(dataIso).toLocaleDateString('pt-BR') + ' ' + new Date(dataIso).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        return new Date(dataIso).toLocaleDateString('pt-BR') + ' ' + new Date(dataIso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     },
 
     mostrarAlerta: (msg) => {
         const el = document.getElementById('textoAlerta');
-        if(el) {
+        if (el) {
             el.innerText = msg;
             const modalEl = document.getElementById('modalAlerta');
             let modal = bootstrap.Modal.getInstance(modalEl);
@@ -85,10 +85,10 @@ const AprovacoesComplementares = {
             let lpus = [];
             contratos.forEach(c => {
                 if (c.lpus) c.lpus.forEach(l => {
-                    if (l.ativo) lpus.push({ 
-                        id: l.id, 
+                    if (l.ativo) lpus.push({
+                        id: l.id,
                         nome: `${c.nome} | ${l.codigoLpu} - ${l.nomeLpu}`,
-                        valor: l.valorSemImposto || l.valor || 0 
+                        valor: l.valorSemImposto || l.valor || 0
                     });
                 });
             });
@@ -112,35 +112,48 @@ const AprovacoesComplementares = {
                 }
             }
 
-            const res = await fetch(`${API_BASE_URL}/os/${osId}`, { 
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } 
+            const res = await fetch(`${API_BASE_URL}/os/${osId}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
-            if(res.ok) {
+            if (res.ok) {
                 const dados = await res.json();
                 let site = dados.site || '-';
                 let projeto = dados.projeto || '-';
-                
+                // --- NOVO: Captura o segmento vindo do DTO da OS ---
+                let segmento = (dados.segmento && dados.segmento.nome) ? dados.segmento.nome : '-';
+
                 if ((site === '-' || projeto === '-') && dados.detalhes && dados.detalhes.length > 0) {
                     const det = dados.detalhes[0];
                     if (site === '-') site = det.site || '-';
                     if (projeto === '-') projeto = det.regional || '-';
                 }
-                const info = { osCodigo: dados.os, projeto: projeto, site: site, loaded: true };
+
+                // Adicionei a propriedade 'segmento' no objeto info
+                const info = { osCodigo: dados.os, projeto: projeto, site: site, segmento: segmento, loaded: true };
                 AprovacoesComplementares.mapaDetalhesOs[osId] = info;
                 AprovacoesComplementares.atualizarLinhasTabela(osId, info);
                 return info;
             }
-        } catch(e) { console.error("Erro fetch OS:", e); }
-        return { osCodigo: 'OS #'+osId, projeto: '-', site: '-', loaded: false };
+        } catch (e) { console.error("Erro fetch OS:", e); }
+        return { osCodigo: 'OS #' + osId, projeto: '-', site: '-', loaded: false };
     },
 
     atualizarLinhasTabela: (osId, info) => {
         const spansSite = document.querySelectorAll(`.site-placeholder-${osId}`);
         const spansProjeto = document.querySelectorAll(`.projeto-placeholder-${osId}`);
         const spansOs = document.querySelectorAll(`.os-placeholder-${osId}`);
+        // --- NOVO: Seleciona os spans de segmento ---
+        const spansSegmento = document.querySelectorAll(`.segmento-placeholder-${osId}`);
 
         spansSite.forEach(el => { el.innerText = info.site; el.classList.remove('loading-text'); });
         spansProjeto.forEach(el => { el.innerText = info.projeto; el.classList.remove('loading-text'); });
+
+        // --- NOVO: Atualiza o texto do segmento ---
+        spansSegmento.forEach(el => {
+            el.innerText = info.segmento || '-';
+            el.classList.remove('loading-text');
+        });
+
         spansOs.forEach(el => { el.innerText = info.osCodigo; el.classList.remove('fw-light'); el.classList.add('fw-bold'); });
     },
 
@@ -151,20 +164,20 @@ const AprovacoesComplementares = {
         AprovacoesComplementares.init();
         const tbody = document.getElementById('tbodyHistoricoComplementares');
         const contador = document.getElementById('contadorHistComp');
-        
-        if(!tbody) return;
-        
+
+        if (!tbody) return;
+
         tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Carregando histórico...</p></td></tr>';
-        if(contador) contador.innerText = 'Carregando...';
+        if (contador) contador.innerText = 'Carregando...';
 
         try {
             await AprovacoesComplementares.carregarTodasLpus();
-            
+
             const userRole = localStorage.getItem('role') || '';
             const userId = localStorage.getItem('usuarioId');
-            
+
             // CORREÇÃO: Parâmetros enviados via HEADERS, não na URL
-            const headersExtras = { 
+            const headersExtras = {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 'X-User-Role': userRole,
                 'X-User-Id': userId
@@ -186,22 +199,22 @@ const AprovacoesComplementares = {
                 // Fallback para endpoint específico do usuário se o geral falhar
                 const fallbackUrl = `${AprovacoesComplementares.MS_URL}/usuario/${userId}`;
                 const responseFallback = await fetch(fallbackUrl, { headers: headersExtras });
-                if(responseFallback.ok) {
+                if (responseFallback.ok) {
                     lista = await responseFallback.json();
                 } else {
                     throw new Error("Não foi possível carregar o histórico.");
                 }
             }
-            
+
             tbody.innerHTML = '';
-            
-            if(!lista || lista.length === 0) {
+
+            if (!lista || lista.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-5"><i class="bi bi-inbox fs-1 opacity-25"></i><br>Nenhum registro encontrado.</td></tr>';
-                if(contador) contador.innerText = '0 registros';
+                if (contador) contador.innerText = '0 registros';
                 return;
             }
-            
-            if(contador) contador.innerText = `${lista.length} registros`;
+
+            if (contador) contador.innerText = `${lista.length} registros`;
 
             // Ordenar por data (mais recente primeiro)
             lista.sort((a, b) => new Date(b.dataSolicitacao || b.dataCriacao) - new Date(a.dataSolicitacao || a.dataCriacao));
@@ -215,6 +228,7 @@ const AprovacoesComplementares = {
                 // Busca info da OS (Cache ou ID temporário)
                 const cacheOs = AprovacoesComplementares.mapaDetalhesOs[item.osId];
                 const nomeOs = cacheOs ? cacheOs.osCodigo : `OS #${item.osId}`;
+                const segmentoDisplay = cacheOs ? cacheOs.segmento : 'Carregando...';
                 const classOsLoading = cacheOs ? '' : 'loading-text';
 
                 // Info da LPU
@@ -223,17 +237,17 @@ const AprovacoesComplementares = {
 
                 // Valores
                 let valor = item.valorTotalAprovado || item.valorTotalEstimado;
-                if(!valor) valor = (lpu ? lpu.valor : 0) * (item.quantidadeAprovada || item.quantidadeOriginal);
+                if (!valor) valor = (lpu ? lpu.valor : 0) * (item.quantidadeAprovada || item.quantidadeOriginal);
 
                 // Status Badge
                 let badgeClass = 'badge-status-pendente';
                 let iconeStatus = '<i class="bi bi-hourglass-split me-1"></i>';
-                if(item.status === 'APROVADO' || item.status === 'CONCLUIDO') { 
-                    badgeClass = 'badge-status-aprovado'; 
+                if (item.status === 'APROVADO' || item.status === 'CONCLUIDO') {
+                    badgeClass = 'badge-status-aprovado';
                     iconeStatus = '<i class="bi bi-check-circle-fill me-1"></i>';
                 }
-                else if(item.status === 'REJEITADO' || item.status === 'CANCELADO' || item.status === 'DEVOLVIDO') { 
-                    badgeClass = 'badge-status-rejeitado'; 
+                else if (item.status === 'REJEITADO' || item.status === 'CANCELADO' || item.status === 'DEVOLVIDO') {
+                    badgeClass = 'badge-status-rejeitado';
                     iconeStatus = '<i class="bi bi-x-circle-fill me-1"></i>';
                 }
 
@@ -243,6 +257,9 @@ const AprovacoesComplementares = {
                 tr.innerHTML = `
                     <td class="fw-bold text-muted small">#${item.id}</td>
                     <td><span class="os-placeholder-${item.osId} ${classOsLoading} fw-bold text-dark">${nomeOs}</span></td>
+                    
+                    <td><small class="segmento-placeholder-${item.osId} ${classOsLoading}">${segmentoDisplay}</small></td>
+                    
                     <td><small class="text-secondary text-truncate d-inline-block" style="max-width: 200px;" title="${nomeLpu}">${nomeLpu}</small></td>
                     <td class="text-center">${item.quantidadeAprovada || item.quantidadeOriginal}</td>
                     <td class="text-end font-monospace text-dark small">${AprovacoesComplementares.formatarMoeda(valor)}</td>
@@ -274,7 +291,7 @@ const AprovacoesComplementares = {
         linhas.forEach(tr => {
             const texto = tr.getAttribute('data-search');
             const rowStatus = tr.getAttribute('data-status');
-            
+
             const matchTermo = termo === '' || texto.includes(termo);
             const matchStatus = status === '' || rowStatus === status;
 
@@ -287,7 +304,7 @@ const AprovacoesComplementares = {
         });
 
         const contador = document.getElementById('contadorHistComp');
-        if(contador) contador.innerText = `${visiveis} registros visíveis`;
+        if (contador) contador.innerText = `${visiveis} registros visíveis`;
     },
 
     // =========================================================================
@@ -309,10 +326,10 @@ const AprovacoesComplementares = {
             const response = await fetch(`${AprovacoesComplementares.MS_URL}/pendentes?role=${userRole}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
-            
+
             if (!response.ok) throw new Error("Erro ao buscar pendências");
             const lista = await response.json();
-            
+
             AprovacoesComplementares.atualizarBadge(lista.length);
             AprovacoesComplementares.renderizarTabelaPrincipal(lista);
 
@@ -340,23 +357,23 @@ const AprovacoesComplementares = {
         tbody.innerHTML = '';
 
         if (!lista || lista.length === 0) {
-            if(msgVazio) { msgVazio.classList.remove('d-none'); msgVazio.classList.add('d-block'); }
+            if (msgVazio) { msgVazio.classList.remove('d-none'); msgVazio.classList.add('d-block'); }
             return;
         }
-        if(msgVazio) { msgVazio.classList.add('d-none'); msgVazio.classList.remove('d-block'); }
+        if (msgVazio) { msgVazio.classList.add('d-none'); msgVazio.classList.remove('d-block'); }
 
         lista.forEach(item => {
             const tr = document.createElement('tr');
-            
+
             const cache = AprovacoesComplementares.mapaDetalhesOs[item.osId];
             const osDisplay = cache ? cache.osCodigo : `OS #${item.osId}`;
             const siteDisplay = cache ? cache.site : 'Carregando...';
             const projetoDisplay = cache ? cache.projeto : 'Carregando...';
-            const loadingClass = cache ? '' : 'loading-text'; 
+            const loadingClass = cache ? '' : 'loading-text';
 
             const lpuInfo = AprovacoesComplementares.listaCompletaLpus.find(l => l.id === item.lpuOriginalId);
             const nomeLpu = lpuInfo ? lpuInfo.nome.split('|')[1] || lpuInfo.nome : `LPU ID: ${item.lpuOriginalId}`;
-            
+
             let valorTotal = item.valorTotalEstimado;
             if (!valorTotal || valorTotal === 0) {
                 const valorUnit = lpuInfo ? lpuInfo.valor : 0;
@@ -369,18 +386,21 @@ const AprovacoesComplementares = {
             const btnTitle = isController ? 'Aprovar' : 'Analisar';
 
             tr.innerHTML = `
-                <td><span class="os-placeholder-${item.osId} text-dark fw-bold">${osDisplay}</span></td>
-                <td><small class="site-placeholder-${item.osId} ${loadingClass}">${siteDisplay}</small></td>
-                <td><small class="projeto-placeholder-${item.osId} ${loadingClass}">${projetoDisplay}</small></td>
-                <td><small class="text-truncate d-inline-block" style="max-width: 250px;" title="${nomeLpu}">${nomeLpu}</small></td>
-                <td class="text-center"><span class="badge bg-light text-dark border">${item.quantidadeOriginal}</span></td>
-                <td class="text-end fw-bold text-success">${AprovacoesComplementares.formatarMoeda(valorTotal)}</td>
-                <td class="text-center"><span class="badge bg-light text-dark border">${item.status}</span></td>
-                <td class="text-center">
-                    <button class="btn btn-sm ${btnClass}" onclick="AprovacoesComplementares.abrirModalAnalise('${item.id}')" title="${btnTitle}"><i class="bi ${btnIcon}"></i></button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="AprovacoesComplementares.prepararRejeicaoInicial('${item.id}')" title="Rejeitar"><i class="bi bi-x-lg"></i></button>
-                </td>
-            `;
+            <td><span class="os-placeholder-${item.osId} text-dark fw-bold">${osDisplay}</span></td>
+            
+            <td><small class="segmento-placeholder-${item.osId} ${loadingClass}">${segmentoDisplay}</small></td>
+            
+            <td><small class="site-placeholder-${item.osId} ${loadingClass}">${siteDisplay}</small></td>
+            <td><small class="projeto-placeholder-${item.osId} ${loadingClass}">${projetoDisplay}</small></td>
+            <td><small class="text-truncate d-inline-block" style="max-width: 250px;" title="${nomeLpu}">${nomeLpu}</small></td>
+            <td class="text-center"><span class="badge bg-light text-dark border">${item.quantidadeOriginal}</span></td>
+            <td class="text-end fw-bold text-success">${AprovacoesComplementares.formatarMoeda(valorTotal)}</td>
+            <td class="text-center"><span class="badge bg-light text-dark border">${item.status}</span></td>
+            <td class="text-center">
+                <button class="btn btn-sm ${btnClass}" onclick="AprovacoesComplementares.abrirModalAnalise('${item.id}')" title="${btnTitle}"><i class="bi ${btnIcon}"></i></button>
+                <button class="btn btn-sm btn-outline-danger" onclick="AprovacoesComplementares.prepararRejeicaoInicial('${item.id}')" title="Rejeitar"><i class="bi bi-x-lg"></i></button>
+            </td>
+        `;
             tbody.appendChild(tr);
         });
     },
@@ -389,7 +409,7 @@ const AprovacoesComplementares = {
         try {
             const btn = document.activeElement;
             const originalIcon = btn.innerHTML;
-            if(btn && btn.tagName === 'BUTTON') btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            if (btn && btn.tagName === 'BUTTON') btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
 
             AprovacoesComplementares.alteracoesBuffer = {};
 
@@ -403,14 +423,14 @@ const AprovacoesComplementares = {
                     propostas.forEach(p => {
                         AprovacoesComplementares.alteracoesBuffer[p.itemId] = { novaQtd: p.novaQtd, novaLpuId: p.novaLpuId, novoBoq: p.novoBoq, novoStatus: p.novoStatus };
                     });
-                } catch (errJson) {}
+                } catch (errJson) { }
             }
 
             const respOs = await fetch(`${API_BASE_URL}/os/${solicitacao.osId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
             const osCompleta = respOs.ok ? await respOs.json() : null;
             AprovacoesComplementares.currentOsCompleta = osCompleta;
 
-            if(btn && btn.tagName === 'BUTTON') btn.innerHTML = originalIcon;
+            if (btn && btn.tagName === 'BUTTON') btn.innerHTML = originalIcon;
 
             const isController = solicitacao.status === 'PENDENTE_CONTROLLER';
 
@@ -422,12 +442,12 @@ const AprovacoesComplementares = {
             const lpuSolicitada = AprovacoesComplementares.listaCompletaLpus.find(l => l.id === solicitacao.lpuOriginalId);
             document.getElementById('viewLpuOriginal').value = lpuSolicitada ? lpuSolicitada.nome : `ID: ${solicitacao.lpuOriginalId}`;
             document.getElementById('viewQtdOriginal').value = solicitacao.quantidadeOriginal;
-            
+
             document.getElementById('viewJustificativaManagerText').innerText = solicitacao.justificativa || "Sem justificativa.";
             document.getElementById('viewJustificativaManager').value = solicitacao.justificativa;
-            
+
             document.getElementById('analiseSolicitacaoId').value = solicitacao.id;
-            
+
             const qtd = isController ? solicitacao.quantidadeAprovada : (solicitacao.quantidadeAprovada || solicitacao.quantidadeOriginal);
             const boq = isController ? solicitacao.boqAprovado : (solicitacao.boqAprovado || '');
             const status = isController ? solicitacao.statusRegistroAprovado : (solicitacao.statusRegistroAprovado || 'ATIVO');
@@ -452,10 +472,10 @@ const AprovacoesComplementares = {
 
             const lpuSelect = document.getElementById('editLpuSelect');
             if (AprovacoesComplementares.choicesMain) { AprovacoesComplementares.choicesMain.destroy(); }
-            
+
             let html = '<option value="">Selecione...</option>';
             const selectedId = isController ? solicitacao.lpuAprovadaId : (solicitacao.lpuAprovadaId || solicitacao.lpuOriginalId);
-            
+
             AprovacoesComplementares.listaCompletaLpus.forEach(l => {
                 html += `<option value="${l.id}" ${l.id == selectedId ? 'selected' : ''}>${l.nome}</option>`;
             });
@@ -467,9 +487,9 @@ const AprovacoesComplementares = {
             const modalEl = document.getElementById('modalAnaliseCoordenador');
             let modalInstance = bootstrap.Modal.getInstance(modalEl);
             if (!modalInstance) { modalInstance = new bootstrap.Modal(modalEl); }
-            
+
             const triggerEl = document.querySelector('#pills-analise-tab');
-            if(triggerEl) bootstrap.Tab.getOrCreateInstance(triggerEl).show();
+            if (triggerEl) bootstrap.Tab.getOrCreateInstance(triggerEl).show();
 
             modalInstance.show();
 
@@ -527,15 +547,15 @@ const AprovacoesComplementares = {
         const tbody = document.getElementById('tbodyItensExistentes');
         tbody.innerHTML = '';
 
-        if(itens.length === 0) { 
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Vazio</td></tr>'; 
-            return; 
+        if (itens.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Vazio</td></tr>';
+            return;
         }
 
         itens.forEach(item => {
             const tr = document.createElement('tr');
             const alteracao = AprovacoesComplementares.alteracoesBuffer[item.id];
-            
+
             const statusOriginal = item.statusRegistro || 'ATIVO';
             const qtdOriginal = item.quantidade;
             const lpuNomeOriginal = item.lpu ? item.lpu.nomeLpu : '-';
@@ -548,8 +568,8 @@ const AprovacoesComplementares = {
             if (alteracao) tr.classList.add('item-modificado');
             if (statusFinal === 'INATIVO') tr.classList.add('text-muted');
 
-            const htmlQtd = (alteracao && alteracao.novaQtd != qtdOriginal) 
-                ? `<span class="valor-antigo">${qtdOriginal}</span><span class="valor-novo">${qtdFinal}</span>` 
+            const htmlQtd = (alteracao && alteracao.novaQtd != qtdOriginal)
+                ? `<span class="valor-antigo">${qtdOriginal}</span><span class="valor-novo">${qtdFinal}</span>`
                 : qtdOriginal;
 
             const htmlStatus = (alteracao && alteracao.novoStatus != statusOriginal)
@@ -567,7 +587,7 @@ const AprovacoesComplementares = {
             const btnClass = statusFinal === 'ATIVO' ? 'btn-outline-danger' : 'btn-success';
             const btnTitle = statusFinal === 'ATIVO' ? 'Propor Inativação' : 'Propor Ativação';
 
-            const acoesHtml = isController ? 
+            const acoesHtml = isController ?
                 `<span class="text-muted small"><i class="bi bi-lock"></i></span>` :
                 `<div class="btn-group btn-group-sm">
                     <button class="btn btn-outline-primary" onclick="AprovacoesComplementares.abrirModalEdicaoItem(${item.id})" title="Propor Edição"><i class="bi bi-pencil"></i></button>
@@ -607,12 +627,12 @@ const AprovacoesComplementares = {
         document.getElementById('modalEditBoq').value = buffer.novoBoq || item.boq || '';
 
         const select = document.getElementById('modalEditLpuSelect');
-        
+
         if (AprovacoesComplementares.choicesEdit) { AprovacoesComplementares.choicesEdit.destroy(); }
 
         let html = '<option value="">Selecione...</option>';
         const currentLpuId = buffer.novaLpuId || (item.lpu ? item.lpu.id : null);
-        
+
         AprovacoesComplementares.listaCompletaLpus.forEach(l => {
             html += `<option value="${l.id}" ${l.id == currentLpuId ? 'selected' : ''}>${l.nome}</option>`;
         });
@@ -632,7 +652,7 @@ const AprovacoesComplementares = {
         const qtd = document.getElementById('modalEditQtd').value;
         const boq = document.getElementById('modalEditBoq').value;
 
-        if(!lpuId || !qtd) { AprovacoesComplementares.mostrarAlerta("Preencha LPU e Quantidade."); return; }
+        if (!lpuId || !qtd) { AprovacoesComplementares.mostrarAlerta("Preencha LPU e Quantidade."); return; }
 
         if (!AprovacoesComplementares.alteracoesBuffer[id]) {
             AprovacoesComplementares.alteracoesBuffer[id] = {};
@@ -642,7 +662,7 @@ const AprovacoesComplementares = {
         AprovacoesComplementares.alteracoesBuffer[id].novoBoq = boq;
 
         const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarItemOs'));
-        if(modal) modal.hide();
+        if (modal) modal.hide();
         AprovacoesComplementares.renderizarItensExistentesComBuffer(false);
     },
 
@@ -652,7 +672,7 @@ const AprovacoesComplementares = {
         const lpuId = document.getElementById('editLpuSelect').value;
 
         const isController = AprovacoesComplementares.currentSolicitacao.status === 'PENDENTE_CONTROLLER';
-        
+
         if (!justificativa || justificativa.trim().length < 3) {
             AprovacoesComplementares.mostrarAlerta('Preencha a Justificativa.');
             return;
@@ -692,10 +712,10 @@ const AprovacoesComplementares = {
 
             if (resp.ok) {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('modalAnaliseCoordenador'));
-                if(modal) modal.hide();
-                
+                if (modal) modal.hide();
+
                 const alerta = bootstrap.Modal.getInstance(document.getElementById('modalAlerta'));
-                if(alerta) alerta.hide();
+                if (alerta) alerta.hide();
 
                 AprovacoesComplementares.carregarPendencias();
             } else { throw new Error('Erro ao processar'); }
@@ -733,13 +753,13 @@ const AprovacoesComplementares = {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ aprovadorId: usuarioId, motivo: motivo })
             });
-            
+
             bootstrap.Modal.getInstance(document.getElementById('modalRejeitar')).hide();
             const mainModal = bootstrap.Modal.getInstance(document.getElementById('modalAnaliseCoordenador'));
-            if(mainModal) mainModal.hide();
+            if (mainModal) mainModal.hide();
 
             AprovacoesComplementares.carregarPendencias();
-        } catch(e) {
+        } catch (e) {
             alert("Erro ao rejeitar");
         }
     }
