@@ -369,6 +369,10 @@ const AprovacoesComplementares = {
             const osDisplay = cache ? cache.osCodigo : `OS #${item.osId}`;
             const siteDisplay = cache ? cache.site : 'Carregando...';
             const projetoDisplay = cache ? cache.projeto : 'Carregando...';
+
+            // --- CORREÇÃO: Adicionando a definição do segmentoDisplay ---
+            const segmentoDisplay = cache ? cache.segmento : 'Carregando...';
+
             const loadingClass = cache ? '' : 'loading-text';
 
             const lpuInfo = AprovacoesComplementares.listaCompletaLpus.find(l => l.id === item.lpuOriginalId);
