@@ -121,13 +121,30 @@
           </div>
 
           <div id="importar-materiais-container" class="d-none gap-2 ms-auto">
-            <button class="btn btn-outline-success btn-sm" id="btnBaixarTemplateMaterial" title="Baixar Modelo">
-              <i class="bi bi-file-earmark-spreadsheet"></i> Modelo
-            </button>
-            <button class="btn btn-outline-dark btn-sm" id="btnImportarLegadoMaterial" title="Importar Excel">
-              <i class="bi bi-upload"></i> Importar
-            </button>
             <input type="file" id="import-legado-material-input" accept=".xlsx" hidden>
+            <input type="file" id="import-custos-input" accept=".xlsx, .xls" hidden>
+
+            <div class="dropdown">
+              <button class="btn btn-outline-success btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                aria-expanded="false">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Modelos
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" id="btnBaixarTemplateEstoque">Modelo de Estoque</a></li>
+                <li><a class="dropdown-item" href="#" id="btnBaixarTemplateCustos">Modelo de Custos (OS)</a></li>
+              </ul>
+            </div>
+
+            <div class="dropdown">
+              <button class="btn btn-outline-dark btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                aria-expanded="false">
+                <i class="bi bi-upload"></i> Importar
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" id="btnTriggerImportarEstoque">Importar Estoque</a></li>
+                <li><a class="dropdown-item" href="#" id="btnTriggerImportarCustos">Importar Custos Financeiros</a></li>
+              </ul>
+            </div>
           </div>
 
         </div>

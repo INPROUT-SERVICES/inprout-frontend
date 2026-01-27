@@ -3,11 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // CONFIGURAÇÕES E CONSTANTES
     // ==========================================================
     const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-        ? 'http://localhost:8081'
-        : window.location.origin + '/api/materiais'; // Em produção será http://localhost:8080/materiais
+        ? 'http://localhost:8081/api/materiais'
+        : window.location.origin + '/api/materiais'; // Em produção será https://www.inproutservices.com.br/api/materiais
 
     // O Monólito pode permanecer assim ou também usar window.location.origin
-    const API_MONOLITO_URL = 'http://localhost:8080';
+    const API_MONOLITO_URL = 'https://www.inproutservices.com.br/api';
 
     // --- Seletores de Elementos Principais ---
     const containerMateriais = document.getElementById('materiais-container');
@@ -91,6 +91,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const avisosContainer = document.getElementById('avisosImportacaoContainer');
     const listaAvisos = document.getElementById('listaAvisosImportacao');
     const btnFecharProgresso = document.getElementById('btnFecharProgresso');
+    const btnBaixarTemplateEstoque = document.getElementById('btnBaixarTemplateEstoque');
+    const btnBaixarTemplateCustos = document.getElementById('btnBaixarTemplateCustos');
+    const btnTriggerImportarEstoque = document.getElementById('btnTriggerImportarEstoque');
+    const btnTriggerImportarCustos = document.getElementById('btnTriggerImportarCustos');
+    const importCustosInput = document.getElementById('import-custos-input');
 
     // Estado da Aplicação
     let todosOsMateriais = [];
@@ -710,7 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const promises = idsParaExcluir.map(id =>
-                    fetchComAuth(`${API_BASE_URL}/materiais/${id}`, { method: 'DELETE' })
+                    fetchComAuth(`${API_BASE_URL}/${id}`, { method: 'DELETE' })
                 );
 
                 await Promise.all(promises);
@@ -817,7 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function abrirModalDetalhes(id) {
         alternarModoModalDetalhes(false);
         try {
-            const response = await fetchComAuth(`${API_BASE_URL}/materiais/${id}`);
+            const response = await fetchComAuth(`${API_BASE_URL}/${id}`);
             if (!response.ok) throw new Error('Material não encontrado');
             const material = await response.json();
 
@@ -928,7 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                const response = await fetchComAuth(`${API_BASE_URL}/materiais`, {
+                const response = await fetchComAuth(`${API_BASE_URL}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(materialData)
@@ -965,7 +970,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                const response = await fetchComAuth(`${API_BASE_URL}/materiais/${materialId}`, {
+                const response = await fetchComAuth(`${API_BASE_URL}/${materialId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -1000,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                const response = await fetchComAuth(`${API_BASE_URL}/materiais/entradas`, {
+                const response = await fetchComAuth(`${API_BASE_URL}/entradas`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(entradaData)
@@ -1027,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnConfirmarExclusao.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Excluindo...`;
 
             try {
-                const response = await fetchComAuth(`${API_BASE_URL}/materiais/${id}`, { method: 'DELETE' });
+                const response = await fetchComAuth(`${API_BASE_URL}/${id}`, { method: 'DELETE' });
                 if (!response.ok) throw new Error((await response.json()).message || 'Erro ao excluir.');
                 mostrarToast('Material excluído com sucesso!', 'success');
                 if (modalExcluir) modalExcluir.hide();
@@ -1054,54 +1059,159 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (btnBaixarTemplate) {
-        btnBaixarTemplate.addEventListener('click', () => {
+    if (btnBaixarTemplateEstoque) {
+        btnBaixarTemplateEstoque.addEventListener('click', (e) => {
+            e.preventDefault();
             const headers = ["ESTOQUE", "CÓDIGO", "DESCRIÇÃO", "MODELO", "Nº DE SÉRIE", "UNIDADE", "SALDO FISICO", "CUSTO UNITÁRIO"];
             const ws = XLSX.utils.aoa_to_sheet([headers]);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Modelo");
-            XLSX.writeFile(wb, "modelo_importacao.xlsx");
+            XLSX.writeFile(wb, "modelo_importacao_estoque.xlsx");
         });
     }
 
-    if (btnImportarLegado && importLegadoInput) {
-        btnImportarLegado.addEventListener('click', () => importLegadoInput.click());
+    // 2. Template Custos (CORRIGIDO: Agora gera .XLSX)
+    if (btnBaixarTemplateCustos) {
+        btnBaixarTemplateCustos.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Headers exatos que o backend espera na leitura das colunas 0, 1 e 2
+            const headers = ["OS", "VALOR_MATERIAL", "VALOR_TRANSPORTE"];
+            const exemplo = ["OS-12345-24", 1500.00, 250.50];
+
+            const ws = XLSX.utils.aoa_to_sheet([headers, exemplo]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Financeiro");
+            XLSX.writeFile(wb, "modelo_custos_os.xlsx");
+        });
+    }
+
+    // --- GATILHOS DOS BOTÕES ---
+    if (btnTriggerImportarEstoque && importLegadoInput) {
+        btnTriggerImportarEstoque.addEventListener('click', (e) => {
+            e.preventDefault();
+            importLegadoInput.click();
+        });
+    }
+    if (btnTriggerImportarCustos && importCustosInput) {
+        btnTriggerImportarCustos.addEventListener('click', (e) => {
+            e.preventDefault();
+            importCustosInput.click();
+        });
+    }
+
+    // --- LISTENERS DE UPLOAD ---
+
+    // 1. Importar ESTOQUE (CORRIGIDO URL)
+    if (importLegadoInput) {
         importLegadoInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file || !modalProgresso) return;
 
-            textoProgresso.textContent = 'Enviando arquivo...';
-            barraProgresso.style.width = '25%';
-            avisosContainer.classList.add('d-none');
-            listaAvisos.innerHTML = '';
-            btnFecharProgresso.disabled = true;
-            modalProgresso.show();
+            // CORREÇÃO: Removido '/materiais' extra, pois API_BASE_URL já deve ter
+            // Se API_BASE_URL terminar em /materiais, usamos apenas /importar-legado
+            const endpoint = `${API_BASE_URL}/importar-legado`;
 
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const response = await fetchComAuth(`${API_BASE_URL}/materiais/importar-legado`, { method: 'POST', body: formData });
-                barraProgresso.style.width = '100%';
-
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.message);
-
-                textoProgresso.textContent = 'Importação concluída!';
-                if (result.log && result.log.length > 0) {
-                    avisosContainer.classList.remove('d-none');
-                    listaAvisos.innerHTML = result.log.map(i => `<li class="list-group-item">${i}</li>`).join('');
-                }
-                await carregarMateriais();
-            } catch (error) {
-                textoProgresso.textContent = 'Erro na importação!';
-                avisosContainer.classList.remove('d-none');
-                listaAvisos.innerHTML = `<li class="list-group-item list-group-item-danger">${error.message}</li>`;
-            } finally {
-                btnFecharProgresso.disabled = false;
-                importLegadoInput.value = '';
-            }
+            handleImportacaoGenerica(file, endpoint, 'Carregando materiais...', carregarMateriais);
+            e.target.value = '';
         });
+    }
+
+    // 2. Importar CUSTOS (Mantido URL do Monólito)
+    if (importCustosInput) {
+        importCustosInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || !modalProgresso) return;
+
+            // Endpoint do backend de OS (financeiro)
+            handleImportacaoGenerica(file, `${API_MONOLITO_URL}/os/importar-financeiro-legado`, 'Atualizando custos...', null);
+            e.target.value = '';
+        });
+    }
+
+    // --- FUNÇÃO GENÉRICA CORRIGIDA (EVITA ERRO DE STREAM) ---
+    async function handleImportacaoGenerica(file, url, textoInicial, callbackSucesso) {
+        // 1. Reset visual
+        textoProgresso.textContent = textoInicial;
+        barraProgresso.style.width = '0%';
+        barraProgresso.textContent = '0%'; // Mostra o numero dentro da barra
+        barraProgresso.setAttribute('aria-valuenow', 0);
+        barraProgresso.classList.add('progress-bar-animated', 'progress-bar-striped'); // Garante animação
+
+        avisosContainer.classList.add('d-none');
+        listaAvisos.innerHTML = '';
+        btnFecharProgresso.disabled = true;
+
+        // Abre o modal
+        modalProgresso.show();
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // 2. Inicia a Simulação de Progresso (Fake Progress)
+        // Isso dá feedback visual enquanto o backend processa
+        let percentual = 0;
+        const intervaloProgresso = setInterval(() => {
+            if (percentual < 90) { // Vai só até 90% enquanto espera
+                percentual += Math.floor(Math.random() * 5) + 1; // Incrementa aleatório
+                if (percentual > 90) percentual = 90;
+
+                barraProgresso.style.width = `${percentual}%`;
+                barraProgresso.textContent = `${percentual}%`;
+                barraProgresso.setAttribute('aria-valuenow', percentual);
+            }
+        }, 500); // Atualiza a cada meio segundo
+
+        try {
+            // 3. Faz a requisição real
+            const response = await fetchComAuth(url, { method: 'POST', body: formData });
+
+            // 4. Requisição finalizou: Pula para 100%
+            clearInterval(intervaloProgresso);
+            barraProgresso.style.width = '100%';
+            barraProgresso.textContent = '100%';
+            barraProgresso.setAttribute('aria-valuenow', 100);
+            barraProgresso.classList.remove('progress-bar-animated'); // Para a animação
+
+            // Leitura da resposta (Segura contra erro de stream)
+            const responseText = await response.text();
+            let result = {};
+            try { result = JSON.parse(responseText); } catch (e) { }
+
+            if (!response.ok) {
+                throw new Error(result.message || result.error || "Erro na importação.");
+            }
+
+            textoProgresso.textContent = 'Processamento finalizado!';
+
+            // Exibição de Logs/Avisos
+            const logs = result.log || result.logs || [];
+            if (logs.length > 0) {
+                avisosContainer.classList.remove('d-none');
+                listaAvisos.innerHTML = logs.map(i => `<li class="list-group-item">${i}</li>`).join('');
+            } else if (result.mensagem) {
+                avisosContainer.classList.remove('d-none');
+                listaAvisos.innerHTML = `<li class="list-group-item list-group-item-success">${result.mensagem}</li>`;
+            }
+
+            // Atualiza a tabela se necessário
+            if (callbackSucesso) await callbackSucesso();
+
+        } catch (error) {
+            clearInterval(intervaloProgresso); // Para a simulação em caso de erro
+            barraProgresso.classList.remove('progress-bar-animated');
+            barraProgresso.classList.add('bg-danger'); // Barra vermelha
+
+            console.error(error);
+            textoProgresso.textContent = 'Ocorreu um erro!';
+            avisosContainer.classList.remove('d-none');
+
+            let msg = error.message;
+            if (msg.includes("Unexpected token")) msg = "Erro inesperado do servidor. Verifique o arquivo enviado.";
+
+            listaAvisos.innerHTML = `<li class="list-group-item list-group-item-danger">${msg}</li>`;
+        } finally {
+            btnFecharProgresso.disabled = false;
+        }
     }
 
     setupRoleBasedUI_CMA();

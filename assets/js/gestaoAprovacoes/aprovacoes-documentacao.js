@@ -233,21 +233,24 @@ function renderizarTabelaDocsVisual(lista) {
     const tbody = document.getElementById('tbody-minhas-docs');
     const msgVazio = document.getElementById('msg-sem-docs');
 
-    // === INÍCIO DA ALTERAÇÃO (Verificação de Role) ===
-    const role = localStorage.getItem('role');
-    // Verifica se é estritamente documentista
-    const isDocumentista = (role && role.toUpperCase() === 'DOCUMENTIST');
+    // === VERIFICAÇÃO DE PERMISSÕES ===
+    const role = (localStorage.getItem('role') || '').toUpperCase();
+    const isDocumentista = (role === 'DOCUMENTIST');
+    const isAdmin = (role === 'ADMIN'); // Apenas ADMIN vê o segmento
 
-    // 1. Controla a visibilidade do CABEÇALHO (TH)
+    // 1. Controle de Visibilidade dos Cabeçalhos (TH)
+
+    // Coluna Item (LPU) - Esconde para Documentista (Regra antiga)
     const thLpu = document.getElementById('th-lpu-doc');
     if (thLpu) {
-        if (isDocumentista) {
-            thLpu.classList.add('d-none');
-        } else {
-            thLpu.classList.remove('d-none');
-        }
+        isDocumentista ? thLpu.classList.add('d-none') : thLpu.classList.remove('d-none');
     }
-    // === FIM DA ALTERAÇÃO (Verificação de Role) ===
+
+    // Coluna Segmento - Mostra apenas para ADMIN (Nova Regra)
+    const thSegmento = document.getElementById('th-segmento-doc');
+    if (thSegmento) {
+        isAdmin ? thSegmento.classList.remove('d-none') : thSegmento.classList.add('d-none');
+    }
 
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -264,22 +267,39 @@ function renderizarTabelaDocsVisual(lista) {
     lista.forEach(l => {
         const slaInfo = calcularSlaVisual(l.dataPrazoDoc);
 
-        // Item (LPU ou OS)
+        // --- 1. Dados do Item (LPU ou OS) ---
         let itemLpuContent = '-';
+        let segmentoNome = '-';
+
         if (l.detalhe) {
             const lpuObj = l.detalhe.lpu || {};
             const lpuCodigo = lpuObj.codigoLpu || lpuObj.nomeLpu || '';
             const objeto = l.detalhe.objetoContratado || '';
             const textoFinal = lpuCodigo ? `${lpuCodigo} - ${objeto}` : objeto;
             itemLpuContent = `<span class="fw-bold text-dark" title="${objeto}">${textoFinal}</span>`;
+
+            // Pega segmento via Detalhe -> OS
+            if (l.detalhe.os && l.detalhe.os.segmento) {
+                segmentoNome = l.detalhe.os.segmento.nome;
+            }
         } else if (l.os) {
             itemLpuContent = `<span class="fw-bold">${l.os.os}</span>`;
+            // Pega segmento via OS direta
+            if (l.os.segmento) {
+                segmentoNome = l.os.segmento.nome;
+            }
         }
 
+        // --- 2. Dados de Pessoas ---
         const valorDoc = l.valorDocumentista != null ? l.valorDocumentista : 0;
+
+        // Responsável (Quem executa/documentista)
         const responsavelNome = l.documentistaNome || (l.documentista ? l.documentista.nome : '-') || (l.manager ? l.manager.nome : '-');
 
-        // Status Badge
+        // Solicitante (Manager que pediu)
+        const solicitanteNome = l.manager ? l.manager.nome : '-';
+
+        // --- 3. Status Badge ---
         let statusBadge = '';
         if (l.statusDocumentacao === 'PENDENTE_RECEBIMENTO') {
             statusBadge = `<span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Aguardando Envio</span>`;
@@ -291,7 +311,7 @@ function renderizarTabelaDocsVisual(lista) {
             statusBadge = `<span class="badge bg-secondary">${l.statusDocumentacao}</span>`;
         }
 
-        // Botões de Ação
+        // --- 4. Botões ---
         let botoes = '';
         if (l.statusDocumentacao === 'EM_ANALISE') {
             botoes = `
@@ -308,13 +328,19 @@ function renderizarTabelaDocsVisual(lista) {
             botoes = `<span class="text-muted small">-</span>`;
         }
 
+        // Classes de controle de exibição nas CÉLULAS (TD)
         const classDisplayLpu = isDocumentista ? 'd-none' : '';
+        const classDisplaySegmento = isAdmin ? '' : 'd-none';
 
         const tr = `
             <tr>
                 <td class="text-center align-middle">${botoes}</td>
                 <td class="text-center align-middle">${statusBadge}</td>
                 
+                <td class="align-middle"><i class="bi bi-person me-1 text-muted"></i>${solicitanteNome}</td>
+
+                <td class="align-middle ${classDisplaySegmento}"><span class="badge bg-light text-secondary border">${segmentoNome}</span></td>
+
                 <td class="align-middle text-truncate ${classDisplayLpu}" style="max-width: 350px;">${itemLpuContent}</td>
                 
                 <td class="align-middle"><span class="badge bg-light text-dark border">${l.tipoDocumentacaoNome || 'Não Def.'}</span></td>
@@ -324,8 +350,7 @@ function renderizarTabelaDocsVisual(lista) {
                 <td class="align-middle text-start"><span class="small text-muted">${l.assuntoEmail || '-'}</span></td>
             </tr>
         `;
-        // === FIM DA ALTERAÇÃO ===
-        
+
         tbody.innerHTML += tr;
     });
 
