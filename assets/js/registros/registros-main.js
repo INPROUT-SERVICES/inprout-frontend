@@ -4,7 +4,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', async function () {
-    // 1. Configura visibilidade das abas (Segurança)
+    // 1. Configura visibilidade das abas
     configurarVisibilidadeAbas();
 
     // 2. Inicializa módulos
@@ -16,26 +16,27 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // 3. Listener de Busca
-    document.getElementById('searchInput').addEventListener('input', RegistrosRender.renderizarTabelaComFiltro);
-
-    // 4. Carrega os dados da tabela (Lista de Registros)
-    RegistrosApi.carregarDados(0, '');
-
-    // --- CORREÇÃO DO DASHBOARD AQUI --- //
-
-    // Verifica permissão e carrega o Dashboard se for ADMIN
-    const role = (localStorage.getItem("role") || "").trim().toUpperCase();
-    if (role === 'ADMIN') {
-        console.log("Iniciando carregamento do Dashboard...");
-        RegistrosApi.carregarDashboard();
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', RegistrosRender.renderizarTabelaComFiltro);
     }
 
-    // Adiciona evento para recarregar/atualizar ao clicar na aba "Análise"
+    // 4. Carrega os dados da tabela
+    // Importante: O dashboard depende de RegistrosState.todasAsLinhas estar preenchido
+    await RegistrosApi.carregarDados(0, '');
+
+    // 5. Configuração do Dashboard de Análise
     const dashboardTabBtn = document.getElementById('dashboard-tab');
     if (dashboardTabBtn) {
+        // Inicializa o dashboard se a aba já estiver ativa (ex: ADMIN)
+        if (dashboardTabBtn.classList.contains('active')) {
+            RegistrosRender.renderizarDashboardAnalise();
+        }
+
+        // Listener para atualizar o dashboard ao clicar na aba
         dashboardTabBtn.addEventListener('shown.bs.tab', function (event) {
-            // Apenas recarrega se não estiver carregando (opcional)
-            RegistrosApi.carregarDashboard();
+            // Chama a função de renderização local usando os dados já carregados
+            RegistrosRender.renderizarDashboardAnalise();
         });
     }
 });

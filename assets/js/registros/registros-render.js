@@ -389,5 +389,187 @@ const RegistrosRender = {
         if (btnAnterior) btnAnterior.disabled = isFirst;
         if (btnProxima) btnProxima.disabled = isLast;
         if (btnUltima) btnUltima.disabled = isLast;
+    },
+
+    renderizarDashboardAnalise: () => {
+        const container = document.getElementById('dashboard-analise-container');
+        const loader = document.getElementById('dashboard-loader');
+        
+        if (!container) return;
+
+        // Mostra loader rápido
+        if(loader) loader.classList.remove('d-none');
+        container.innerHTML = '';
+
+        // Pequeno timeout para permitir que o loader apareça antes do cálculo pesado
+        setTimeout(() => {
+            const dados = RegistrosState.todasAsLinhas || [];
+
+            if (dados.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center text-muted p-5">Nenhum registro carregado para análise.</div>';
+                if(loader) loader.classList.add('d-none');
+                return;
+            }
+
+            // 1. Cálculo
+            const analise = RegistrosRender.calcularMetricasPorSegmento(dados);
+
+            // 2. Renderização
+            if (Object.keys(analise).length === 0) {
+                container.innerHTML = '<div class="col-12 text-center text-muted p-5">Não foi possível agrupar os dados por segmento.</div>';
+            } else {
+                container.innerHTML = Object.keys(analise).sort().map(segmento => {
+                    return RegistrosRender.criarCardSegmento(segmento, analise[segmento]);
+                }).join('');
+            }
+
+            if(loader) loader.classList.add('d-none');
+        }, 50);
+    },
+
+    calcularMetricasPorSegmento: (dados) => {
+        const resultado = {};
+
+        dados.forEach(linha => {
+            // Definições de acesso seguro aos dados
+            const detalhe = linha.detalhe || {}; 
+            const os = linha.os || {};
+            // Tenta pegar o nome do segmento de vários lugares possíveis
+            const segmentoNome = (os.segmento && os.segmento.nome) 
+                                 ? os.segmento.nome 
+                                 : (detalhe.segmentoNome || 'Sem Segmento');
+
+            // Inicializa estrutura do segmento
+            if (!resultado[segmentoNome]) {
+                resultado[segmentoNome] = {
+                    naoIniciado: 0,
+                    paralisado: { total: 0, comPo: 0, semPo: 0 },
+                    emAndamento: { total: 0, comPo: 0, semPo: 0 },
+                    finalizado: { total: 0, comPo: 0, semPo: 0 }
+                };
+            }
+
+            // Valores e Status
+            const valor = parseFloat(detalhe.valorTotal || 0);
+            // Pega situação do último lançamento OU 'NAO_INICIADO' se não houver lançamento
+            let situacao = (linha.ultimoLancamento && linha.ultimoLancamento.situacao) 
+                           ? String(linha.ultimoLancamento.situacao).toUpperCase().trim() 
+                           : 'NAO_INICIADO';
+            
+            // Regra: Se statusRegistro for INATIVO, ignoramos no dashboard financeiro?
+            // Assumindo que sim, para não sujar a análise.
+            if (detalhe.statusRegistro === 'INATIVO') return;
+
+            // Regra PO: Verifica se tem PO válida
+            const poRaw = (detalhe.po || '').toString().trim();
+            const semPo = (!poRaw || poRaw === '-' || poRaw.toLowerCase() === 'pendente');
+
+            // Regra Faturamento: Verifica se já saiu da fila de operação
+            const faturamentoRaw = (detalhe.faturamento || '').toString().toUpperCase().trim();
+            const jaNoFaturamento = ['ID SOLICITADO', 'ID RECEBIDO', 'FATURADO', 'FATURADO EM ADIANTAMENTO'].includes(faturamentoRaw);
+
+            // --- APLICAÇÃO DAS REGRAS ---
+
+            // 1. NÃO INICIADO
+            if (situacao === 'NAO_INICIADO') {
+                resultado[segmentoNome].naoIniciado += valor;
+            }
+            // 2. PARALISADO
+            else if (situacao === 'PARALISADO') {
+                resultado[segmentoNome].paralisado.total += valor;
+                if (semPo) resultado[segmentoNome].paralisado.semPo += valor;
+                else resultado[segmentoNome].paralisado.comPo += valor;
+            }
+            // 3. EM ANDAMENTO
+            else if (situacao === 'EM_ANDAMENTO') {
+                resultado[segmentoNome].emAndamento.total += valor;
+                if (semPo) resultado[segmentoNome].emAndamento.semPo += valor;
+                else resultado[segmentoNome].emAndamento.comPo += valor;
+            }
+            // 4. FINALIZADO (Backlog de Faturamento)
+            // Só conta se está finalizado operacionalmente MAS ainda não foi solicitado faturamento
+            else if (situacao === 'FINALIZADO' && !jaNoFaturamento) {
+                resultado[segmentoNome].finalizado.total += valor;
+                if (semPo) resultado[segmentoNome].finalizado.semPo += valor;
+                else resultado[segmentoNome].finalizado.comPo += valor;
+            }
+        });
+
+        return resultado;
+    },
+
+    criarCardSegmento: (nome, stats) => {
+        const format = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const calcPct = (parcial, total) => total > 0 ? (parcial / total) * 100 : 0;
+
+        return `
+        <div class="segmento-card">
+            <div class="segmento-header">
+                <span>${nome}</span>
+                <span class="badge-segmento">Segmento</span>
+            </div>
+            <div class="segmento-body">
+                
+                <div class="stat-block">
+                    <div class="stat-title text-finalizado">
+                        <span><i class="bi bi-check-circle-fill me-1"></i> Apto a Faturar</span>
+                    </div>
+                    <div class="stat-value">${format(stats.finalizado.total)}</div>
+                    ${stats.finalizado.total > 0 ? `
+                        <div class="po-progress" title="Verde: Com PO | Laranja: Sem PO">
+                            <div class="po-bar-ok" style="width: ${calcPct(stats.finalizado.comPo, stats.finalizado.total)}%"></div>
+                            <div class="po-bar-warn" style="width: ${calcPct(stats.finalizado.semPo, stats.finalizado.total)}%"></div>
+                        </div>
+                        <div class="sub-info">
+                            <span>Com PO: ${format(stats.finalizado.comPo)}</span>
+                            <span class="${stats.finalizado.semPo > 0 ? 'text-danger fw-bold' : ''}">Sem PO: ${format(stats.finalizado.semPo)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="stat-block">
+                    <div class="stat-title text-andamento">
+                        <span><i class="bi bi-play-circle me-1"></i> Em Andamento</span>
+                    </div>
+                    <div class="stat-value">${format(stats.emAndamento.total)}</div>
+                    ${stats.emAndamento.total > 0 ? `
+                        <div class="po-progress">
+                            <div class="po-bar-ok" style="width: ${calcPct(stats.emAndamento.comPo, stats.emAndamento.total)}%"></div>
+                            <div class="po-bar-warn" style="width: ${calcPct(stats.emAndamento.semPo, stats.emAndamento.total)}%"></div>
+                        </div>
+                        <div class="sub-info">
+                            <span>Com PO: ${format(stats.emAndamento.comPo)}</span>
+                            <span>Sem PO: ${format(stats.emAndamento.semPo)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="stat-block">
+                    <div class="stat-title text-paralisado">
+                        <span><i class="bi bi-pause-circle me-1"></i> Paralisado</span>
+                    </div>
+                    <div class="stat-value">${format(stats.paralisado.total)}</div>
+                    ${stats.paralisado.total > 0 ? `
+                        <div class="po-progress">
+                            <div class="po-bar-ok" style="width: ${calcPct(stats.paralisado.comPo, stats.paralisado.total)}%"></div>
+                            <div class="po-bar-warn" style="width: ${calcPct(stats.paralisado.semPo, stats.paralisado.total)}%"></div>
+                        </div>
+                        <div class="sub-info">
+                            <span>Com PO: ${format(stats.paralisado.comPo)}</span>
+                            <span class="${stats.paralisado.semPo > 0 ? 'text-danger' : ''}">Sem PO: ${format(stats.paralisado.semPo)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="stat-block" style="border:none; padding-top:12px;">
+                    <div class="stat-title text-nao-iniciado">
+                        <span><i class="bi bi-circle me-1"></i> Não Iniciado</span>
+                    </div>
+                    <div class="stat-value fs-6 text-muted">${format(stats.naoIniciado)}</div>
+                </div>
+
+            </div>
+        </div>
+        `;
     }
 };

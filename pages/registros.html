@@ -63,527 +63,359 @@
         <div class="tab-content" id="registrosTabContent">
 
             <div class="tab-pane fade show active" id="dashboard-pane" role="tabpanel" aria-labelledby="dashboard-tab">
-                <div id="dashboard-loader" class="container-fluid py-5">
-                    <div class="row justify-content-center">
-                        <div class="col-md-6 col-lg-4 text-center">
+                <div class="container-fluid py-4">
+
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h4 class="text-primary fw-bold mb-1"><i class="bi bi-speedometer2 me-2"></i>Panorama
+                                Financeiro</h4>
+                            <p class="text-muted small mb-0">Análise baseada nos registros carregados em tela.</p>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm"
+                            onclick="RegistrosRender.renderizarDashboardAnalise()">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Atualizar Visão
+                        </button>
+                    </div>
+
+                    <div id="dashboard-loader" class="text-center py-5 d-none">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 text-muted">Calculando indicadores...</p>
+                    </div>
+
+                    <div id="dashboard-analise-container" class="dashboard-grid">
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalHistoricoLancamentos" tabindex="-1"
+            aria-labelledby="modalHistoricoLancamentosLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalHistoricoLancamentosLabel"><i
+                                class="bi bi-clock-history me-2"></i>Histórico de Lançamentos</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover modern-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data Atividade</th>
+                                        <th>Status Aprovação</th>
+                                        <th>Situação</th>
+                                        <th>Etapa</th>
+                                        <th style="min-width: 250px;">Detalhe Diário</th>
+                                        <th>Prestador</th>
+                                        <th>Valor</th>
+                                        <th>Gestor</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-historico-lancamentos">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="modalProgressoExportacao" data-bs-backdrop="static" data-bs-keyboard="false"
+            tabindex="-1" aria-labelledby="modalProgressoLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalProgressoLabel"><i
+                                class="bi bi-file-earmark-spreadsheet me-2"></i>Exportando Relatório</h5>
+                    </div>
+                    <div class="modal-body">
+                        <p id="textoProgresso" class="text-center mb-2">Preparando dados...</p>
+                        <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+                            style="height: 20px;">
+                            <div id="barraProgresso"
+                                class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalProgressoImportacao" data-bs-backdrop="static" data-bs-keyboard="false"
+            tabindex="-1" aria-labelledby="modalProgressoImportacaoLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalProgressoImportacaoLabel"><i
+                                class="bi bi-upload me-2"></i>Importando Planilha</h5>
+                    </div>
+                    <div class="modal-body">
+                        <p id="textoProgressoImportacao" class="text-center mb-2">Lendo arquivo...</p>
+                        <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+                            style="height: 20px;">
+                            <div id="barraProgressoImportacao"
+                                class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                style="width: 0%">0%</div>
+                        </div>
+                        <div id="errosImportacaoContainer" class="mt-3 d-none">
+                            <h6>Ocorreram erros durante a importação:</h6>
+                            <ul id="listaErrosImportacao" class="list-group"
+                                style="font-size: 0.8rem; max-height: 150px; overflow-y: auto;"></ul>
+                        </div>
+                    </div>
+                    <div class="modal-footer d-flex justify-content-between">
+                        <button type="button" class="btn btn-danger" id="btnCancelarImportacao">
+                            <i class="bi bi-x-circle me-1"></i>Cancelar Importação
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="btnFecharProgressoImportacao"
+                            data-bs-dismiss="modal" disabled>
+                            Fechar
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+            <div id="toastMensagem" class="toast align-items-center border-0 text-bg-success" role="alert"
+                aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body" id="toastTexto"></div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                        aria-label="Fechar"></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalDetalheDiario" tabindex="-1" aria-labelledby="modalDetalheDiarioLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalDetalheDiarioLabel"><i class="bi bi-text-left me-2"></i>Detalhe
+                            Diário
+                            Completo</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body" id="modalDetalheDiarioBody" style="white-space: pre-wrap;">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalEditarDetalhe" tabindex="-1" aria-labelledby="modalEditarDetalheLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalEditarDetalheLabel"><i
+                                class="bi bi-pencil-square me-2"></i>Editar
+                            Detalhe de Registro</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formEditarDetalhe">
+                            <input type="hidden" id="editDetalheId">
+
+                            <h6 class="section-title">Dados da OS</h6>
                             <div class="mb-3">
-                                <i class="bi bi-bar-chart-line-fill text-primary display-4"></i>
-                            </div>
-                            <h5 class="text-muted fw-light mb-3">Analisando registros...</h5>
-
-                            <div class="progress" style="height: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-                                    role="progressbar" style="width: 100%"></div>
+                                <label for="osValue" class="form-label">Ordem de Serviço (OS)</label>
+                                <input type="text" class="form-control" id="osValue" readonly>
                             </div>
 
-                            <small class="text-muted mt-2 d-block fst-italic">Consolidando indicadores em tempo
-                                real</small>
-                        </div>
+                            <h6 class="section-title">Alteração de Campos</h6>
+
+                            <div class="mb-3">
+                                <label for="selectSegmento"
+                                    class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Segmento</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#selectSegmento">
+                                    </div>
+                                </label>
+                                <select class="form-select" id="selectSegmento" name="novoSegmentoId" disabled required>
+                                    <option value="">Carregando...</option>
+                                </select>
+                                <small class="form-text text-muted">A alteração do segmento afeta toda a OS.</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="novaKeyValue"
+                                    class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Chave Externa (KEY)</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#novaKeyValue">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="novaKeyValue" name="novaChave" disabled
+                                    required placeholder="Insira a nova chave única">
+                            </div>
+
+                            <div class="mb-3" id="gestorTimFieldGroup">
+                                <label for="novoGestorTimValue"
+                                    class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Gestor TIM</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input type="checkbox" class="form-check-input toggle-editar"
+                                            data-target="#novoGestorTimValue">
+                                    </div>
+                                </label>
+                                <input type="text" class="form-control" id="novoGestorTimValue" name="novoGestorTim"
+                                    disabled required placeholder="Insira o novo Gestor TIM">
+                            </div>
+
+                        </form>
                     </div>
-                </div>
-
-                <div id="dashboard-content" class="d-none">
-                    <div class="row g-4 mb-4">
-
-                        <div class="col-md-6 col-xl-3">
-                            <div class="card h-100 border-start border-4 border-secondary shadow-sm">
-                                <div class="card-body">
-                                    <h6 class="text-uppercase text-muted small fw-bold">Não Iniciado</h6>
-                                    <h2 class="display-6 fw-bold text-secondary mb-0" id="dash-nao-iniciado">0</h2>
-                                    <small class="text-muted fw-bold" id="dash-valor-nao-iniciado">R$ 0,00</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 col-xl-3">
-                            <div class="card h-100 border-start border-4 border-danger shadow-sm">
-                                <div class="card-body">
-                                    <h6 class="text-uppercase text-muted small fw-bold">Paralisado</h6>
-                                    <h2 class="display-6 fw-bold text-danger mb-0" id="dash-paralisado">0</h2>
-                                    <small class="text-danger fw-bold" id="dash-valor-paralisado">R$ 0,00</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 col-xl-3">
-                            <div class="card h-100 border-start border-4 border-warning shadow-sm"
-                                style="border-color: #fd7e14 !important;">
-                                <div class="card-body">
-                                    <h6 class="text-uppercase text-muted small fw-bold">Aguard. Doc</h6>
-                                    <h2 class="display-6 fw-bold text-warning mb-0" style="color: #fd7e14 !important;"
-                                        id="dash-aguardando-doc">0</h2>
-                                    <small class="fw-bold" style="color: #fd7e14 !important;"
-                                        id="dash-valor-aguardando-doc">R$ 0,00</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 col-xl-3">
-                            <div class="card h-100 border-start border-4 border-warning shadow-sm">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="text-uppercase text-muted small fw-bold mb-0">Em Andamento</h6>
-                                        <span class="badge bg-warning text-dark fs-6" id="dash-andamento-total">0</span>
-                                    </div>
-                                    <div class="mb-2 text-warning fw-bold small" id="dash-valor-andamento-total">R$ 0,00
-                                    </div>
-
-                                    <div class="d-flex justify-content-between small text-muted border-top pt-2">
-                                        <span>Com PO: <strong id="dash-andamento-com-po">0</strong></span>
-                                        <span>Sem PO: <strong id="dash-andamento-sem-po">0</strong></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 col-xl-3">
-                            <div class="card h-100 border-start border-4 border-success shadow-sm">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="text-uppercase text-muted small fw-bold mb-0">Finalizado</h6>
-                                        <span class="badge bg-success fs-6" id="dash-finalizado-total">0</span>
-                                    </div>
-                                    <div class="mb-2 text-success fw-bold small" id="dash-valor-finalizado-total">R$
-                                        0,00</div>
-
-                                    <div class="d-flex justify-content-between small text-muted border-top pt-2">
-                                        <span>Com PO: <strong id="dash-finalizado-com-po">0</strong></span>
-                                        <span>Sem PO: <strong id="dash-finalizado-sem-po">0</strong></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-12 col-xl-12">
-                            <div class="card border-0 bg-primary text-white shadow">
-                                <div
-                                    class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
-                                    <div>
-                                        <h6 class="text-uppercase text-white-50 small fw-bold mb-1">Gate Atual (Vigente)
-                                        </h6>
-                                        <h3 class="mb-0 fw-bold" id="dash-gate-nome">--</h3>
-                                        <small class="text-white-50">Previsão: <span
-                                                id="dash-gate-previsao">--/--/----</span></small>
-                                    </div>
-                                    <div class="d-flex gap-4 text-center">
-                                        <div class="border-start border-white border-opacity-25 ps-4">
-                                            <h4 class="mb-0" id="dash-gate-solicitado">0</h4>
-                                            <small class="text-white-50" style="font-size: 0.75rem;">ID
-                                                Solicitado</small>
-                                        </div>
-                                        <div class="border-start border-white border-opacity-25 ps-4">
-                                            <h4 class="mb-0" id="dash-gate-ok">0</h4>
-                                            <small class="text-white-50" style="font-size: 0.75rem;">ID OK</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="lista-pane" role="tabpanel" aria-labelledby="lista-tab">
-                <div class="card shadow-sm border-top-0 rounded-top-0">
-                    <div class="card-header bg-white p-3">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                            <div class="d-flex align-items-center gap-2 flex-grow-1">
-                                <div class="input-group search-box flex-grow-1">
-                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                    <input type="text" id="searchInput" class="form-control border-end-0"
-                                        placeholder="Buscar por OS, Site, Contrato, KEY...">
-                                    <span class="input-group-text bg-white border-start-0 d-none"
-                                        id="loading-indicator-busca">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="text-muted small fst-italic"
-                                                style="font-size: 0.8rem;">Sincronizando...</span>
-                                            <div class="spinner-border spinner-border-sm text-success" role="status">
-                                            </div>
-                                        </div>
-                                    </span>
-                                </div>
-                                <button class="btn btn-outline-secondary btn-sm" id="btnSortOS"
-                                    title="Ordenar por OS">OS <i class="bi bi-sort-down"></i></button>
-                            </div>
-
-                            <div class="d-flex flex-wrap align-items-center gap-2" id="botoes-acao">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="importLegado" />
-                                    <label class="form-check-label" for="importLegado">Importar Legado</label>
-                                </div>
-                                <button class="btn btn-success" id="btnDownloadTemplate"><i
-                                        class="bi bi-download me-1"></i> Modelo</button>
-                                <button class="btn btn-outline-secondary" id="btnImportar"><i
-                                        class="bi bi-file-earmark-excel me-1"></i> Importar</button>
-                                <button class="btn btn-warning" id="btnImportarFinanceiro" title="Atualizar valores"><i
-                                        class="bi bi-currency-dollar me-1"></i> Financeiro</button>
-                                <input type="file" id="importFileFinanceiro" accept=".xlsx, .csv" hidden>
-                                <button class="btn btn-outline-secondary" id="btnExportar"><i
-                                        class="bi bi-download me-1"></i> Exportar</button>
-                                <input type="file" id="importFile" accept=".xlsx, .csv" hidden>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="accordion" id="accordion-registros">
-                        </div>
-                        <div class="pagination-controls mt-3">
-                            <div id="pagination-container-copy">
-                                <div>
-                                    <label for="rowsPerPage" class="form-label me-2">Grupos por página:</label>
-                                    <select id="rowsPerPage" class="form-select form-select-sm d-inline-block"
-                                        style="width: auto;">
-                                        <option value="10">10</option>
-                                        <option value="25">25</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                        <option value="all">Todos</option>
-                                    </select>
-                                </div>
-                                <div id="pagination-info" class="text-muted"></div>
-                                <div>
-                                    <button class="btn btn-sm btn-outline-secondary" id="btnPrimeiraPagina"><i
-                                            class="bi bi-chevron-bar-left"></i></button>
-                                    <button class="btn btn-sm btn-outline-secondary" id="btnPaginaAnterior"><i
-                                            class="bi bi-chevron-left"></i></button>
-                                    <button class="btn btn-sm btn-outline-secondary" id="btnProximaPagina"><i
-                                            class="bi bi-chevron-right"></i></button>
-                                    <button class="btn btn-sm btn-outline-secondary" id="btnUltimaPagina"><i
-                                            class="bi bi-chevron-bar-right"></i></button>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success" form="formEditarDetalhe" id="btnSalvarDetalhe"
+                            disabled>Salvar Alterações</button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="modal fade" id="modalHistoricoLancamentos" tabindex="-1"
-        aria-labelledby="modalHistoricoLancamentosLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalHistoricoLancamentosLabel"><i
-                            class="bi bi-clock-history me-2"></i>Histórico de Lançamentos</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover modern-table">
-                            <thead>
-                                <tr>
-                                    <th>Data Atividade</th>
-                                    <th>Status Aprovação</th>
-                                    <th>Situação</th>
-                                    <th>Etapa</th>
-                                    <th style="min-width: 250px;">Detalhe Diário</th>
-                                    <th>Prestador</th>
-                                    <th>Valor</th>
-                                    <th>Gestor</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-historico-lancamentos">
-                            </tbody>
-                        </table>
+        <div class="modal fade" id="modalConfirmarExclusao" tabindex="-1" aria-labelledby="modalConfirmarExclusaoLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-danger" id="modalConfirmarExclusaoLabel"><i
+                                class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Exclusão</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="modal fade" id="modalProgressoExportacao" data-bs-backdrop="static" data-bs-keyboard="false"
-        tabindex="-1" aria-labelledby="modalProgressoLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalProgressoLabel"><i
-                            class="bi bi-file-earmark-spreadsheet me-2"></i>Exportando Relatório</h5>
-                </div>
-                <div class="modal-body">
-                    <p id="textoProgresso" class="text-center mb-2">Preparando dados...</p>
-                    <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
-                        style="height: 20px;">
-                        <div id="barraProgresso"
-                            class="progress-bar progress-bar-striped progress-bar-animated bg-success"
-                            style="width: 0%">0%</div>
+                    <div class="modal-body">
+                        <p>Você tem certeza que deseja excluir este registro?</p>
+                        <p class="small text-muted">Esta ação excluirá o registro. Não poderá ser desfeita, tem certeza
+                            que
+                            deseja continuar?</p>
+                        <input type="hidden" id="deleteOsId">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-danger" id="btnConfirmarExclusaoDefinitiva">Sim,
+                            Excluir</button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="modal fade" id="modalProgressoImportacao" data-bs-backdrop="static" data-bs-keyboard="false"
-        tabindex="-1" aria-labelledby="modalProgressoImportacaoLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalProgressoImportacaoLabel"><i
-                            class="bi bi-upload me-2"></i>Importando Planilha</h5>
-                </div>
-                <div class="modal-body">
-                    <p id="textoProgressoImportacao" class="text-center mb-2">Lendo arquivo...</p>
-                    <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
-                        style="height: 20px;">
-                        <div id="barraProgressoImportacao"
-                            class="progress-bar progress-bar-striped progress-bar-animated bg-success"
-                            style="width: 0%">0%</div>
+        <div class="modal fade" id="modalConfirmarFinalizacao" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="modalFinalizarLabel">Finalizar OSs</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div id="errosImportacaoContainer" class="mt-3 d-none">
-                        <h6>Ocorreram erros durante a importação:</h6>
-                        <ul id="listaErrosImportacao" class="list-group"
-                            style="font-size: 0.8rem; max-height: 150px; overflow-y: auto;"></ul>
-                    </div>
-                </div>
-                <div class="modal-footer d-flex justify-content-between">
-                    <button type="button" class="btn btn-danger" id="btnCancelarImportacao">
-                        <i class="bi bi-x-circle me-1"></i>Cancelar Importação
-                    </button>
-                    <button type="button" class="btn btn-secondary" id="btnFecharProgressoImportacao"
-                        data-bs-dismiss="modal" disabled>
-                        Fechar
-                    </button>
-                </div>
-
-            </div>
-        </div>
-    </div>
-
-    <div class="toast-container position-fixed bottom-0 end-0 p-3">
-        <div id="toastMensagem" class="toast align-items-center border-0 text-bg-success" role="alert"
-            aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body" id="toastTexto"></div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
-                    aria-label="Fechar"></button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="modalDetalheDiario" tabindex="-1" aria-labelledby="modalDetalheDiarioLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalDetalheDiarioLabel"><i class="bi bi-text-left me-2"></i>Detalhe
-                        Diário
-                        Completo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                </div>
-                <div class="modal-body" id="modalDetalheDiarioBody" style="white-space: pre-wrap;">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="modalEditarDetalhe" tabindex="-1" aria-labelledby="modalEditarDetalheLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalEditarDetalheLabel"><i class="bi bi-pencil-square me-2"></i>Editar
-                        Detalhe de Registro</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formEditarDetalhe">
-                        <input type="hidden" id="editDetalheId">
-
-                        <h6 class="section-title">Dados da OS</h6>
+                    <div class="modal-body text-center py-4">
                         <div class="mb-3">
-                            <label for="osValue" class="form-label">Ordem de Serviço (OS)</label>
-                            <input type="text" class="form-control" id="osValue" readonly>
+                            <div class="d-inline-flex align-items-center justify-content-center bg-warning bg-opacity-10 text-warning rounded-circle"
+                                style="width: 60px; height: 60px;">
+                                <i class="bi bi-exclamation-lg" style="font-size: 2rem;"></i>
+                            </div>
                         </div>
-
-                        <h6 class="section-title">Alteração de Campos</h6>
-
-                        <div class="mb-3">
-                            <label for="selectSegmento"
-                                class="form-label d-flex justify-content-between align-items-center">
-                                <span>Segmento</span>
-                                <div class="form-check form-switch m-0">
-                                    <input type="checkbox" class="form-check-input toggle-editar"
-                                        data-target="#selectSegmento">
-                                </div>
-                            </label>
-                            <select class="form-select" id="selectSegmento" name="novoSegmentoId" disabled required>
-                                <option value="">Carregando...</option>
-                            </select>
-                            <small class="form-text text-muted">A alteração do segmento afeta toda a OS.</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="novaKeyValue"
-                                class="form-label d-flex justify-content-between align-items-center">
-                                <span>Chave Externa (KEY)</span>
-                                <div class="form-check form-switch m-0">
-                                    <input type="checkbox" class="form-check-input toggle-editar"
-                                        data-target="#novaKeyValue">
-                                </div>
-                            </label>
-                            <input type="text" class="form-control" id="novaKeyValue" name="novaChave" disabled required
-                                placeholder="Insira a nova chave única">
-                        </div>
-
-                        <div class="mb-3" id="gestorTimFieldGroup">
-                            <label for="novoGestorTimValue"
-                                class="form-label d-flex justify-content-between align-items-center">
-                                <span>Gestor TIM</span>
-                                <div class="form-check form-switch m-0">
-                                    <input type="checkbox" class="form-check-input toggle-editar"
-                                        data-target="#novoGestorTimValue">
-                                </div>
-                            </label>
-                            <input type="text" class="form-control" id="novoGestorTimValue" name="novoGestorTim"
-                                disabled required placeholder="Insira o novo Gestor TIM">
-                        </div>
-
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success" form="formEditarDetalhe" id="btnSalvarDetalhe"
-                        disabled>Salvar Alterações</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="modalConfirmarExclusao" tabindex="-1" aria-labelledby="modalConfirmarExclusaoLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title text-danger" id="modalConfirmarExclusaoLabel"><i
-                            class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Exclusão</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Você tem certeza que deseja excluir este registro?</p>
-                    <p class="small text-muted">Esta ação excluirá o registro. Não poderá ser desfeita, tem certeza que
-                        deseja continuar?</p>
-                    <input type="hidden" id="deleteOsId">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger" id="btnConfirmarExclusaoDefinitiva">Sim,
-                        Excluir</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="modalConfirmarFinalizacao" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="modalFinalizarLabel">Finalizar OSs</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body text-center py-4">
-                    <div class="mb-3">
-                        <div class="d-inline-flex align-items-center justify-content-center bg-warning bg-opacity-10 text-warning rounded-circle"
-                            style="width: 60px; height: 60px;">
-                            <i class="bi bi-exclamation-lg" style="font-size: 2rem;"></i>
-                        </div>
+                        <h5 class="fw-bold mb-2">Confirmar finalização automática?</h5>
+                        <p class="text-muted small px-3">
+                            O sistema irá replicar o último lançamento finalizado para os outros itens. <br>
+                            Tem certeza que deseja prosseguir?
+                        </p>
+                        <input type="hidden" id="inputHiddenOsIdFinalizar">
                     </div>
-                    <h5 class="fw-bold mb-2">Confirmar finalização automática?</h5>
-                    <p class="text-muted small px-3">
-                        O sistema irá replicar o último lançamento finalizado para os outros itens. <br>
-                        Tem certeza que deseja prosseguir?
-                    </p>
-                    <input type="hidden" id="inputHiddenOsIdFinalizar">
-                </div>
-                <div class="modal-footer bg-light border-top-0 justify-content-center">
-                    <button type="button" class="btn btn-outline-secondary px-4"
-                        data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-success px-4" id="btnConfirmarFinalizacaoAction">
-                        <i class="bi bi-check-lg me-1"></i> Confirmar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="modalMinhaConta" tabindex="-1" aria-labelledby="modalMinhaContaLabel">
-        <div class="modal-dialog modal-md modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalMinhaContaLabel">
-                        <i class="bi bi-person-circle me-2"></i> Minha Conta
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="text-center mb-3">
-                        <i class="bi bi-person-circle" style="font-size: 4rem; color: #198754;"></i>
-                        <h5 class="mt-2" id="nomeUsuarioModal">Nome do Usuário</h5>
-                        <p class="text-muted" id="emailUsuarioModal">email@dominio.com</p>
-                        <div id="userInfoDetalhes" class="mt-2"></div>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#alterarEmail" aria-expanded="false">
-                            <i class="bi bi-envelope"></i> Alterar E-mail
+                    <div class="modal-footer bg-light border-top-0 justify-content-center">
+                        <button type="button" class="btn btn-outline-secondary px-4"
+                            data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-success px-4" id="btnConfirmarFinalizacaoAction">
+                            <i class="bi bi-check-lg me-1"></i> Confirmar
                         </button>
-                        <div class="collapse mt-2" id="alterarEmail">
-                            <form id="formAlterarEmail">
-                                <div class="mb-2">
-                                    <label class="form-label">Novo E-mail</label>
-                                    <input type="email" class="form-control" id="novoEmail"
-                                        placeholder="Digite seu novo e-mail">
-                                </div>
-                            </form>
-                        </div>
-                        <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#alterarSenha" aria-expanded="false">
-                            <i class="bi bi-shield-lock"></i> Alterar Senha
-                        </button>
-                        <div class="collapse mt-2" id="alterarSenha">
-                            <form id="formAlterarSenha">
-                                <div class="mb-2">
-                                    <label class="form-label">Nova Senha</label>
-                                    <input type="password" class="form-control" id="novaSenha"
-                                        placeholder="Digite sua nova senha">
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label">Confirmar Nova Senha</label>
-                                    <input type="password" class="form-control" id="confirmarSenha"
-                                        placeholder="Confirme sua nova senha">
-                                </div>
-                            </form>
-                        </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-success" id="btnSalvarAlteracoes">
-                        <i class="bi bi-check-circle"></i> Salvar Alterações
-                    </button>
                 </div>
             </div>
         </div>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../assets/js/general/sidebar.js?v=4.6"></script>
-    <script src="../assets/js/general/global.js?v=4.6"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <div class="modal fade" id="modalMinhaConta" tabindex="-1" aria-labelledby="modalMinhaContaLabel">
+            <div class="modal-dialog modal-md modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalMinhaContaLabel">
+                            <i class="bi bi-person-circle me-2"></i> Minha Conta
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-person-circle" style="font-size: 4rem; color: #198754;"></i>
+                            <h5 class="mt-2" id="nomeUsuarioModal">Nome do Usuário</h5>
+                            <p class="text-muted" id="emailUsuarioModal">email@dominio.com</p>
+                            <div id="userInfoDetalhes" class="mt-2"></div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#alterarEmail" aria-expanded="false">
+                                <i class="bi bi-envelope"></i> Alterar E-mail
+                            </button>
+                            <div class="collapse mt-2" id="alterarEmail">
+                                <form id="formAlterarEmail">
+                                    <div class="mb-2">
+                                        <label class="form-label">Novo E-mail</label>
+                                        <input type="email" class="form-control" id="novoEmail"
+                                            placeholder="Digite seu novo e-mail">
+                                    </div>
+                                </form>
+                            </div>
+                            <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#alterarSenha" aria-expanded="false">
+                                <i class="bi bi-shield-lock"></i> Alterar Senha
+                            </button>
+                            <div class="collapse mt-2" id="alterarSenha">
+                                <form id="formAlterarSenha">
+                                    <div class="mb-2">
+                                        <label class="form-label">Nova Senha</label>
+                                        <input type="password" class="form-control" id="novaSenha"
+                                            placeholder="Digite sua nova senha">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Confirmar Nova Senha</label>
+                                        <input type="password" class="form-control" id="confirmarSenha"
+                                            placeholder="Confirme sua nova senha">
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                        <button type="button" class="btn btn-success" id="btnSalvarAlteracoes">
+                            <i class="bi bi-check-circle"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <script src="../assets/js/registros/registros-state.js"></script>
-    <script src="../assets/js/registros/registros-utils.js"></script>
-    <script src="../assets/js/registros/registros-render.js"></script>
-    <script src="../assets/js/registros/registros-api.js"></script>
-    <script src="../assets/js/registros/registros-actions.js"></script>
-    <script src="../assets/js/registros/registros-io.js"></script>
-    <script src="../assets/js/registros/registros-main.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="../assets/js/general/sidebar.js?v=4.6"></script>
+        <script src="../assets/js/general/global.js?v=4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+        <script src="../assets/js/registros/registros-state.js"></script>
+        <script src="../assets/js/registros/registros-utils.js"></script>
+        <script src="../assets/js/registros/registros-render.js"></script>
+        <script src="../assets/js/registros/registros-api.js"></script>
+        <script src="../assets/js/registros/registros-actions.js"></script>
+        <script src="../assets/js/registros/registros-io.js"></script>
+        <script src="../assets/js/registros/registros-main.js"></script>
 
 </body>
 

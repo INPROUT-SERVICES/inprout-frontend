@@ -544,3 +544,116 @@ div:where(.swal2-icon).swal2-question {
     background-color: #dc3545;
     color: white;
 }
+
+/* ========================================================== */
+/* ======== DASHBOARD DE ANÁLISE (NOVO) ===================== */
+/* ========================================================== */
+
+/* Grid do Dashboard */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+    padding-bottom: 2rem;
+}
+
+/* Card do Segmento */
+.segmento-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border: 1px solid #eef2f6;
+    overflow: hidden;
+    transition: transform 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.segmento-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.segmento-header {
+    background: #f8f9fa;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eef2f6;
+    font-weight: 700;
+    color: #374151;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.segmento-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-grow: 1;
+}
+
+/* Blocos de Estatística */
+.stat-block {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+    border-bottom: 1px dashed #e5e7eb;
+}
+
+.stat-block:last-child {
+    border-bottom: none;
+}
+
+.stat-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #6b7280;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+/* Barra de Progresso PO */
+.po-progress {
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    margin-top: 6px;
+    overflow: hidden;
+    display: flex;
+}
+
+.po-bar-ok { background-color: #10b981; } /* Com PO - Verde */
+.po-bar-warn { background-color: #f59e0b; } /* Sem PO - Laranja */
+
+.sub-info {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    margin-top: 4px;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Cores por Status */
+.text-nao-iniciado { color: #6b7280; }
+.text-paralisado { color: #ef4444; }
+.text-andamento { color: #3b82f6; }
+.text-finalizado { color: #10b981; } 
+
+.badge-segmento {
+    font-size: 0.7rem;
+    background-color: #e9ecef;
+    color: #495057;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 2px 6px;
+}
