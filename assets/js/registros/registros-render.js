@@ -1,10 +1,15 @@
 /**
  * registros-render.js
- * Responsável por renderizar a tabela, os grupos e aplicar filtros visuais.
+ * Versão Híbrida:
+ * 1. Mantém a renderização da TABELA e BOTÕES da versão antiga (estável).
+ * 2. Mantém a renderização do DASHBOARD da versão nova.
  */
 
 const RegistrosRender = {
-    // Definição das colunas
+    // =========================================================================
+    // PARTE 1: TABELA E BOTÕES (Lógica restaurada da versão antiga)
+    // =========================================================================
+
     colunasCompletas: ["OS", "SITE", "CONTRATO", "SEGMENTO", "PROJETO", "GESTOR TIM", "REGIONAL", "LPU", "LOTE", "BOQ", "PO", "ITEM", "OBJETO CONTRATADO", "UNIDADE", "QUANTIDADE", "VALOR TOTAL OS", "OBSERVAÇÕES", "DATA PO", "VISTORIA", "PLANO VISTORIA", "DESMOBILIZAÇÃO", "PLANO DESMOBILIZAÇÃO", "INSTALAÇÃO", "PLANO INSTALAÇÃO", "ATIVAÇÃO", "PLANO ATIVAÇÃO", "DOCUMENTAÇÃO", "PLANO DOCUMENTAÇÃO", "ETAPA GERAL", "ETAPA DETALHADA", "STATUS", "DETALHE DIÁRIO", "CÓD. PRESTADOR", "PRESTADOR", "VALOR", "GESTOR", "SITUAÇÃO", "DATA ATIVIDADE", "FATURAMENTO", "SOLICIT ID FAT", "RECEB ID FAT", "ID FATURAMENTO", "DATA FAT INPROUT", "SOLICIT FS PORTAL", "DATA FS", "NUM FS", "GATE", "GATE ID", "DATA CRIAÇÃO OS", "KEY", "STATUS REGISTRO"],
 
     colunasGestor: [
@@ -45,18 +50,18 @@ const RegistrosRender = {
             const etapa = RegistrosUtils.get(linha, 'ultimoLancamento.etapa', null);
             return etapa ? `${etapa.indiceDetalhado} - ${etapa.nomeDetalhado}` : '-';
         },
-        "STATUS": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.status'), 
+        "STATUS": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.status'),
         "DETALHE DIÁRIO": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.detalheDiario'),
         "CÓD. PRESTADOR": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.prestador.codigo'), "PRESTADOR": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.prestador.nome'),
         "VALOR": (linha) => RegistrosUtils.formatarMoeda(RegistrosUtils.get(linha, 'ultimoLancamento.valor')), "GESTOR": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.manager.nome'),
-        
+
         "SITUAÇÃO": (linha) => {
             if (RegistrosUtils.get(linha, 'detalhe.statusRegistro') === 'INATIVO') {
                 return 'CANCELADO';
             }
             return RegistrosUtils.get(linha, 'ultimoLancamento.situacao');
         },
-        
+
         "DATA ATIVIDADE": (linha) => RegistrosUtils.formatarData(RegistrosUtils.get(linha, 'ultimoLancamento.dataAtividade')),
         "FATURAMENTO": (linha) => RegistrosUtils.get(linha, 'detalhe.faturamento'), "SOLICIT ID FAT": (linha) => RegistrosUtils.get(linha, 'detalhe.solitIdFat'),
         "RECEB ID FAT": (linha) => RegistrosUtils.get(linha, 'detalhe.recebIdFat'), "ID FATURAMENTO": (linha) => RegistrosUtils.get(linha, 'detalhe.idFaturamento'),
@@ -98,7 +103,7 @@ const RegistrosRender = {
             // Garante que é string, remove espaços e verifica se é vazio ou hifen
             let boq = d.boq ? String(d.boq).trim() : '';
             if (boq === '') boq = '-';
-            
+
             const valorItem = d.valorTotal || 0;
 
             if (boq === '-') {
@@ -112,17 +117,17 @@ const RegistrosRender = {
 
         // CORREÇÃO AQUI: Removemos o filtro de INATIVO para o cálculo de CPS
         const valorTotalCPS = grupo.linhas.flatMap(linha => {
-             // Se o registro for INATIVO, ainda assim contabilizamos os custos realizados (CPS)
-             return RegistrosUtils.get(linha, 'detalhe.lancamentos', []);
+            // Se o registro for INATIVO, ainda assim contabilizamos os custos realizados (CPS)
+            return RegistrosUtils.get(linha, 'detalhe.lancamentos', []);
         })
-        .filter(lanc => ['APROVADO', 'APROVADO_CPS_LEGADO'].includes(lanc.situacaoAprovacao))
-        .reduce((sum, lanc) => sum + (lanc.valor || 0), 0);
+            .filter(lanc => ['APROVADO', 'APROVADO_CPS_LEGADO'].includes(lanc.situacaoAprovacao))
+            .reduce((sum, lanc) => sum + (lanc.valor || 0), 0);
 
         const custoTotalMateriais = dadosOS.custoTotalMateriais || 0;
         const valorCpsLegado = dadosOS.valorCpsLegado || 0;
         const valorTransporte = dadosOS.transporte || 0;
         const totalGasto = valorTotalCPS + custoTotalMateriais + valorCpsLegado + valorTransporte;
-        
+
         const percentual = valorTotalOS > 0 ? (totalGasto / valorTotalOS) * 100 : 0;
 
         // HTML dos KPIs
@@ -145,24 +150,24 @@ const RegistrosRender = {
         // --- Verificação de Status da OS e Ícone ---
         let temFinalizado = false;
         let temPendente = false;
-        
+
         grupo.linhas.forEach(linha => {
             const situacao = RegistrosUtils.get(linha, 'ultimoLancamento.situacao');
             const isInativo = RegistrosUtils.get(linha, 'detalhe.statusRegistro') === 'INATIVO';
-            
+
             if (!isInativo) {
                 const situacaoNormalizada = situacao ? String(situacao).toUpperCase().trim() : 'PENDENTE';
                 if (situacaoNormalizada === 'FINALIZADO') {
                     temFinalizado = true;
                 } else {
-                    temPendente = true; 
+                    temPendente = true;
                 }
             }
         });
 
         const isTotalmenteFinalizada = RegistrosRender.verificarSeOsFinalizada(grupo);
         const headerStyle = isTotalmenteFinalizada ? 'style="background-color: #fff3cd !important;"' : '';
-        
+
         let btnFinalizarOsHTML = '';
         if (['ADMIN', 'COORDINATOR', 'MANAGER'].includes(role)) {
             if (temFinalizado && temPendente) {
@@ -190,31 +195,31 @@ const RegistrosRender = {
 
         const bodyRowsHTML = grupo.linhas.map(linhaData => {
             const detalheId = RegistrosUtils.get(linhaData, 'detalhe.id', '');
-            
+
             const statusRegistro = RegistrosUtils.get(linhaData, 'detalhe.statusRegistro', 'ATIVO');
             const isInativo = statusRegistro === 'INATIVO';
             const rowClass = isInativo ? 'row-inativo' : '';
-            
+
             const cellsHTML = headersVisiveis.map(header => {
                 if (header === "HISTÓRICO") {
                     const lancamentosCount = RegistrosUtils.get(linhaData, 'detalhe.lancamentos', []).length;
                     const isDisabled = !detalheId || lancamentosCount <= 1;
                     return `<td><button class="btn btn-sm btn-outline-info btn-historico" data-detalhe-id="${detalheId}" title="Ver Histórico" ${isDisabled ? 'disabled' : ''}><i class="bi bi-clock-history"></i></button></td>`;
                 }
-                
+
                 if (header === "AÇÕES") {
-                    let btnEditar = (['ADMIN', 'ASSISTANT', 'COORDINATOR', 'MANAGER'].includes(role) && detalheId) 
+                    let btnEditar = (['ADMIN', 'ASSISTANT', 'COORDINATOR', 'MANAGER'].includes(role) && detalheId)
                         ? `<button class="btn btn-sm btn-outline-primary btn-edit-detalhe" data-id="${detalheId}" title="Editar"><i class="bi bi-pencil-fill"></i></button>` : '';
-                    
-                    let btnExcluir = (['ADMIN', 'ASSISTANT'].includes(role)) 
+
+                    let btnExcluir = (['ADMIN', 'ASSISTANT'].includes(role))
                         ? `<button class="btn btn-sm btn-outline-danger btn-delete-registro" data-id="${detalheId}" title="Excluir"><i class="bi bi-trash-fill"></i></button>` : '';
-                    
+
                     let btnInativar = '';
                     if (['ADMIN', 'ASSISTANT'].includes(role) && detalheId) {
                         if (isInativo) {
-                             btnInativar = `<button class="btn btn-sm btn-success btn-toggle-status" data-id="${detalheId}" data-status="INATIVO" title="Reativar Registro"><i class="bi bi-check-circle"></i></button>`;
+                            btnInativar = `<button class="btn btn-sm btn-success btn-toggle-status" data-id="${detalheId}" data-status="INATIVO" title="Reativar Registro"><i class="bi bi-check-circle"></i></button>`;
                         } else {
-                             btnInativar = `<button class="btn btn-sm btn-outline-secondary btn-toggle-status" data-id="${detalheId}" data-status="ATIVO" title="Inativar/Cancelar"><i class="bi bi-x-circle"></i></button>`;
+                            btnInativar = `<button class="btn btn-sm btn-outline-secondary btn-toggle-status" data-id="${detalheId}" data-status="ATIVO" title="Inativar/Cancelar"><i class="bi bi-x-circle"></i></button>`;
                         }
                     }
 
@@ -288,7 +293,7 @@ const RegistrosRender = {
                 const bFinalizada = RegistrosRender.verificarSeOsFinalizada(b);
                 if (aFinalizada && !bFinalizada) return -1;
                 if (!aFinalizada && bFinalizada) return 1;
-                return 0; 
+                return 0;
             });
         }
 
@@ -326,14 +331,14 @@ const RegistrosRender = {
                     RegistrosUtils.get(linhaData, 'detalhe.lpu.nomeLpu', ''),
                     RegistrosUtils.get(linhaData, 'detalhe.lpu.codigoLpu', ''),
                     RegistrosUtils.get(linhaData, 'detalhe.key', ''),
-                    RegistrosUtils.get(linhaData, 'detalhe.lote', '') // <--- ADICIONADO AQUI
+                    RegistrosUtils.get(linhaData, 'detalhe.lote', '')
                 ].join(' ').toLowerCase();
                 return textoPesquisavel.includes(termoBusca);
             })
             : listaBase;
 
         let grupos = RegistrosRender.transformarEmGrupos(linhasFiltradas);
-        
+
         if (['ADMIN', 'ASSISTANT'].includes(RegistrosState.userRole)) {
             grupos.sort((a, b) => {
                 const aFinalizada = RegistrosRender.verificarSeOsFinalizada(a);
@@ -391,14 +396,18 @@ const RegistrosRender = {
         if (btnUltima) btnUltima.disabled = isLast;
     },
 
+    // =========================================================================
+    // PARTE 2: DASHBOARD (Lógica mantida da versão nova)
+    // =========================================================================
+
     renderizarDashboardAnalise: () => {
         const container = document.getElementById('dashboard-analise-container');
         const loader = document.getElementById('dashboard-loader');
-        
+
         if (!container) return;
 
         // Mostra loader rápido
-        if(loader) loader.classList.remove('d-none');
+        if (loader) loader.classList.remove('d-none');
         container.innerHTML = '';
 
         // Pequeno timeout para permitir que o loader apareça antes do cálculo pesado
@@ -407,7 +416,7 @@ const RegistrosRender = {
 
             if (dados.length === 0) {
                 container.innerHTML = '<div class="col-12 text-center text-muted p-5">Nenhum registro carregado para análise.</div>';
-                if(loader) loader.classList.add('d-none');
+                if (loader) loader.classList.add('d-none');
                 return;
             }
 
@@ -423,7 +432,7 @@ const RegistrosRender = {
                 }).join('');
             }
 
-            if(loader) loader.classList.add('d-none');
+            if (loader) loader.classList.add('d-none');
         }, 50);
     },
 
@@ -432,12 +441,12 @@ const RegistrosRender = {
 
         dados.forEach(linha => {
             // Definições de acesso seguro aos dados
-            const detalhe = linha.detalhe || {}; 
+            const detalhe = linha.detalhe || {};
             const os = linha.os || {};
             // Tenta pegar o nome do segmento de vários lugares possíveis
-            const segmentoNome = (os.segmento && os.segmento.nome) 
-                                 ? os.segmento.nome 
-                                 : (detalhe.segmentoNome || 'Sem Segmento');
+            const segmentoNome = (os.segmento && os.segmento.nome)
+                ? os.segmento.nome
+                : (detalhe.segmentoNome || 'Sem Segmento');
 
             // Inicializa estrutura do segmento
             if (!resultado[segmentoNome]) {
@@ -452,12 +461,11 @@ const RegistrosRender = {
             // Valores e Status
             const valor = parseFloat(detalhe.valorTotal || 0);
             // Pega situação do último lançamento OU 'NAO_INICIADO' se não houver lançamento
-            let situacao = (linha.ultimoLancamento && linha.ultimoLancamento.situacao) 
-                           ? String(linha.ultimoLancamento.situacao).toUpperCase().trim() 
-                           : 'NAO_INICIADO';
-            
-            // Regra: Se statusRegistro for INATIVO, ignoramos no dashboard financeiro?
-            // Assumindo que sim, para não sujar a análise.
+            let situacao = (linha.ultimoLancamento && linha.ultimoLancamento.situacao)
+                ? String(linha.ultimoLancamento.situacao).toUpperCase().trim()
+                : 'NAO_INICIADO';
+
+            // Regra: Se statusRegistro for INATIVO, ignoramos no dashboard financeiro
             if (detalhe.statusRegistro === 'INATIVO') return;
 
             // Regra PO: Verifica se tem PO válida
