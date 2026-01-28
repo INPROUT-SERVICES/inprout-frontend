@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- VARIÁVEIS GLOBAIS ---
-    const API_BASE_URL = 'http://localhost:8080';
+    const API_BASE_URL = 'http://localhost:8083';
     const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
-    const userId = localStorage.getItem('usuarioId'); 
+    const userId = localStorage.getItem('usuarioId');
 
     // Mapeamento dos elementos de Abas (Tabs)
     const tabs = {
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loaderId: '#historico-faturado-pane'
         }
     };
-    
+
     // Cards e KPIs
     const cards = {
         solicitacao: document.getElementById('card-pendente-solicitacao'),
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         adiantamentos: document.getElementById('card-adiantamentos'),
         faturados: document.getElementById('card-faturados')
     };
-    
+
     const kpis = {
         solicitacao: document.getElementById('kpi-pendente-solicitacao'),
         fila: document.getElementById('kpi-pendente-fila'),
@@ -78,23 +78,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const value = path.split('.').reduce((a, b) => (a && a[b] != null ? a[b] : undefined), obj);
         return value !== undefined ? value : defaultValue;
     };
-    
+
     const formatarData = (dataStr) => {
         if (!dataStr || dataStr === '-') return '-';
         // Tratamento simples para ISO date ou arrays de data
-        if (Array.isArray(dataStr)) return new Date(dataStr[0], dataStr[1]-1, dataStr[2]).toLocaleDateString('pt-BR');
+        if (Array.isArray(dataStr)) return new Date(dataStr[0], dataStr[1] - 1, dataStr[2]).toLocaleDateString('pt-BR');
         let dataLimpa = dataStr.toString().split(' ')[0];
-        if (dataLimpa.includes('-')) { 
-            return new Date(dataLimpa).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+        if (dataLimpa.includes('-')) {
+            return new Date(dataLimpa).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
         }
         return dataLimpa;
     };
 
     const formatarDataHora = (dataStr) => {
-         if (!dataStr) return '-';
-         try {
-             return new Date(dataStr).toLocaleString('pt-BR');
-         } catch(e) { return dataStr; }
+        if (!dataStr) return '-';
+        try {
+            return new Date(dataStr).toLocaleString('pt-BR');
+        } catch (e) { return dataStr; }
     };
 
     const formatarMoeda = (valor) => {
@@ -116,14 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
         abasVisiveis.forEach(tabKey => {
             if (tabs[tabKey] && tabs[tabKey].nav) tabs[tabKey].nav.style.display = 'block';
         });
-        
+
         // Ativa a primeira aba visível se nenhuma estiver ativa
         if (!document.querySelector('#faturamento-tabs .nav-link.active')) {
-             const primeira = Object.values(tabs).find(tab => tab.nav && tab.nav.style.display === 'block');
-             if (primeira) {
-                 primeira.btn?.classList.add('active');
-                 primeira.pane?.classList.add('show', 'active');
-             }
+            const primeira = Object.values(tabs).find(tab => tab.nav && tab.nav.style.display === 'block');
+            if (primeira) {
+                primeira.btn?.classList.add('active');
+                primeira.pane?.classList.add('show', 'active');
+            }
         }
     }
 
@@ -152,13 +152,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Visibilidade dos Cards
             if (['ADMIN', 'CONTROLLER'].includes(userRole)) Object.values(cards).forEach(c => c && (c.style.display = 'block'));
             else if (userRole === 'COORDINATOR') {
-                if(cards.solicitacao) cards.solicitacao.style.display = 'block';
-                if(cards.recusados) cards.recusados.style.display = 'block';
-                if(cards.adiantamentos) cards.adiantamentos.style.display = 'block';
+                if (cards.solicitacao) cards.solicitacao.style.display = 'block';
+                if (cards.recusados) cards.recusados.style.display = 'block';
+                if (cards.adiantamentos) cards.adiantamentos.style.display = 'block';
             } else if (userRole === 'ASSISTANT') {
-                if(cards.fila) cards.fila.style.display = 'block';
-                if(cards.recusados) cards.recusados.style.display = 'block';
-                if(cards.adiantamentos) cards.adiantamentos.style.display = 'block';
+                if (cards.fila) cards.fila.style.display = 'block';
+                if (cards.recusados) cards.recusados.style.display = 'block';
+                if (cards.adiantamentos) cards.adiantamentos.style.display = 'block';
             }
         } catch (error) {
             console.error("Erro dashboard:", error);
@@ -170,12 +170,12 @@ document.addEventListener('DOMContentLoaded', () => {
     async function carregarFilaFaturamento() {
         const tab = tabs.filaFaturamento;
         toggleLoader(tab.loaderId, true);
-        
+
         try {
             const response = await fetchComAuth(`${API_BASE_URL}/faturamento/fila-assistant/${userId}`);
             if (!response.ok) throw new Error('Erro ao carregar fila.');
             const dados = await response.json();
-            
+
             // Colunas simplificadas baseadas no que temos no DTO
             tab.thead.innerHTML = `
                 <tr>
@@ -195,34 +195,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 tab.tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted p-4">Fila vazia.</td></tr>`;
             } else {
                 tab.tbody.innerHTML = dados.map(item => {
-                    // DTO: SolicitacaoFaturamentoDTO
                     const isAdiantamento = item.tipo === 'ADIANTAMENTO';
                     const badgeTipo = isAdiantamento ? '<span class="badge bg-warning">ADIANTAMENTO</span>' : '<span class="badge bg-info">REGULAR</span>';
-                    
+
                     let acoes = '';
-                    if (['ASSISTANT', 'ADMIN'].includes(userRole)) {
-                        acoes = `
-                            <button class="btn btn-sm btn-outline-success" data-action="id-recebido" data-id="${item.id}" title="Receber ID"><i class="bi bi-check-circle"></i></button>
-                            <button class="btn btn-sm btn-outline-danger" data-action="id-recusado" data-id="${item.id}" title="Recusar"><i class="bi bi-x-circle"></i></button>
-                            <button class="btn btn-sm btn-outline-primary" data-action="faturado" data-id="${item.id}" title="Faturar"><i class="bi bi-cash-stack"></i></button>
+
+                    // Regra de Visibilidade e Ações do Assistant
+                    if (userRole === 'ASSISTANT') {
+                        // Botão de Recusa (sempre disponível até faturar)
+                        const btnRecusar = `<button class="btn btn-sm btn-outline-danger ms-1" data-action="id-recusado" data-id="${item.id}" title="Recusar"><i class="bi bi-x-circle"></i></button>`;
+
+                        if (item.status === 'PENDENTE_ASSISTANT') {
+                            // Passo 1: Marcar como Solicitado
+                            acoes = `
+                            <button class="btn btn-sm btn-info text-white" data-action="marcar-solicitado" data-id="${item.id}" title="Confirmar Solicitação de ID">
+                                <i class="bi bi-envelope-paper"></i> Já Solicitei
+                            </button>
+                            ${btnRecusar}
                         `;
+                        } else if (item.status === 'ID_SOLICITADO') {
+                            // Passo 2: Marcar como Recebido
+                            acoes = `
+                            <button class="btn btn-sm btn-warning" data-action="id-recebido" data-id="${item.id}" title="Confirmar Recebimento">
+                                <i class="bi bi-check-circle"></i> Já Recebi
+                            </button>
+                            ${btnRecusar}
+                        `;
+                        } else if (item.status === 'ID_RECEBIDO') {
+                            // Passo 3: Faturar
+                            acoes = `
+                            <button class="btn btn-sm btn-success" data-action="faturado" data-id="${item.id}" title="Faturar">
+                                <i class="bi bi-cash-stack"></i> Faturar
+                            </button>
+                            ${btnRecusar}
+                        `;
+                        } else {
+                            acoes = '<span class="badge bg-success">Concluído</span>';
+                        }
                     } else {
-                        acoes = '-';
+                        acoes = '<span class="text-muted"><i class="bi bi-eye"></i> Somente Leitura</span>';
                     }
 
                     return `
-                        <tr>
-                            <td><span class="badge bg-secondary">${item.status || 'PENDENTE'}</span></td>
-                            <td>${badgeTipo}</td>
-                            <td>${item.numeroOs || '-'}</td>
-                            <td>${item.descricaoItem || '-'}</td>
-                            <td>${formatarMoeda(item.valor)}</td>
-                            <td>${item.solicitanteNome || '-'}</td>
-                            <td>${formatarDataHora(item.dataSolicitacao)}</td>
-                            <td>${item.observacao || '-'}</td>
-                            <td><div class="d-flex gap-1">${acoes}</div></td>
-                        </tr>
-                    `;
+                    <tr>
+                        <td><span class="badge bg-secondary">${item.status}</span></td>
+                        <td>${badgeTipo}</td>
+                        <td>${item.numeroOs || '-'}</td>
+                        <td>${item.descricaoItem || '-'}</td>
+                        <td>${formatarMoeda(item.valor)}</td>
+                        <td>${item.solicitanteNome || '-'}</td>
+                        <td>${formatarDataHora(item.dataSolicitacao)}</td>
+                        <td>${item.observacao || '-'}</td>
+                        <td><div class="d-flex align-items-center">${acoes}</div></td>
+                    </tr>
+                `;
                 }).join('');
             }
         } catch (error) {
@@ -232,15 +258,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function handleAcaoAssistant(action, solicitacaoId) {
+        if (action === 'id-recusado') {
+            document.getElementById('recusarSolicitacaoId').value = solicitacaoId;
+            modalRecusar.show();
+            return;
+        }
+
+        // Mapeamento Action -> Status Enum
+        let novoStatus = '';
+        let titulo = '';
+
+        if (action === 'marcar-solicitado') {
+            novoStatus = 'ID_SOLICITADO';
+            titulo = 'Confirmar Solicitação de ID';
+        } else if (action === 'id-recebido') {
+            novoStatus = 'ID_RECEBIDO';
+            titulo = 'Confirmar Recebimento de ID';
+        } else if (action === 'faturado') {
+            novoStatus = 'FATURADO';
+            titulo = 'Confirmar Faturamento';
+        }
+
+        document.getElementById('acaoSimplesSolicitacaoId').value = solicitacaoId;
+        document.getElementById('acaoSimplesEndpoint').value = novoStatus; // Passamos o STATUS direto
+        document.getElementById('modalAcaoSimplesTitle').innerText = titulo;
+        document.getElementById('modalAcaoSimplesBody').innerText = `Deseja alterar o status para: ${titulo}?`;
+        modalAcaoSimples.show();
+    }
+
     async function carregarFilaSolicitarID() {
         const tab = tabs.solicitarId;
         toggleLoader(tab.loaderId, true);
-        
+
         try {
             const response = await fetchComAuth(`${API_BASE_URL}/faturamento/fila-coordenador/${userId}`);
             if (!response.ok) throw new Error('Erro ao carregar fila.');
             const dados = await response.json();
-            
+
             tab.thead.innerHTML = `
                 <tr>
                     <th>OS</th>
@@ -288,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dados = await response.json();
 
             tab.thead.innerHTML = `<tr><th>OS</th><th>Item</th><th>Ação</th></tr>`;
-            
+
             if (!dados || dados.length === 0) {
                 tab.tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted p-4">Nada para adiantar.</td></tr>`;
             } else {
@@ -319,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetchComAuth(`${API_BASE_URL}/faturamento/visao-adiantamentos/${userId}`);
             if (!response.ok) throw new Error('Erro ao carregar visão.');
             const dados = await response.json();
-            
+
             tab.thead.innerHTML = `<tr><th>OS</th><th>Item</th><th>Status</th><th>Data Solicitação</th></tr>`;
             if (!dados || dados.length === 0) {
                 tab.tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted p-4">Sem histórico.</td></tr>`;
@@ -350,28 +405,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- ACTIONS HANDLERS ---
-    
+
     // Delegação de eventos de clique
     document.getElementById('faturamentoTabContent').addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-action]');
         if (!btn) return;
         const action = btn.dataset.action;
         const id = btn.dataset.id;
-        
+
         if (action === 'solicitar-id') handleSolicitarId(id, btn);
         else if (action === 'solicitar-adiantamento') handleSolicitarAdiantamento(id, btn);
-        else if (['id-recebido', 'faturado', 'id-recusado'].includes(action)) handleAcaoAssistant(action, id);
+        // Atualizado para incluir a nova ação
+        else if (['marcar-solicitado', 'id-recebido', 'faturado', 'id-recusado'].includes(action)) {
+            handleAcaoAssistant(action, id);
+        }
     });
 
     async function handleSolicitarId(osLpuDetalheId, btn) {
-        btn.disabled = true; 
+        btn.disabled = true;
         try {
             const res = await fetchComAuth(`${API_BASE_URL}/faturamento/solicitar/${osLpuDetalheId}/${userId}`, { method: 'POST' });
-            if(!res.ok) throw new Error((await res.json()).message || 'Erro');
+            if (!res.ok) throw new Error((await res.json()).message || 'Erro');
             mostrarToast('Solicitado com sucesso!', 'success');
             carregarDashboard();
             carregarFilaSolicitarID();
-        } catch(e) { mostrarToast(e.message, 'error'); btn.disabled = false; }
+        } catch (e) { mostrarToast(e.message, 'error'); btn.disabled = false; }
     }
 
     async function handleSolicitarAdiantamento(osLpuDetalheId, btn) {
@@ -379,11 +437,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         try {
             const res = await fetchComAuth(`${API_BASE_URL}/faturamento/solicitar-adiantamento/${osLpuDetalheId}/${userId}`, { method: 'POST' });
-            if(!res.ok) throw new Error((await res.json()).message || 'Erro');
+            if (!res.ok) throw new Error((await res.json()).message || 'Erro');
             mostrarToast('Adiantamento solicitado!', 'success');
             carregarDashboard();
             carregarFilaAdiantamento();
-        } catch(e) { mostrarToast(e.message, 'error'); btn.disabled = false; }
+        } catch (e) { mostrarToast(e.message, 'error'); btn.disabled = false; }
     }
 
     function handleAcaoAssistant(action, solicitacaoId) {
@@ -403,32 +461,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Listeners dos Modais
-    if(modalAcaoSimplesEl) {
-        document.getElementById('btnConfirmarAcaoSimples').addEventListener('click', async function() {
+    if (modalAcaoSimplesEl) {
+        document.getElementById('btnConfirmarAcaoSimples').addEventListener('click', async function () {
             const id = document.getElementById('acaoSimplesSolicitacaoId').value;
             const status = document.getElementById('acaoSimplesEndpoint').value; // Usando status direto
-            const btn = this; 
+            const btn = this;
             btn.disabled = true;
-            
+
             try {
                 const payload = { status: status, responsavelId: userId };
                 const res = await fetchComAuth(`${API_BASE_URL}/faturamento/status/${id}`, {
                     method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if(!res.ok) throw new Error('Erro ao atualizar');
-                
+                if (!res.ok) throw new Error('Erro ao atualizar');
+
                 mostrarToast('Atualizado!', 'success');
                 modalAcaoSimples.hide();
                 carregarDashboard();
                 carregarFilaFaturamento();
-            } catch(e) { mostrarToast(e.message, 'error'); } finally { btn.disabled = false; }
+            } catch (e) { mostrarToast(e.message, 'error'); } finally { btn.disabled = false; }
         });
     }
 
-    if(modalRecusarEl) {
-        document.getElementById('formRecusarFaturamento').addEventListener('submit', async function(e) {
+    if (modalRecusarEl) {
+        document.getElementById('formRecusarFaturamento').addEventListener('submit', async function (e) {
             e.preventDefault();
             const id = document.getElementById('recusarSolicitacaoId').value;
             const obs = document.getElementById('motivoRecusa').value;
@@ -439,16 +497,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const payload = { status: 'ID_RECUSADO', responsavelId: userId, observacao: obs };
                 const res = await fetchComAuth(`${API_BASE_URL}/faturamento/status/${id}`, {
                     method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if(!res.ok) throw new Error('Erro ao recusar');
+                if (!res.ok) throw new Error('Erro ao recusar');
 
                 mostrarToast('Recusado!', 'success');
                 modalRecusar.hide();
                 carregarDashboard();
                 carregarFilaFaturamento();
-            } catch(e) { mostrarToast(e.message, 'error'); } finally { btn.disabled = false; }
+            } catch (e) { mostrarToast(e.message, 'error'); } finally { btn.disabled = false; }
         });
     }
 
@@ -464,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('#faturamento-tabs .nav-link').forEach(tab => {
         tab.addEventListener('show.bs.tab', (e) => {
             const target = e.target.getAttribute('data-bs-target');
-            if(funcoesLoad[target]) funcoesLoad[target]();
+            if (funcoesLoad[target]) funcoesLoad[target]();
         });
     });
 
@@ -473,9 +531,9 @@ document.addEventListener('DOMContentLoaded', () => {
         carregarDashboard();
         // Carrega a aba ativa inicial
         const active = document.querySelector('#faturamento-tabs .nav-link.active');
-        if(active) {
+        if (active) {
             const target = active.getAttribute('data-bs-target');
-            if(funcoesLoad[target]) funcoesLoad[target]();
+            if (funcoesLoad[target]) funcoesLoad[target]();
         }
     }
 
