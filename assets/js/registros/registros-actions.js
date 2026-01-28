@@ -65,7 +65,7 @@ const RegistrosActions = {
 
     setupListenersAcoes: () => {
         const accordionContainer = document.getElementById('accordion-registros');
-        
+
         const modalEditarDetalheEl = document.getElementById('modalEditarDetalhe');
         const modalEditarDetalhe = modalEditarDetalheEl ? new bootstrap.Modal(modalEditarDetalheEl) : null;
 
@@ -78,78 +78,81 @@ const RegistrosActions = {
         const modalFinalizarEl = document.getElementById('modalConfirmarFinalizacao');
         const modalFinalizar = modalFinalizarEl ? new bootstrap.Modal(modalFinalizarEl) : null;
 
-        accordionContainer.addEventListener('click', async function (e) {
-            const btnEdit = e.target.closest('.btn-edit-detalhe');
-            const btnDelete = e.target.closest('.btn-delete-registro');
-            const btnHistorico = e.target.closest('.btn-historico');
-            const btnFinalizarWrapper = e.target.closest('.icon-hover-wrapper');
-            
-            // --- NOVO: Listener do Botão de Inativar/Ativar ---
-            const btnToggleStatus = e.target.closest('.btn-toggle-status');
+        // CORREÇÃO: Verificação se o container existe
+        if (accordionContainer) {
+            accordionContainer.addEventListener('click', async function (e) {
+                const btnEdit = e.target.closest('.btn-edit-detalhe');
+                const btnDelete = e.target.closest('.btn-delete-registro');
+                const btnHistorico = e.target.closest('.btn-historico');
+                const btnFinalizarWrapper = e.target.closest('.icon-hover-wrapper');
 
-            if (btnToggleStatus) {
-                e.preventDefault();
-                e.stopPropagation();
-                const detalheId = btnToggleStatus.dataset.id;
-                const statusAtual = btnToggleStatus.dataset.status;
-                
-                const acao = statusAtual === 'INATIVO' ? 'ATIVAR' : 'INATIVAR';
-                const novoStatus = statusAtual === 'INATIVO' ? 'ATIVO' : 'INATIVO';
-                const cor = statusAtual === 'INATIVO' ? 'success' : 'warning';
+                // --- NOVO: Listener do Botão de Inativar/Ativar ---
+                const btnToggleStatus = e.target.closest('.btn-toggle-status');
 
-                const result = await Swal.fire({
-                    title: `Deseja ${acao} este registro?`,
-                    text: acao === 'INATIVO' 
-                          ? "O registro ficará riscado e o valor não somará no total da OS." 
-                          : "O registro voltará a ser contabilizado normalmente.",
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: `Sim, ${acao}`,
-                    confirmButtonColor: acao === 'INATIVO' ? '#d33' : '#28a745',
-                    cancelButtonText: 'Cancelar'
-                });
+                if (btnToggleStatus) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const detalheId = btnToggleStatus.dataset.id;
+                    const statusAtual = btnToggleStatus.dataset.status;
 
-                if (result.isConfirmed) {
-                    try {
-                        await RegistrosApi.alternarStatusDetalhe(detalheId, novoStatus);
-                        RegistrosUtils.mostrarToast(`Registro alterado para ${novoStatus} com sucesso!`, 'success');
-                        RegistrosApi.carregarDados(RegistrosState.paginaAtual, RegistrosState.termoBusca);
-                    } catch (error) {
-                        RegistrosUtils.mostrarToast("Erro ao alterar status: " + error.message, 'error');
+                    const acao = statusAtual === 'INATIVO' ? 'ATIVAR' : 'INATIVAR';
+                    const novoStatus = statusAtual === 'INATIVO' ? 'ATIVO' : 'INATIVO';
+                    const cor = statusAtual === 'INATIVO' ? 'success' : 'warning';
+
+                    const result = await Swal.fire({
+                        title: `Deseja ${acao} este registro?`,
+                        text: acao === 'INATIVO'
+                            ? "O registro ficará riscado e o valor não somará no total da OS."
+                            : "O registro voltará a ser contabilizado normalmente.",
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: `Sim, ${acao}`,
+                        confirmButtonColor: acao === 'INATIVO' ? '#d33' : '#28a745',
+                        cancelButtonText: 'Cancelar'
+                    });
+
+                    if (result.isConfirmed) {
+                        try {
+                            await RegistrosApi.alternarStatusDetalhe(detalheId, novoStatus);
+                            RegistrosUtils.mostrarToast(`Registro alterado para ${novoStatus} com sucesso!`, 'success');
+                            RegistrosApi.carregarDados(RegistrosState.paginaAtual, RegistrosState.termoBusca);
+                        } catch (error) {
+                            RegistrosUtils.mostrarToast("Erro ao alterar status: " + error.message, 'error');
+                        }
                     }
                 }
-            }
-            // --------------------------------------------------
+                // --------------------------------------------------
 
-            if (btnEdit) {
-                e.preventDefault();
-                const detalheId = btnEdit.dataset.id;
-                RegistrosActions.abrirModalEdicao(detalheId, modalEditarDetalhe);
-            }
+                if (btnEdit) {
+                    e.preventDefault();
+                    const detalheId = btnEdit.dataset.id;
+                    RegistrosActions.abrirModalEdicao(detalheId, modalEditarDetalhe);
+                }
 
-            if (btnDelete) {
-                e.preventDefault();
-                const detalheId = btnDelete.dataset.id;
-                const deleteInput = document.getElementById('deleteOsId');
-                if (deleteInput) deleteInput.value = detalheId;
-                if (modalConfirmarExclusao) modalConfirmarExclusao.show();
-            }
+                if (btnDelete) {
+                    e.preventDefault();
+                    const detalheId = btnDelete.dataset.id;
+                    const deleteInput = document.getElementById('deleteOsId');
+                    if (deleteInput) deleteInput.value = detalheId;
+                    if (modalConfirmarExclusao) modalConfirmarExclusao.show();
+                }
 
-            if (btnHistorico) {
-                e.preventDefault();
-                const detalheId = btnHistorico.dataset.detalheId;
-                RegistrosActions.abrirModalHistorico(detalheId, modalHistorico);
-            }
+                if (btnHistorico) {
+                    e.preventDefault();
+                    const detalheId = btnHistorico.dataset.detalheId;
+                    RegistrosActions.abrirModalHistorico(detalheId, modalHistorico);
+                }
 
-            if (btnFinalizarWrapper) {
-                e.stopPropagation();
-                e.preventDefault();
-                const osId = btnFinalizarWrapper.getAttribute('data-os-id');
-                const inputHidden = document.getElementById('inputHiddenOsIdFinalizar');
-                if (inputHidden) inputHidden.value = osId;
-                if (modalFinalizar) modalFinalizar.show();
-            }
-        });
+                if (btnFinalizarWrapper) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const osId = btnFinalizarWrapper.getAttribute('data-os-id');
+                    const inputHidden = document.getElementById('inputHiddenOsIdFinalizar');
+                    if (inputHidden) inputHidden.value = osId;
+                    if (modalFinalizar) modalFinalizar.show();
+                }
+            });
+        }
 
         const btnConfirmarFinalizacaoAction = document.getElementById('btnConfirmarFinalizacaoAction');
         if (btnConfirmarFinalizacaoAction) {
@@ -274,12 +277,12 @@ const RegistrosActions = {
             tbody.innerHTML = '';
             lancamentos.forEach(l => {
                 const tr = document.createElement('tr');
-                
+
                 // Formatação de status (exemplo simples)
                 let statusBadge = l.situacaoAprovacao;
-                if(l.situacaoAprovacao === 'APROVADO') statusBadge = '<span class="badge bg-success">Aprovado</span>';
-                else if(l.situacaoAprovacao === 'REJEITADO') statusBadge = '<span class="badge bg-danger">Rejeitado</span>';
-                else if(l.situacaoAprovacao && l.situacaoAprovacao.includes('PENDENTE')) statusBadge = '<span class="badge bg-warning text-dark">Pendente</span>';
+                if (l.situacaoAprovacao === 'APROVADO') statusBadge = '<span class="badge bg-success">Aprovado</span>';
+                else if (l.situacaoAprovacao === 'REJEITADO') statusBadge = '<span class="badge bg-danger">Rejeitado</span>';
+                else if (l.situacaoAprovacao && l.situacaoAprovacao.includes('PENDENTE')) statusBadge = '<span class="badge bg-warning text-dark">Pendente</span>';
 
                 tr.innerHTML = `
                     <td>${RegistrosUtils.formatarData(l.dataAtividade)}</td>

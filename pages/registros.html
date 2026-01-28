@@ -62,27 +62,50 @@
 
         <div class="tab-content" id="registrosTabContent">
 
-            <div class="tab-pane fade show active" id="dashboard-pane" role="tabpanel" aria-labelledby="dashboard-tab">
+            <div class="tab-pane fade show active" id="dashboard-pane" ...>
+            </div>
+
+            <div class="tab-pane fade" id="lista-pane" role="tabpanel" aria-labelledby="lista-tab">
                 <div class="container-fluid py-4">
 
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div>
-                            <h4 class="text-primary fw-bold mb-1"><i class="bi bi-speedometer2 me-2"></i>Panorama
-                                Financeiro</h4>
-                            <p class="text-muted small mb-0">Análise baseada nos registros carregados em tela.</p>
+                    <div class="row mb-3 align-items-center">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control border-start-0 ps-0" id="searchInput"
+                                    placeholder="Buscar por OS, Segmento, Detalhe...">
+                            </div>
                         </div>
-                        <button class="btn btn-outline-primary btn-sm"
-                            onclick="RegistrosRender.renderizarDashboardAnalise()">
-                            <i class="bi bi-arrow-clockwise me-1"></i> Atualizar Visão
-                        </button>
+                        <div class="col-md-8 d-flex justify-content-end gap-2">
+                            <button id="btnSortOS" class="btn btn-outline-secondary" title="Ordenar por OS">
+                                <i class="bi bi-sort-down"></i> Ordenar OS
+                            </button>
+                            <select id="rowsPerPage" class="form-select w-auto">
+                                <option value="10">10 por pág</option>
+                                <option value="20" selected>20 por pág</option>
+                                <option value="50">50 por pág</option>
+                                <option value="all">Todos</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div id="dashboard-loader" class="text-center py-5 d-none">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <p class="mt-2 text-muted">Calculando indicadores...</p>
+                    <div class="accordion" id="accordion-registros">
                     </div>
 
-                    <div id="dashboard-analise-container" class="dashboard-grid">
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <span class="text-muted small" id="infoPaginacao">Mostrando 0 de 0 registros</span>
+                        <nav aria-label="Navegação">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item"><button class="page-link" id="btnPrimeiraPagina"><i
+                                            class="bi bi-chevron-double-left"></i></button></li>
+                                <li class="page-item"><button class="page-link" id="btnPaginaAnterior"><i
+                                            class="bi bi-chevron-left"></i></button></li>
+                                <li class="page-item"><button class="page-link" id="btnProximaPagina"><i
+                                            class="bi bi-chevron-right"></i></button></li>
+                                <li class="page-item"><button class="page-link" id="btnUltimaPagina"><i
+                                            class="bi bi-chevron-double-right"></i></button></li>
+                            </ul>
+                        </nav>
                     </div>
 
                 </div>
