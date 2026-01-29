@@ -119,41 +119,52 @@ function declareVariaveisGlobais() {
     window.etapasDisponiveis = [];
 }
 
-function formatarStatus(status) {
-    return {
-        TRABALHADO: "Trabalhado",
-        TRABALHO_PARCIAL: "Trabalho parcial",
-        NAO_TRABALHADO: "Não trabalhado",
-        NAO_APLICAVEL: "N/A"
-    }[status] || status;
+function formatarStatus(statusCodigo) {
+    const mapa = {
+        "TRABALHADO": "Trabalhado",
+        "TRABALHO_PARCIAL": "Trabalho Parcial",
+        "NAO_TRABALHADO": "Não trabalhado",
+        "NAO_APLICAVEL": "N/A"
+    };
+    // Se não achar no mapa, devolve o próprio código (segurança)
+    return mapa[statusCodigo] || statusCodigo;
 }
 
 function formatarBadges(statusArray) {
-    // 1. Mapeamento de CÓDIGO (API) para COR
-    const mapaCores = {
+    // Mapa: CHAVE (Vem do Backend) -> VALOR (Classe CSS)
+    const mapaCor = {
         "TRABALHADO": 'success',
-        "TRABALHO_PARCIAL": 'warning', 
+        "TRABALHO_PARCIAL": 'warning',
         "NAO_TRABALHADO": 'danger',
-        "NAO_APLICAVEL": 'secondary'
+        "NAO_APLICAVEL": 'secondary',
+        // Fallback para caso venha a descrição antiga
+        "Trabalhado": 'success',
+        "Trabalho Parcial": 'warning',
+        "Não trabalhado": 'danger'
     };
 
-    // 2. Ordem de exibição baseada nos CÓDIGOS
-    const ordemFixa = ['TRABALHADO', 'TRABALHO_PARCIAL', 'NAO_TRABALHADO', 'NAO_APLICAVEL'];
+    // Mapa: CHAVE (Vem do Backend) -> TEXTO (Para exibir na tela)
+    const mapaTexto = {
+        "TRABALHADO": "Trabalhado",
+        "TRABALHO_PARCIAL": "Trabalho Parcial",
+        "NAO_TRABALHADO": "Não trabalhado",
+        "NAO_APLICAVEL": "N/A"
+    };
 
     if (!Array.isArray(statusArray)) {
-        return '';
+        // Se vier null ou string única, transforma em array para evitar erro
+        if (!statusArray) return '';
+        statusArray = [statusArray];
     }
 
-    return ordemFixa
-        // Filtra apenas os status que vieram na lista da API
-        .filter(codigo => statusArray.includes(codigo))
-        .map(codigo => {
-            const cor = mapaCores[codigo] || 'secondary';
-            // Usa a função formatarStatus (que já existe no seu código) para pegar o texto bonito
-            const texto = formatarStatus(codigo); 
-            return `<span class="badge-status badge-${cor}">${texto}</span>`;
-        })
-        .join(' ');
+    return statusArray.map(status => {
+        // Pega a cor baseada no status (ou usa cinza 'secondary' se não achar)
+        const cor = mapaCor[status] || 'secondary';
+        // Pega o texto bonitinho (ou usa o próprio status se não tiver tradução)
+        const texto = mapaTexto[status] || status;
+
+        return `<span class="badge-status badge-${cor}">${texto}</span>`;
+    }).join(' ');
 }
 
 function formatarTitulo(campo) {
@@ -434,6 +445,8 @@ function renderizarEtapasDetalhadasParaEdicao(codigo) {
         return;
     }
 
+    // Aqui garantimos que o VALUE seja o código (para o backend entender)
+    // E o TEXTO seja a descrição (para o usuário ler)
     listaEditar.innerHTML = etapa.etapasDetalhadas.map((d, i) => `
         <div class="card p-3 shadow-sm border rounded-3">
             <div class="mb-2">
@@ -447,9 +460,9 @@ function renderizarEtapasDetalhadasParaEdicao(codigo) {
             <div class="mb-2">
                 <label class="form-label">Status</label>
                 <select class="form-select" multiple data-edit-status="${i}">
-                    <option value="TRABALHADO" ${d.status?.includes('TRABALHADO') ? 'selected' : ''}>Trabalhado</option>
-                    <option value="NAO_TRABALHADO" ${d.status?.includes('NAO_TRABALHADO') ? 'selected' : ''}>Não trabalhado</option>
-                    <option value="TRABALHO_PARCIAL" ${d.status?.includes('TRABALHO_PARCIAL') ? 'selected' : ''}>Trabalho parcial</option>
+                    <option value="TRABALHADO" ${d.status?.includes('TRABALHADO') || d.status?.includes('Trabalhado') ? 'selected' : ''}>Trabalhado</option>
+                    <option value="NAO_TRABALHADO" ${d.status?.includes('NAO_TRABALHADO') || d.status?.includes('Não trabalhado') ? 'selected' : ''}>Não trabalhado</option>
+                    <option value="TRABALHO_PARCIAL" ${d.status?.includes('TRABALHO_PARCIAL') || d.status?.includes('Trabalho Parcial') ? 'selected' : ''}>Trabalho Parcial</option>
                 </select>
             </div>
         </div>

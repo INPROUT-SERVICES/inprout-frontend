@@ -322,9 +322,17 @@ const AprovacoesComplementares = {
 
         try {
             await AprovacoesComplementares.carregarTodasLpus();
+
             const userRole = localStorage.getItem('role') || 'COORDINATOR';
-            const response = await fetch(`${AprovacoesComplementares.MS_URL}/pendentes?role=${userRole}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            const userId = localStorage.getItem('usuarioId'); // PEGANDO O ID DO USUÁRIO
+
+            // --- CORREÇÃO: Enviando X-User-Id e X-User-Role nos headers ---
+            const response = await fetch(`${AprovacoesComplementares.MS_URL}/pendentes`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'X-User-Role': userRole,
+                    'X-User-Id': userId  // OBRIGATÓRIO PARA O FILTRO DE SEGMENTO
+                }
             });
 
             if (!response.ok) throw new Error("Erro ao buscar pendências");

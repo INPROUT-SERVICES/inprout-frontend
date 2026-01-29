@@ -27,10 +27,20 @@ document.addEventListener('DOMContentLoaded', () => {
     renderizarBarraFiltrosModerna();
 
     // Inicia a lógica de filtros e, somente após terminar, carrega os dados
-    // Isso evita o loop de recarregamento
     setTimeout(async () => {
         await initFiltrosCPS();
-        carregarPendenciasCPS(); // Chamada inicial única e segura
+
+        // VINCULA O EVENTO DE CLIQUE AQUI TAMBÉM (Segurança extra)
+        const btnUpdateModerno = document.getElementById('btn-atualizar-lista-cps');
+        const btnUpdateOriginal = document.getElementById('btn-atualizar-cps'); // ID do HTML original
+
+        const acaoAtualizar = () => carregarPendenciasCPS();
+
+        if (btnUpdateModerno) btnUpdateModerno.addEventListener('click', acaoAtualizar);
+        if (btnUpdateOriginal) btnUpdateOriginal.addEventListener('click', acaoAtualizar);
+
+        // Carregamento inicial
+        carregarPendenciasCPS();
     }, 100);
 });
 
@@ -141,6 +151,8 @@ function renderizarBarraFiltrosModerna() {
 
     const filterContainer = document.createElement('div');
     filterContainer.className = 'filter-bar-container';
+
+    // CORREÇÃO: Botão com type="button" para evitar submit/reload
     filterContainer.innerHTML = `
         <div class="row g-3 align-items-end">
             <div class="col-md-3">
@@ -160,7 +172,7 @@ function renderizarBarraFiltrosModerna() {
                 </select>
             </div>
             <div class="col-md-2 text-end">
-                 <button class="btn btn-primary btn-update-modern w-100" id="btn-atualizar-lista-cps">
+                 <button type="button" class="btn btn-primary btn-update-modern w-100" id="btn-atualizar-lista-cps">
                     <i class="bi bi-arrow-clockwise"></i> Atualizar
                 </button>
             </div>
@@ -168,11 +180,16 @@ function renderizarBarraFiltrosModerna() {
     `;
 
     pane.insertBefore(filterContainer, pane.firstChild);
-    filterContainer.querySelector('#btn-atualizar-lista-cps').addEventListener('click', carregarPendenciasCPS);
+
+    // Adiciona o listener SOMENTE no botão
+    const btnUpdate = filterContainer.querySelector('#btn-atualizar-lista-cps');
+    if (btnUpdate) {
+        btnUpdate.addEventListener('click', carregarPendenciasCPS);
+    }
 }
 
 // ==========================================================
-// INICIALIZAÇÃO DE FILTROS E CHOICES (ASYNC CORRIGIDO)
+// INICIALIZAÇÃO DE FILTROS E CHOICES
 // ==========================================================
 
 async function initFiltrosCPS() {
@@ -182,17 +199,23 @@ async function initFiltrosCPS() {
     const selectMesPend = document.getElementById('cps-filtro-mes-ref');
     const selectMesHist = document.getElementById('cps-hist-filtro-mes-ref');
 
-    // Preenche Mês (Síncrono)
+    // --- MUDANÇA AQUI: Adiciona opção "Todos" e seleciona ela por padrão ---
     if (selectMesPend) {
         selectMesPend.innerHTML = '';
+
+        // Opção Padrão (Vazia -> Todos) selecionada
+        selectMesPend.add(new Option("Todos os Meses", "", true, true));
+
         for (let i = 0; i < 12; i++) {
             const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
             const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
             const txt = `${nomesMeses[d.getMonth()]}/${d.getFullYear()}`;
-            selectMesPend.add(new Option(txt, val, i === 0, i === 0));
+            // Removemos o 'selected' daqui, pois o padrão agora é o "Todos"
+            selectMesPend.add(new Option(txt, val));
         }
     }
 
+    // (O restante do código para Histórico e Segmentos permanece igual...)
     if (selectMesHist && selectMesHist.options.length === 0) {
         for (let i = 0; i < 12; i++) {
             const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
@@ -205,7 +228,6 @@ async function initFiltrosCPS() {
     const selectsSeg = [document.getElementById('cps-filtro-segmento'), document.getElementById('cps-hist-filtro-segmento')];
     const selectsPrest = [document.getElementById('cps-filtro-prestador'), document.getElementById('cps-hist-filtro-prestador')];
 
-    // Carrega dados do servidor e popula os selects
     try {
         const [resSeg, resPrest] = await Promise.all([
             fetchComAuth(`${API_BASE_URL}/segmentos`),
@@ -227,7 +249,7 @@ async function initFiltrosCPS() {
         if (resPrest.ok) {
             const prests = await resPrest.json();
 
-            // Prestador Pendências
+            // Lógica do Choices.js mantida...
             const elPrestPend = selectsPrest[0];
             if (elPrestPend) {
                 if (window.choicesCpsPrestador) {
@@ -246,7 +268,6 @@ async function initFiltrosCPS() {
                 });
             }
 
-            // Prestador Histórico
             const elPrestHist = selectsPrest[1];
             if (elPrestHist) {
                 if (window.choicesCpsHistPrestador) {
@@ -266,18 +287,6 @@ async function initFiltrosCPS() {
     } catch (e) {
         console.error("Erro ao inicializar filtros CPS", e);
     }
-
-    // --- CORREÇÃO IMPORTANTE ---
-    // Adiciona os listeners APENAS DEPOIS de preencher tudo.
-    if (selectMesPend) selectMesPend.addEventListener('change', carregarPendenciasCPS);
-    if (selectsSeg[0]) selectsSeg[0].addEventListener('change', carregarPendenciasCPS);
-
-    // Listener no select do Choices.js (o evento sobe do elemento original)
-    if (selectsPrest[0]) selectsPrest[0].addEventListener('change', carregarPendenciasCPS);
-
-    if (selectMesHist) selectMesHist.addEventListener('change', () => carregarHistoricoCPS(false));
-    if (selectsSeg[1]) selectsSeg[1].addEventListener('change', () => carregarHistoricoCPS(false));
-    if (selectsPrest[1]) selectsPrest[1].addEventListener('change', () => carregarHistoricoCPS(false));
 }
 
 // ==========================================================
@@ -286,77 +295,257 @@ async function initFiltrosCPS() {
 
 async function carregarPendenciasCPS() {
     toggleLoader(true, '#cps-pendencias-pane');
-
-    // CORREÇÃO: Pega o ID do usuário corretamente
     const userId = localStorage.getItem('usuarioId');
 
-    await atualizarHeaderKpiCPS();
-
     try {
-        const segmentoId = document.getElementById('cps-filtro-segmento')?.value || '';
-        const prestadorId = document.getElementById('cps-filtro-prestador')?.value || '';
-        const mesVal = document.getElementById('cps-filtro-mes-ref')?.value; // Captura o valor do mês
+        // 1. CAPTURA OS FILTROS
+        const segmentoEl = document.getElementById('cps-filtro-segmento');
+        const prestadorEl = document.getElementById('cps-filtro-prestador');
+        const mesEl = document.getElementById('cps-filtro-mes-ref');
 
-        const params = new URLSearchParams({ segmentoId, prestadorId });
+        const segmentoId = (segmentoEl && segmentoEl.value) ? segmentoEl.value : '';
 
-        // Lógica para adicionar as datas na requisição
-        if (mesVal) {
-            const [ano, mes] = mesVal.split('-');
-            // Define o primeiro e o último dia do mês selecionado
-            const dataInicio = `${ano}-${mes}-01`;
-            const dataFim = `${ano}-${mes}-${new Date(ano, mes, 0).getDate()}`;
-
-            params.append('inicio', dataInicio);
-            params.append('fim', dataFim);
+        let prestadorId = '';
+        if (window.choicesCpsPrestador && prestadorEl) {
+            prestadorId = window.choicesCpsPrestador.getValue(true) || '';
+        } else {
+            prestadorId = (prestadorEl && prestadorEl.value) ? prestadorEl.value : '';
         }
 
-        const res = await fetchComAuth(`${API_BASE_URL}/controle-cps?${params}`, { headers: { 'X-User-ID': userId } });
+        const mesVal = (mesEl && mesEl.value) ? mesEl.value : '';
+
+        // 2. PREPARA PARÂMETROS PARA A LISTA (Backend)
+        const paramsLista = {};
+
+        if (segmentoId) paramsLista.segmentoId = segmentoId;
+        if (prestadorId) paramsLista.prestadorId = prestadorId;
+
+        // Lógica de Data: Se tiver mês selecionado, manda pro backend. 
+        // Se for "Todos" (vazio), não manda data (traz tudo) e filtramos visualmente se precisar.
+        if (mesVal) {
+            const [ano, mes] = mesVal.split('-');
+            paramsLista.inicio = `${ano}-${mes}-01`;
+            paramsLista.fim = `${ano}-${mes}-${new Date(ano, mes, 0).getDate()}`;
+        }
+
+        // --- REMOVIDO: A chamada ao backend do Dashboard foi retirada daqui ---
+        // await atualizarHeaderKpiCPS(...); // <--- NÃO USAMOS MAIS ISSO
+
+        // 3. BUSCA A LISTA BRUTA
+        const paramsUrl = new URLSearchParams(paramsLista);
+        const res = await fetchComAuth(`${API_BASE_URL}/controle-cps?${paramsUrl.toString()}`, { headers: { 'X-User-ID': userId } });
         if (!res.ok) throw new Error('Erro ao buscar pendências.');
 
-        const dados = await res.json();
+        const dadosBrutos = await res.json();
 
-        window.dadosCpsGlobais = dados;
+        // 4. FILTRAGEM LOCAL (Aplicação rigorosa dos filtros na tela)
+        const dadosFiltrados = dadosBrutos.filter(item => {
+            // Filtro Prestador
+            if (prestadorId && (!item.prestador || item.prestador.id != prestadorId)) return false;
+
+            // Filtro Segmento
+            const idSegItem = item.os?.segmentoId || item.segmentoId || item.os?.segmento?.id;
+            if (segmentoId && idSegItem && idSegItem != segmentoId) return false;
+
+            // Filtro Data de Atividade
+            if (mesVal) {
+                if (!item.dataAtividade) return false;
+
+                let anoItem, mesItem;
+                if (item.dataAtividade.includes('/')) { // DD/MM/YYYY
+                    const p = item.dataAtividade.split('/');
+                    if (p.length === 3) { mesItem = p[1]; anoItem = p[2]; }
+                } else if (item.dataAtividade.includes('-')) { // YYYY-MM-DD
+                    const p = item.dataAtividade.split('-');
+                    if (p.length === 3) { anoItem = p[0]; mesItem = p[1]; }
+                }
+
+                const [anoFiltro, mesFiltro] = mesVal.split('-');
+                if (anoItem && mesItem && (anoItem !== anoFiltro || mesItem !== mesFiltro)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        // 5. ATUALIZA A TELA
+        window.dadosCpsGlobais = dadosFiltrados;
+
+        // A. Renderiza a Lista
         renderizarAcordeonCPS(window.dadosCpsGlobais, 'accordionPendenciasCPS', 'msg-sem-pendencias-cps', true);
 
+        // B. Calcula o Dashboard com BASE NO QUE ESTÁ NA TELA
+        calcularDashboardLocal(window.dadosCpsGlobais);
+
+        // C. Reaplica busca textual se houver
+        const inputBusca = document.getElementById('input-busca-cps-pendencias');
+        if (inputBusca && inputBusca.value) {
+            aplicarFiltroVisualCPS('accordionPendenciasCPS', 'input-busca-cps-pendencias');
+        }
+
     } catch (error) {
+        console.error(error);
         mostrarToast(error.message, 'error');
     } finally {
         toggleLoader(false, '#cps-pendencias-pane');
     }
 }
 
-async function atualizarHeaderKpiCPS() {
+function calcularDashboardLocal(lista) {
+    // Inicializa zerado
+    let totalCps = 0;
+    let totalAdiantado = 0;
+    let totalConfirmado = 0;
+    let totalPendente = 0;
+    let totalPago = 0;
+    let qtdItens = 0;
+
+    if (lista && lista.length > 0) {
+        qtdItens = lista.length;
+
+        lista.forEach(l => {
+            // Garante número
+            const valorItem = parseFloat(l.valor || 0);
+            const valorPagamento = l.valorPagamento !== null ? parseFloat(l.valorPagamento) : valorItem;
+            const valorAdiantamento = parseFloat(l.valorAdiantamento || 0);
+            const status = l.statusPagamento;
+
+            // 1. Total CPS (Soma bruta dos itens listados)
+            totalCps += valorItem;
+
+            // 2. Total Adiantado
+            if (valorAdiantamento > 0) {
+                totalAdiantado += valorAdiantamento;
+            }
+
+            // Lógica baseada nos status do Backend
+            const isPago = status === 'PAGO' || status === 'CONCLUIDO';
+            const isConfirmado = status === 'FECHADO' || status === 'ALTERACAO_SOLICITADA';
+
+            // 3. Total Confirmado (Soma tudo que já foi "aprovado" pelo coord ou pago)
+            if (isPago || isConfirmado) {
+                totalConfirmado += valorPagamento;
+            }
+
+            // 4. Total Pendente (Confirmado mas ainda não pago pelo Controller)
+            if (isConfirmado) {
+                totalPendente += valorPagamento;
+            }
+
+            // 5. Total Pago
+            if (isPago) {
+                totalPago += valorPagamento;
+            }
+        });
+    }
+
+    // Atualiza o DOM
+    const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+
+    document.querySelectorAll('.kpi-cps-total-mes-value').forEach(e => e.textContent = fmt(totalCps));
+    document.querySelectorAll('.kpi-cps-total-adiantado-value').forEach(e => e.textContent = fmt(totalAdiantado));
+    document.querySelectorAll('.kpi-cps-total-confirmado-value').forEach(e => e.textContent = fmt(totalConfirmado));
+    document.querySelectorAll('.kpi-cps-total-pendente-value').forEach(e => e.textContent = fmt(totalPendente));
+    document.querySelectorAll('.kpi-cps-total-pago-value').forEach(e => e.textContent = fmt(totalPago));
+
+    // Se tiver contador de itens
+    document.querySelectorAll('.kpi-cps-qtd-itens-value').forEach(e => e.textContent = qtdItens);
+}
+
+function configurarSelectAllVisiveis() {
+    const chkMaster = document.getElementById('cps-check-selecionar-todos-visiveis');
+    if (!chkMaster) return;
+
+    // Reseta o estado inicial
+    chkMaster.checked = false;
+
+    // Remove listener antigo para não duplicar (caso recarregue a lista)
+    const novoChk = chkMaster.cloneNode(true);
+    chkMaster.parentNode.replaceChild(novoChk, chkMaster);
+
+    novoChk.addEventListener('change', (e) => {
+        const isChecked = e.target.checked;
+        const accordion = document.getElementById('accordionPendenciasCPS');
+
+        if (!accordion) return;
+
+        // Seleciona todas as linhas (tr) dentro do acordeão
+        const linhas = accordion.querySelectorAll('tbody tr');
+
+        linhas.forEach(tr => {
+            // VERIFICAÇÃO CRUCIAL:
+            // Só altera se a linha NÃO tiver a classe 'd-none' (oculta pelo filtro)
+            if (!tr.classList.contains('d-none')) {
+                const checkbox = tr.querySelector('.cps-check');
+                if (checkbox) {
+                    checkbox.checked = isChecked;
+                }
+            }
+        });
+
+        // Atualiza também os checkboxes dos cabeçalhos dos grupos (opcional, mas visualmente bom)
+        // Se estiver marcando tudo, marca os headers visíveis também
+        accordion.querySelectorAll('.accordion-item').forEach(item => {
+            if (!item.classList.contains('d-none')) {
+                const headerCheck = item.querySelector('.cps-select-all');
+                if (headerCheck) {
+                    // Verifica se todas as linhas visíveis desse grupo estão marcadas
+                    const linhasDoGrupo = item.querySelectorAll('tbody tr:not(.d-none) .cps-check');
+                    const todasMarcadas = Array.from(linhasDoGrupo).every(c => c.checked);
+                    headerCheck.checked = todasMarcadas && linhasDoGrupo.length > 0;
+
+                    // Aplica estilo visual de seleção no acordeão
+                    if (headerCheck.checked) item.classList.add('cps-selected');
+                    else item.classList.remove('cps-selected');
+                }
+            }
+        });
+
+        // Atualiza a toolbar flutuante
+        atualizarBotoesLoteCPS();
+    });
+}
+
+async function atualizarHeaderKpiCPS(filtrosExternos = null) {
     const els = document.querySelectorAll('.kpi-cps-total-mes-value');
     if (!els.length) return;
 
     const userId = localStorage.getItem('usuarioId');
-    const mesVal = document.getElementById('cps-filtro-mes-ref')?.value;
-    const segId = document.getElementById('cps-filtro-segmento')?.value || '';
-    const prestId = document.getElementById('cps-filtro-prestador')?.value || '';
+    let params;
 
-    if (!mesVal) return;
+    if (filtrosExternos) {
+        // Usa os filtros passados pela função principal
+        params = new URLSearchParams(filtrosExternos);
+    } else {
+        // Fallback: Tenta ler do DOM se chamado isoladamente (raro)
+        const mesVal = document.getElementById('cps-filtro-mes-ref')?.value;
+        if (!mesVal) return;
 
-    const [ano, mes] = mesVal.split('-');
-
-    const params = new URLSearchParams({
-        inicio: `${ano}-${mes}-01`,
-        fim: `${ano}-${mes}-${new Date(ano, mes, 0).getDate()}`,
-        segmentoId: segId,
-        prestadorId: prestId
-    });
+        const [ano, mes] = mesVal.split('-');
+        params = new URLSearchParams({
+            inicio: `${ano}-${mes}-01`,
+            fim: `${ano}-${mes}-${new Date(ano, mes, 0).getDate()}`,
+            segmentoId: document.getElementById('cps-filtro-segmento')?.value || '',
+            prestadorId: document.getElementById('cps-filtro-prestador')?.value || ''
+        });
+    }
 
     try {
-        const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/dashboard?${params}`, { headers: { 'X-User-ID': userId } });
+        const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/dashboard?${params.toString()}`, { headers: { 'X-User-ID': userId } });
         if (res.ok) {
             const d = await res.json();
             const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
+            // Atualiza os valores na tela
             document.querySelectorAll('.kpi-cps-total-mes-value').forEach(e => e.textContent = fmt(d.valorTotal));
             document.querySelectorAll('.kpi-cps-total-adiantado-value').forEach(e => e.textContent = fmt(d.valorTotalAdiantado));
             document.querySelectorAll('.kpi-cps-total-confirmado-value').forEach(e => e.textContent = fmt(d.valorTotalConfirmado));
             document.querySelectorAll('.kpi-cps-total-pendente-value').forEach(e => e.textContent = fmt(d.valorTotalPendente));
             document.querySelectorAll('.kpi-cps-total-pago-value').forEach(e => e.textContent = fmt(d.valorTotalPago));
-            document.querySelectorAll('.kpi-cps-qtd-itens-value').forEach(e => e.textContent = d.quantidadeItens || 0);
+            // Caso tenha campo de quantidade
+            if (d.quantidadeItens !== undefined) {
+                document.querySelectorAll('.kpi-cps-qtd-itens-value').forEach(e => e.textContent = d.quantidadeItens);
+            }
         }
     } catch (e) { console.error("Erro dashboard CPS:", e); }
 }
@@ -367,21 +556,15 @@ async function carregarHistoricoCPS(append = false) {
     if (btn) btn.disabled = true;
 
     const userId = localStorage.getItem('usuarioId');
-
-    // CORREÇÃO: Ler o valor do mês selecionado
     const mesRefSelect = document.getElementById('cps-hist-filtro-mes-ref');
     const mesRef = mesRefSelect ? mesRefSelect.value : null;
 
     if (!append) {
-        // Se houver um mês selecionado, usamos ele para definir o início e fim
         if (mesRef) {
             const [ano, mes] = mesRef.split('-').map(Number);
-            // Data Inicio: dia 1 do mês selecionado
             window.cpsHistDataInicio = new Date(ano, mes - 1, 1);
-            // Data Fim: último dia do mês selecionado (dia 0 do mês seguinte)
             window.cpsHistDataFim = new Date(ano, mes, 0);
         } else {
-            // Fallback: últimos 30 dias se nada estiver selecionado
             window.cpsHistDataFim = new Date();
             window.cpsHistDataInicio = new Date();
             window.cpsHistDataInicio.setDate(window.cpsHistDataFim.getDate() - 30);
@@ -391,7 +574,6 @@ async function carregarHistoricoCPS(append = false) {
         const acc = document.getElementById('accordionHistoricoCPS');
         if (acc) acc.innerHTML = '';
     } else {
-        // Lógica de "Carregar Mais"
         const novaDataFim = new Date(window.cpsHistDataInicio);
         novaDataFim.setDate(novaDataFim.getDate() - 1);
         window.cpsHistDataFim = novaDataFim;
@@ -415,6 +597,12 @@ async function carregarHistoricoCPS(append = false) {
 
         window.dadosCpsHistorico = append ? [...window.dadosCpsHistorico, ...novos] : novos;
         renderizarAcordeonCPS(window.dadosCpsHistorico, 'accordionHistoricoCPS', 'msg-sem-historico-cps', false);
+
+        const inputHist = document.getElementById('input-busca-cps-historico');
+        if (inputHist && inputHist.value) {
+            aplicarFiltroVisualCPS('accordionHistoricoCPS', 'input-busca-cps-historico');
+        }
+
     } catch (error) {
         mostrarToast(error.message, 'error');
     } finally {
@@ -433,10 +621,9 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
     if (!container) return;
     container.innerHTML = '';
 
-    // CORREÇÃO: Tenta pegar 'role' ou 'userRole' para garantir compatibilidade
     const userRole = (localStorage.getItem("role") || localStorage.getItem("userRole") || "").trim().toUpperCase();
 
-    // Filtros de visualização por perfil
+    // Filtros de visualização por perfil (Client Side)
     if (isPendencia) {
         lista = lista.filter(l => {
             if (['COORDINATOR', 'MANAGER'].includes(userRole)) return l.statusPagamento === 'EM_ABERTO';
@@ -472,21 +659,17 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         return acc;
     }, {});
 
-    // Converte mapa para lista para poder ordenar os GRUPOS
     const listaGrupos = Object.values(gruposMap);
 
-    // --- 1. ORDENAÇÃO DOS GRUPOS (PRIORIDADE VISUAL) ---
+    // Ordenação (Prioridade Visual)
     listaGrupos.sort((a, b) => {
-        // Verifica se existe solicitação de adiantamento dentro do grupo
         const aTemAdiant = a.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
         const bTemAdiant = b.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
-
-        // Prioridade 1: Grupos com Solicitação de Adiantamento (Para Controller)
         if (userRole === 'CONTROLLER') {
-            if (aTemAdiant && !bTemAdiant) return -1; // A vem primeiro
-            if (!aTemAdiant && bTemAdiant) return 1;  // B vem primeiro
+            if (aTemAdiant && !bTemAdiant) return -1;
+            if (!aTemAdiant && bTemAdiant) return 1;
         }
-        return 0; // Mantém ordem original para os demais
+        return 0;
     });
 
     const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
@@ -494,22 +677,18 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
     listaGrupos.forEach((grp, idx) => {
         const uid = `cps-${isPendencia ? 'pend' : 'hist'}-${idx}`;
 
-        // Ordenação interna dos itens (Rows)
+        // Ordenação interna
         grp.itens.sort((a, b) => {
             if (a.statusPagamento === 'SOLICITACAO_ADIANTAMENTO') return -1;
             if (b.statusPagamento === 'SOLICITACAO_ADIANTAMENTO') return 1;
             return 0;
         });
 
-        // Verifica flag para pintar o container
         const temSolicitacaoAdiantamento = grp.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
-
-        // --- 2. DEFINE COR DO CONTAINER (HEADER DO ACORDEÃO) ---
         let headerStyleClass = '';
         let headerStyleInline = '';
 
         if (isPendencia && userRole === 'CONTROLLER' && temSolicitacaoAdiantamento) {
-            // Amarelo claro para chamar atenção (bg-warning-subtle é do Bootstrap 5.3+, fallback com style)
             headerStyleClass = 'bg-warning-subtle';
             headerStyleInline = 'background-color: #fff3cd !important; color: #664d03;';
         }
@@ -548,7 +727,6 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
             const isSolicitacao = l.statusPagamento === 'SOLICITACAO_ADIANTAMENTO';
 
             let rowClass = isPago ? 'table-success' : (isConfirmado ? 'table-primary-light' : (isAdiantado ? 'table-warning-light' : ''));
-            // Destaca a linha da solicitação também, se quiser
             if (isSolicitacao) rowClass = 'table-warning';
 
             if (isPendencia) {
@@ -610,12 +788,78 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
 
     if (isPendencia) {
         registrarEventosCps();
+        configurarSelectAllVisiveis();
         atualizarBotoesLoteCPS();
         configurarBuscaCps('input-busca-cps-pendencias', 'accordionPendenciasCPS');
     } else {
         configurarBuscaCps('input-busca-cps-historico', 'accordionHistoricoCPS');
     }
 }
+
+// ==========================================================
+// FUNÇÃO CENTRALIZADA DE FILTRO VISUAL (NOVO)
+// ==========================================================
+
+function aplicarFiltroVisualCPS(accordionId, inputId) {
+    const input = document.getElementById(inputId);
+    const accordion = document.getElementById(accordionId);
+    if (!input || !accordion) return;
+
+    const termo = input.value.toLowerCase();
+
+    // Se estiver vazio, mostra tudo
+    if (!termo) {
+        accordion.querySelectorAll('.accordion-item').forEach(item => {
+            item.classList.remove('d-none');
+            item.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('d-none'));
+        });
+        return;
+    }
+
+    // Aplica o filtro
+    accordion.querySelectorAll('.accordion-item').forEach(item => {
+        const headerText = item.querySelector('.accordion-header').innerText.toLowerCase();
+        let headerMatches = headerText.includes(termo);
+        let hasVisibleRow = false;
+
+        const linhas = item.querySelectorAll('tbody tr');
+        linhas.forEach(tr => {
+            const rowText = tr.innerText.toLowerCase();
+            if (rowText.includes(termo)) {
+                tr.classList.remove('d-none');
+                hasVisibleRow = true;
+            } else {
+                tr.classList.add('d-none');
+            }
+        });
+
+        // Se o header der match, mostra todas as linhas (ou pode manter a lógica de filtrar só as linhas)
+        if (headerMatches) {
+            item.classList.remove('d-none');
+            linhas.forEach(tr => tr.classList.remove('d-none'));
+        } else {
+            if (hasVisibleRow) {
+                item.classList.remove('d-none');
+            } else {
+                item.classList.add('d-none');
+            }
+        }
+    });
+}
+
+function configurarBuscaCps(inputId, accordionId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    // Sobrescreve handlers para evitar duplicação de listeners
+    input.onkeyup = function () {
+        aplicarFiltroVisualCPS(accordionId, inputId);
+    };
+    input.onsearch = function () {
+        aplicarFiltroVisualCPS(accordionId, inputId);
+    };
+}
+
 
 // ==========================================================
 // AÇÕES EM LOTE (Toolbar Flutuante)
@@ -638,8 +882,6 @@ function registrarEventosCps() {
 function atualizarBotoesLoteCPS() {
     const selecionados = document.querySelectorAll('.cps-check:checked');
     const qtd = selecionados.length;
-
-    // CORREÇÃO: Tenta pegar 'role' ou 'userRole'
     const userRole = (localStorage.getItem("role") || localStorage.getItem("userRole") || "").trim().toUpperCase();
 
     let toolbar = document.getElementById('cps-toolbar-lote');
@@ -853,7 +1095,7 @@ if (formSolAdiant) {
         const modalEl = document.getElementById('modalSolicitarAdiantamento');
         const isLote = modalEl.dataset.acaoEmLote === 'true';
 
-        // Tratamento do valor: se estiver vazio ou inválido, envia null ou 0 dependendo da regra de negócio
+        // Tratamento do valor
         let valorRaw = document.getElementById('valorSolicitadoInput').value;
         let valor = valorRaw ? parseFloat(valorRaw.replace(/\./g, '').replace(',', '.')) : null;
 
@@ -866,15 +1108,13 @@ if (formSolAdiant) {
                 let erros = [];
 
                 for (const id of ids) {
-                    // CORREÇÃO AQUI: Verifica a resposta de cada item individualmente
-                    const res = await fetchComAuth(`${API_BASE_URL}/lancamentos/${id}/solicitar-adiantamento`, {
+                    // CORREÇÃO AQUI: Alterado de /lancamentos/ para /controle-cps/
+                    const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/${id}/solicitar-adiantamento`, {
                         method: 'POST',
                         body: JSON.stringify({ valor: valor, usuarioId: uId, justificativa: just })
                     });
 
                     if (!res.ok) {
-                        // Se der erro, captura a mensagem para avisar o usuário, mas não para o loop imediatamente
-                        // ou para, dependendo da preferência. Aqui vamos acumular erros.
                         const textoErro = await res.text();
                         console.error(`Falha no item ${id}:`, textoErro);
                         erros.push(`Item ${id}: não processado.`);
@@ -882,7 +1122,6 @@ if (formSolAdiant) {
                 }
 
                 if (erros.length > 0) {
-                    // Se houve erros, lança exceção para cair no catch e mostrar o Toast de erro
                     if (erros.length === ids.length) {
                         throw new Error("Falha ao solicitar adiantamento para todos os itens selecionados.");
                     } else {
@@ -893,9 +1132,10 @@ if (formSolAdiant) {
                 }
 
             } else {
-                // Lógica unitária (Mantida igual, mas garantindo verificação)
                 const id = document.getElementById('adiantamentoLancamentoId').value;
-                const res = await fetchComAuth(`${API_BASE_URL}/lancamentos/${id}/solicitar-adiantamento`, {
+
+                // CORREÇÃO AQUI TAMBÉM: Alterado de /lancamentos/ para /controle-cps/
+                const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/${id}/solicitar-adiantamento`, {
                     method: 'POST',
                     body: JSON.stringify({ valor: valor, usuarioId: uId, justificativa: just })
                 });
@@ -1004,13 +1244,10 @@ if (formRecu) {
     formRecu.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = formRecu.querySelector('button[type="submit"]');
-
-        // Dados do Formulário
         const motivo = document.getElementById('cpsMotivoRecusaInput').value;
-        const usuarioId = parseInt(localStorage.getItem('usuarioId')); // Garante que é número (Long)
+        const usuarioId = parseInt(localStorage.getItem('usuarioId'));
         const isLote = window.modalRecusarCPS._element.dataset.acaoEmLote === 'true';
 
-        // Validação Básica
         if (!motivo || motivo.trim() === "") {
             mostrarToast("O motivo da recusa é obrigatório.", "warning");
             return;
@@ -1022,12 +1259,10 @@ if (formRecu) {
 
         let ids = [];
         if (isLote) {
-            // Pega IDs dos checkboxes marcados
             ids = Array.from(document.querySelectorAll('.cps-check:checked'))
                 .map(c => parseInt(c.dataset.id))
-                .filter(id => !isNaN(id)); // Filtra inválidos
+                .filter(id => !isNaN(id));
         } else {
-            // Pega ID do campo oculto (item único)
             const idUnico = parseInt(document.getElementById('cpsLancamentoIdRecusar').value);
             if (idUnico) ids.push(idUnico);
         }
@@ -1039,11 +1274,7 @@ if (formRecu) {
 
         setLoading(btn, true);
 
-        // Define URL e Payload com tipos corretos
         const url = isLote ? '/controle-cps/recusar-controller-lote' : '/controle-cps/recusar-controller';
-
-        // ATENÇÃO: Para item único, o backend espera "lancamentoId" (singular). 
-        // Para lote, espera "lancamentoIds" (plural).
         const payload = isLote
             ? { lancamentoIds: ids, controllerId: usuarioId, motivo: motivo }
             : { lancamentoId: ids[0], controllerId: usuarioId, motivo: motivo };
@@ -1051,28 +1282,24 @@ if (formRecu) {
         try {
             const res = await fetchComAuth(`${API_BASE_URL}${url}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }, // Garante cabeçalho JSON
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             if (res.ok) {
                 mostrarToast("Devolução realizada com sucesso!", "success");
                 if (window.modalRecusarCPS) window.modalRecusarCPS.hide();
-
-                // Limpa seleção e recarrega
                 document.querySelectorAll('.cps-check:checked').forEach(c => c.checked = false);
                 document.querySelectorAll('.cps-select-all').forEach(c => c.checked = false);
                 atualizarBotoesLoteCPS();
                 carregarPendenciasCPS();
             } else {
-                // Tenta ler a mensagem de erro do backend (ex: erro de permissão)
                 const erroTxt = await res.text();
                 let msgErro = "Erro ao recusar.";
                 try {
                     const erroJson = JSON.parse(erroTxt);
                     msgErro = erroJson.message || msgErro;
                 } catch (e) { msgErro = erroTxt; }
-
                 throw new Error(msgErro);
             }
         } catch (err) {
@@ -1160,55 +1387,22 @@ function gerarOpcoesCompetencia() {
     select.innerHTML = '';
 
     const hoje = new Date();
-    // Data base inicial (Mês atual)
     let dataBase = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
-    // Regra Padrão: Se passou do dia 5, sugere o próximo mês
     if (hoje.getDate() > 5) {
         dataBase.setMonth(dataBase.getMonth() + 1);
     }
 
-    // --- EXCEÇÃO JANEIRO 2026 ---
-    // Se hoje for Janeiro/2026 (qualquer dia) OU Fevereiro/2026 (até dia 9)
-    // Forçamos a lista a começar em Janeiro/2026
-    if (
-        (hoje.getFullYear() === 2026 && hoje.getMonth() === 0) || // Janeiro todo
-        (hoje.getFullYear() === 2026 && hoje.getMonth() === 1 && hoje.getDate() <= 9) // Até 09 de Fev
-    ) {
-        dataBase = new Date(2026, 0, 1); // Seta para 01/01/2026
+    if ((hoje.getFullYear() === 2026 && hoje.getMonth() === 0) || (hoje.getFullYear() === 2026 && hoje.getMonth() === 1 && hoje.getDate() <= 9)) {
+        dataBase = new Date(2026, 0, 1);
     }
-    // ----------------------------
 
     const meses = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 
     for (let i = 0; i < 60; i++) {
         const mes = dataBase.getMonth();
         const ano = dataBase.getFullYear();
-        // O value deve ser YYYY-MM-01 para bater com o LocalDate do Java
         select.add(new Option(`${meses[mes]}/${ano}`, `${ano}-${String(mes + 1).padStart(2, '0')}-01`));
         dataBase.setMonth(dataBase.getMonth() + 1);
     }
-}
-
-function configurarBuscaCps(inputId, accordionId) {
-    const input = document.getElementById(inputId);
-    const accordion = document.getElementById(accordionId);
-    if (!input || !accordion) return;
-    const newInput = input.cloneNode(true);
-    input.parentNode.replaceChild(newInput, input);
-    newInput.addEventListener('keyup', function () {
-        const termo = this.value.toLowerCase();
-        accordion.querySelectorAll('.accordion-item').forEach(item => {
-            const headerText = item.querySelector('.accordion-header').innerText.toLowerCase();
-            let visivel = headerText.includes(termo);
-            if (!visivel) {
-                const linhas = item.querySelectorAll('tbody tr');
-                linhas.forEach(tr => {
-                    if (tr.innerText.toLowerCase().includes(termo)) { tr.classList.remove('d-none'); visivel = true; }
-                    else { tr.classList.add('d-none'); }
-                });
-            } else { item.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('d-none')); }
-            item.classList.toggle('d-none', !visivel);
-        });
-    });
 }
