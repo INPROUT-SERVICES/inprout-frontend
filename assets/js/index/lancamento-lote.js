@@ -537,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
             selectStatus.innerHTML = '<option value="" selected disabled>Selecione...</option>';
             selectStatus.disabled = true;
 
-            if (etapaDetalhada && etapaDetalhada.status.length > 0) {
+            if (etapaDetalhada && etapaDetalhada.status && etapaDetalhada.status.length > 0) {
                 etapaDetalhada.status.forEach(status => selectStatus.add(new Option(status, status)));
                 selectStatus.disabled = false;
             }
