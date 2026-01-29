@@ -1,0 +1,34 @@
+### --- ADICIONAR NO FINAL --- ###
+
+# Arquivos de Sistema Operacional (Obrigatório)
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Arquivos de Backup e Temporários (Os "Pix aleatórios")
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+*.orig
+# Arquivos que o Windows cria ao mesclar conflitos
+*.rej
+
+# Dumps de erro do Java (Arquivos que parecem chaves enormes)
+hs_err_pid*
+replay_pid*
+
+# Se você usa Node/Frontend em algum momento
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Credenciais e Ambientes locais (Segurança)
+.env
+.env.local
+*.pem
+*.key
