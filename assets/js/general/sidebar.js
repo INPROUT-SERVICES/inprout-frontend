@@ -96,22 +96,25 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }
 
-            // --- CONTROLE DE VISIBILIDADE POR PERFIL (MANAGER/OUTROS) ---
+            // --- CONTROLE DE VISIBILIDADE POR PERFIL ---
             try {
                 // Seleciona elementos
                 const cpsLink = document.querySelector('#sidebar a[href*="cps.html"]');
                 const faturamentoLink = document.querySelector('#sidebar a[href*="faturamento.html"]');
                 const gateReportLink = document.querySelector('#sidebar a[href*="gateReport.html"]');
 
-                // Regras para MANAGER
-                if (role === 'MANAGER') {
-                    if (cpsLink) cpsLink.parentElement.style.display = 'none';
+                // 1. REGRA DE FATURAMENTO:
+                // Se NÃO for ADMIN e NÃO for CONTROLLER, esconde o link.
+                if (role !== 'ADMIN' && role !== 'CONTROLLER') {
                     if (faturamentoLink) faturamentoLink.parentElement.style.display = 'none';
-                    if (gateReportLink) gateReportLink.parentElement.style.display = 'none';
                 }
 
-                // (Opcional) Esconder módulos ainda não prontos para todos, se necessário
-                // if (faturamentoLink) faturamentoLink.parentElement.style.display = 'none';
+                // 2. REGRAS PARA MANAGER:
+                // Manager não vê CPS nem Gate Report (e nem Faturamento, que já foi escondido acima)
+                if (role === 'MANAGER') {
+                    if (cpsLink) cpsLink.parentElement.style.display = 'none';
+                    if (gateReportLink) gateReportLink.parentElement.style.display = 'none';
+                }
 
             } catch (error) {
                 console.error("Falha ao configurar a visibilidade da sidebar:", error);

@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- VARIÁVEIS GLOBAIS ---
-    const API_BASE_URL = 'http://localhost:8083';
+    const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:8083'
+        : window.location.origin;
+
     const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
     const userId = localStorage.getItem('usuarioId');
 
@@ -33,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         visaoAdiantamentos: {
             nav: document.getElementById('nav-visao-adiantamentos'),
-            pane: document.getElementById('nav-visao-adiantamentos'),
+            pane: document.getElementById('visao-adiantamentos-pane'), // Corrigido ID duplicado do nav
             btn: document.getElementById('visao-adiantamentos-tab'),
             thead: document.getElementById('thead-visao-adiantamentos'),
             tbody: document.getElementById('tbody-visao-adiantamentos'),

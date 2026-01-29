@@ -286,7 +286,7 @@ async function initFiltrosCPS() {
 
 async function carregarPendenciasCPS() {
     toggleLoader(true, '#cps-pendencias-pane');
-    
+
     // CORREÇÃO: Pega o ID do usuário corretamente
     const userId = localStorage.getItem('usuarioId');
 
@@ -328,7 +328,7 @@ async function carregarPendenciasCPS() {
 async function atualizarHeaderKpiCPS() {
     const els = document.querySelectorAll('.kpi-cps-total-mes-value');
     if (!els.length) return;
-    
+
     const userId = localStorage.getItem('usuarioId');
     const mesVal = document.getElementById('cps-filtro-mes-ref')?.value;
     const segId = document.getElementById('cps-filtro-segmento')?.value || '';
@@ -365,7 +365,7 @@ async function carregarHistoricoCPS(append = false) {
     toggleLoader(true, '#cps-historico-pane');
     const btn = document.getElementById('btn-carregar-mais-historico-cps');
     if (btn) btn.disabled = true;
-    
+
     const userId = localStorage.getItem('usuarioId');
 
     // CORREÇÃO: Ler o valor do mês selecionado
@@ -638,7 +638,7 @@ function registrarEventosCps() {
 function atualizarBotoesLoteCPS() {
     const selecionados = document.querySelectorAll('.cps-check:checked');
     const qtd = selecionados.length;
-    
+
     // CORREÇÃO: Tenta pegar 'role' ou 'userRole'
     const userRole = (localStorage.getItem("role") || localStorage.getItem("userRole") || "").trim().toUpperCase();
 
@@ -852,27 +852,71 @@ if (formSolAdiant) {
         setLoading(btn, true);
         const modalEl = document.getElementById('modalSolicitarAdiantamento');
         const isLote = modalEl.dataset.acaoEmLote === 'true';
-        const valor = parseFloat(document.getElementById('valorSolicitadoInput').value.replace(/\./g, '').replace(',', '.'));
+
+        // Tratamento do valor: se estiver vazio ou inválido, envia null ou 0 dependendo da regra de negócio
+        let valorRaw = document.getElementById('valorSolicitadoInput').value;
+        let valor = valorRaw ? parseFloat(valorRaw.replace(/\./g, '').replace(',', '.')) : null;
+
         const just = document.getElementById('justificativaAdiantamentoInput').value;
         const uId = localStorage.getItem('usuarioId');
 
         try {
             if (isLote) {
                 const ids = Array.from(document.querySelectorAll('.cps-check:checked')).map(c => c.dataset.id);
+                let erros = [];
+
                 for (const id of ids) {
-                    await fetchComAuth(`${API_BASE_URL}/lancamentos/${id}/solicitar-adiantamento`, { method: 'POST', body: JSON.stringify({ valor: valor, usuarioId: uId, justificativa: just }) });
+                    // CORREÇÃO AQUI: Verifica a resposta de cada item individualmente
+                    const res = await fetchComAuth(`${API_BASE_URL}/lancamentos/${id}/solicitar-adiantamento`, {
+                        method: 'POST',
+                        body: JSON.stringify({ valor: valor, usuarioId: uId, justificativa: just })
+                    });
+
+                    if (!res.ok) {
+                        // Se der erro, captura a mensagem para avisar o usuário, mas não para o loop imediatamente
+                        // ou para, dependendo da preferência. Aqui vamos acumular erros.
+                        const textoErro = await res.text();
+                        console.error(`Falha no item ${id}:`, textoErro);
+                        erros.push(`Item ${id}: não processado.`);
+                    }
                 }
-                mostrarToast("Solicitações em lote enviadas!", "success");
+
+                if (erros.length > 0) {
+                    // Se houve erros, lança exceção para cair no catch e mostrar o Toast de erro
+                    if (erros.length === ids.length) {
+                        throw new Error("Falha ao solicitar adiantamento para todos os itens selecionados.");
+                    } else {
+                        mostrarToast(`Processado parcialmente. ${erros.length} itens falharam.`, "warning");
+                    }
+                } else {
+                    mostrarToast("Solicitações em lote enviadas com sucesso!", "success");
+                }
+
             } else {
+                // Lógica unitária (Mantida igual, mas garantindo verificação)
                 const id = document.getElementById('adiantamentoLancamentoId').value;
-                const res = await fetchComAuth(`${API_BASE_URL}/lancamentos/${id}/solicitar-adiantamento`, { method: 'POST', body: JSON.stringify({ valor: valor, usuarioId: uId, justificativa: just }) });
-                if (!res.ok) throw new Error("Erro na solicitação.");
+                const res = await fetchComAuth(`${API_BASE_URL}/lancamentos/${id}/solicitar-adiantamento`, {
+                    method: 'POST',
+                    body: JSON.stringify({ valor: valor, usuarioId: uId, justificativa: just })
+                });
+
+                if (!res.ok) {
+                    const erroTxt = await res.text();
+                    throw new Error(erroTxt || "Erro na solicitação.");
+                }
+
                 mostrarToast("Solicitação enviada!", "success");
             }
+
             if (window.modalSolicitarAdiantamento) window.modalSolicitarAdiantamento.hide();
             carregarPendenciasCPS();
-        } catch (e) { mostrarToast("Erro: " + e.message, "error"); }
-        finally { setLoading(btn, false); delete modalEl.dataset.acaoEmLote; }
+
+        } catch (e) {
+            mostrarToast("Erro: " + e.message, "error");
+        } finally {
+            setLoading(btn, false);
+            delete modalEl.dataset.acaoEmLote;
+        }
     });
 }
 

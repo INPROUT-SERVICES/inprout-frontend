@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     // 5. Configuração do Dashboard de Análise
     const dashboardTabBtn = document.getElementById('dashboard-tab');
     if (dashboardTabBtn) {
-        // Inicializa o dashboard se a aba já estiver ativa (ex: ADMIN)
+        // Inicializa o dashboard se a aba já estiver ativa (ex: ADMIN ou CONTROLLER)
         if (dashboardTabBtn.classList.contains('active')) {
             RegistrosRender.renderizarDashboardAnalise();
         }
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 /**
  * Configura qual aba deve aparecer baseada na Role do usuário.
- * Apenas ADMIN vê o Dashboard. Outros perfis vão direto para a Lista.
+ * ADMIN e CONTROLLER veem o Dashboard. Outros perfis vão direto para a Lista.
  */
 function configurarVisibilidadeAbas() {
     const role = (localStorage.getItem("role") || "").trim().toUpperCase();
@@ -52,8 +52,8 @@ function configurarVisibilidadeAbas() {
     const listaTabBtn = document.getElementById('lista-tab');
     const listaPane = document.getElementById('lista-pane');
 
-    // Se NÃO for ADMIN, removemos/escondemos o dashboard e ativamos a lista
-    if (role !== 'ADMIN') {
+    // Se NÃO for ADMIN e NÃO for CONTROLLER, removemos/escondemos o dashboard e ativamos a lista
+    if (role !== 'ADMIN' && role !== 'CONTROLLER') {
         // Esconde o botão da aba Dashboard
         if (dashboardTabBtn) {
             dashboardTabBtn.parentElement.style.display = 'none'; // Esconde o <li> inteiro
