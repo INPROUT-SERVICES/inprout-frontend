@@ -123,35 +123,37 @@ function formatarStatus(status) {
     return {
         TRABALHADO: "Trabalhado",
         TRABALHO_PARCIAL: "Trabalho parcial",
-        NAO_TRABALHADO: "Não trabalhado"
+        NAO_TRABALHADO: "Não trabalhado",
+        NAO_APLICAVEL: "N/A"
     }[status] || status;
 }
 
 function formatarBadges(statusArray) {
-    // Mapeamento que traduz a DESCRIÇÃO (vinda da API) para a cor do badge.
-    const mapaStatus = {
-        "Trabalhado": 'success',
-        "Trabalho Parcial": 'warning', // Corrigido para "Trabalho Parcial"
-        "Não trabalhado": 'danger'    // Corrigido para "Não trabalhado"
+    // 1. Mapeamento de CÓDIGO (API) para COR
+    const mapaCores = {
+        "TRABALHADO": 'success',
+        "TRABALHO_PARCIAL": 'warning', 
+        "NAO_TRABALHADO": 'danger',
+        "NAO_APLICAVEL": 'secondary'
     };
 
-    // Ordem em que os badges devem aparecer na tela, para consistência.
-    const ordemFixa = ['Trabalhado', 'Trabalho Parcial', 'Não trabalhado'];
+    // 2. Ordem de exibição baseada nos CÓDIGOS
+    const ordemFixa = ['TRABALHADO', 'TRABALHO_PARCIAL', 'NAO_TRABALHADO', 'NAO_APLICAVEL'];
 
     if (!Array.isArray(statusArray)) {
-        // Medida de segurança: se 'status' não for um array, não tenta processar.
         return '';
     }
 
     return ordemFixa
-        // 1. Filtra a ordem padrão, mantendo apenas os status que realmente vieram no array da API.
-        .filter(descricao => statusArray.includes(descricao))
-        // 2. Para cada status válido, cria o HTML do badge.
-        .map(descricao => {
-            const cor = mapaStatus[descricao] || 'secondary'; // Pega a cor do mapa ou usa uma cor padrão.
-            return `<span class="badge-status badge-${cor}">${descricao}</span>`;
+        // Filtra apenas os status que vieram na lista da API
+        .filter(codigo => statusArray.includes(codigo))
+        .map(codigo => {
+            const cor = mapaCores[codigo] || 'secondary';
+            // Usa a função formatarStatus (que já existe no seu código) para pegar o texto bonito
+            const texto = formatarStatus(codigo); 
+            return `<span class="badge-status badge-${cor}">${texto}</span>`;
         })
-        .join(' '); // 3. Junta todos os HTMLs dos badges em uma única string.
+        .join(' ');
 }
 
 function formatarTitulo(campo) {
