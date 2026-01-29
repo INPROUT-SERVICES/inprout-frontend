@@ -1387,22 +1387,40 @@ function gerarOpcoesCompetencia() {
     select.innerHTML = '';
 
     const hoje = new Date();
+    // Define a data base como o dia 1º do mês atual
     let dataBase = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
+    // REGRA PADRÃO: Se hoje for dia 6 ou mais, a competência mínima vira o mês seguinte.
+    // Ex: Hoje é 06/02 -> Pula para Março (03). 
+    // Se fosse 05/02 -> Continuaria Fevereiro (02).
     if (hoje.getDate() > 5) {
         dataBase.setMonth(dataBase.getMonth() + 1);
     }
 
-    if ((hoje.getFullYear() === 2026 && hoje.getMonth() === 0) || (hoje.getFullYear() === 2026 && hoje.getMonth() === 1 && hoje.getDate() <= 9)) {
-        dataBase = new Date(2026, 0, 1);
-    }
+    // --- REMOVIDA A LÓGICA DE EXCEÇÃO DE JANEIRO/2026 AQUI ---
 
-    const meses = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+    const mesesNomes = [
+        "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
 
-    for (let i = 0; i < 60; i++) {
+    // Gera opções para os próximos 12 meses a partir da dataBase calculada
+    for (let i = 0; i < 12; i++) {
         const mes = dataBase.getMonth();
         const ano = dataBase.getFullYear();
-        select.add(new Option(`${meses[mes]}/${ano}`, `${ano}-${String(mes + 1).padStart(2, '0')}-01`));
+
+        // Formata o valor como "MM/YYYY" (ex: "02/2026") para o value do option
+        const valor = `${String(mes + 1).padStart(2, '0')}/${ano}`;
+
+        // Texto visível para o usuário (ex: "Fevereiro/2026")
+        const texto = `${mesesNomes[mes]}/${ano}`;
+
+        const option = document.createElement('option');
+        option.value = valor;
+        option.textContent = texto;
+        select.appendChild(option);
+
+        // Avança para o próximo mês no loop
         dataBase.setMonth(dataBase.getMonth() + 1);
     }
 }
