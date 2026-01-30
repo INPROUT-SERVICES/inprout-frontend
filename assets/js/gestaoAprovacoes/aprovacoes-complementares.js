@@ -686,18 +686,32 @@ const AprovacoesComplementares = {
         const isController = AprovacoesComplementares.currentSolicitacao.status === 'PENDENTE_CONTROLLER';
         const endpoint = isController ? 'controller/aprovar' : 'coordenador/aprovar';
 
+        // --- CORREÇÃO AQUI: Usando os IDs corretos (os mesmos do abrirModalAnalise) ---
+        const elLpu = document.getElementById('editLpuSelect');
+        const elQtd = document.getElementById('editQuantidade');
+        const elBoq = document.getElementById('editBoq');
+        const elStatus = document.getElementById('editStatusRegistro');
+        const elJust = document.getElementById('editJustificativaCoordenador');
+
+        // Validação simples para evitar erro se algum elemento não existir
+        if (!elLpu || !elQtd) {
+            Swal.fire('Erro', 'Campos obrigatórios não encontrados no formulário.', 'error');
+            return;
+        }
+
         // Monta o objeto de dados (DTO)
         const dto = {
             aprovadorId: usuarioId,
-            lpuId: document.getElementById('selectLpuEdicao').value,
-            quantidade: document.getElementById('qtdEdicao').value,
-            boq: document.getElementById('boqEdicao').value,
-            statusRegistro: document.getElementById('statusRegistroEdicao').value, // Novo campo
-            justificativa: document.getElementById('justificativaCoordenador').value,
+            lpuId: elLpu.value,
+            quantidade: elQtd.value,
+            boq: elBoq ? elBoq.value : '',
+            statusRegistro: elStatus ? elStatus.value : 'ATIVO',
+            justificativa: elJust ? elJust.value : '',
 
             // Se houver alterações nos itens existentes (JSON)
             alteracoesItensExistentesJson: JSON.stringify(AprovacoesComplementares.alteracoesBuffer)
         };
+        // -------------------------------------------------------------------------------
 
         // 1. LOADING: Sem botão OK e bloqueando clique fora
         Swal.fire({
@@ -705,7 +719,7 @@ const AprovacoesComplementares = {
             html: 'Aguarde enquanto salvamos a aprovação.',
             allowOutsideClick: false,
             allowEscapeKey: false,
-            showConfirmButton: false, // <--- REMOVE O BOTÃO OK
+            showConfirmButton: false,
             didOpen: () => {
                 Swal.showLoading();
             }

@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    const userRole = localStorage.getItem('userRole');
+    const userRole = localStorage.getItem('role') || localStorage.getItem('userRole');
 
     // Busca a aba pelo ID para ajustar texto conforme role
     const tabDocumentacao = document.getElementById('minhas-docs-tab');
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 if (typeof carregarDadosHistoricoAtividades === 'function') {
                     carregarDadosHistoricoAtividades().finally(() => { targetPane.dataset.loaded = 'true'; });
                 }
-            } 
+            }
             // --- CORREÇÃO AQUI: Verificação de existência da função ---
             else if (targetPaneId === '#historico-materiais-pane' && targetPane.dataset.loaded !== 'true') {
                 if (typeof window.carregarDadosHistoricoMateriais === 'function') {
@@ -123,11 +123,11 @@ document.addEventListener('DOMContentLoaded', async function () {
                     // Opcional: mostrar mensagem de erro visual no painel
                     targetPane.innerHTML = `<div class="text-center p-5 text-muted">Funcionalidade carregando... Tente atualizar a página.</div>`;
                 }
-            } 
+            }
             else if (targetPaneId === '#historico-complementares-pane' && targetPane.dataset.loaded !== 'true') {
-                 if (typeof carregarDadosHistoricoComplementares === 'function') {
+                if (typeof carregarDadosHistoricoComplementares === 'function') {
                     carregarDadosHistoricoComplementares().finally(() => { targetPane.dataset.loaded = 'true'; });
-                 }
+                }
             }
             // Abas CPS (possuem lógica própria)
             else if (targetPaneId === '#cps-pendencias-pane') { initFiltrosCPS(); carregarPendenciasCPS(); }
@@ -350,37 +350,72 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         const btn = document.getElementById('btnConfirmarRecusa');
         const isAcaoEmLote = modalRecusar._element.dataset.acaoEmLote === 'true';
-        const ids = isAcaoEmLote ? Array.from(document.querySelectorAll('#accordion-pendencias .linha-checkbox:checked')).map(cb => cb.dataset.id) : [document.getElementById('recusarLancamentoId').value];
+        const ids = isAcaoEmLote
+            ? Array.from(document.querySelectorAll('#accordion-pendencias .linha-checkbox:checked')).map(cb => cb.dataset.id)
+            : [document.getElementById('recusarLancamentoId').value];
 
-        if (ids.length === 0) return;
-        const motivo = document.getElementById('motivoRecusa').value;
+        if (ids.length === 0) {
+            mostrarToast("Nenhum item selecionado.", "warning");
+            return;
+        }
+
+        // Validação do Motivo (Remove espaços em branco extras)
+        const motivo = document.getElementById('motivoRecusa').value.trim();
+        if (!motivo) {
+            mostrarToast("O motivo da recusa é obrigatório.", "warning");
+            return;
+        }
+
+        // Validação do Usuário
+        if (!userId) {
+            mostrarToast("Erro de sessão: ID do usuário não encontrado. Faça login novamente.", "error");
+            return;
+        }
 
         let endpoint = '';
         let payload = {};
+
         if (userRole === 'CONTROLLER' || userRole === 'ADMIN') {
             endpoint = '/lancamentos/lote/controller-rejeitar';
             payload = { lancamentoIds: ids, controllerId: userId, motivoRejeicao: motivo };
         } else {
             endpoint = '/lancamentos/lote/coordenador-rejeitar';
+            // Garante que ids sejam numéricos se necessário, mas o backend Java aceita string numérica
             payload = { lancamentoIds: ids, aprovadorId: userId, comentario: motivo };
         }
 
         toggleLoader(true, '#atividades-pane');
         setButtonLoading(btn, true);
+
         try {
-            const res = await fetchComAuth(`${API_BASE_URL}${endpoint}`, { method: 'POST', body: JSON.stringify(payload) });
-            if (!res.ok) throw new Error("Erro ao recusar.");
+            const res = await fetchComAuth(`${API_BASE_URL}${endpoint}`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            // CORREÇÃO AQUI: Ler a mensagem de erro do Backend
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.message || `Erro ao recusar (Status: ${res.status})`);
+            }
 
             mostrarToast(`${ids.length} item(ns) recusado(s) com sucesso!`, "success");
             modalRecusar.hide();
+
+            // Atualiza a interface
             const histPane = document.getElementById('historico-atividades-pane');
             if (histPane) histPane.dataset.loaded = 'false';
             await carregarDashboardEBadges();
             renderizarAcordeonPendencias(window.todasPendenciasAtividades);
+
         } catch (e) {
+            console.error("Erro na recusa:", e);
             mostrarToast(e.message, 'error');
+        } finally {
+            setButtonLoading(btn, false);
+            if (modalRecusar._element) delete modalRecusar._element.dataset.acaoEmLote;
+            toggleLoader(false, '#atividades-pane');
         }
-        finally { setButtonLoading(btn, false); delete modalRecusar._element.dataset.acaoEmLote; toggleLoader(false, '#atividades-pane'); }
     });
 
     document.getElementById('formComentarPrazo')?.addEventListener('submit', async function (event) {

@@ -1449,8 +1449,7 @@ function gerarOpcoesCompetencia() {
         const ano = dataBase.getFullYear();
 
         // Formata o valor como "MM/YYYY" (ex: "02/2026") para o value do option
-        const valor = `${String(mes + 1).padStart(2, '0')}/${ano}`;
-
+        const valor = `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
         // Texto visível para o usuário (ex: "Fevereiro/2026")
         const texto = `${mesesNomes[mes]}/${ano}`;
 
