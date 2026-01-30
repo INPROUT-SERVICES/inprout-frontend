@@ -1104,37 +1104,76 @@ if (formSolAdiant) {
 
         try {
             if (isLote) {
-                const ids = Array.from(document.querySelectorAll('.cps-check:checked')).map(c => c.dataset.id);
-                let erros = [];
+                // =================================================================
+                // LÓGICA DE DISTRIBUIÇÃO CORRIGIDA
+                // =================================================================
+                const checkedElements = document.querySelectorAll('.cps-check:checked');
+                let saldoRestanteParaAdiantar = valor; // Valor total que o usuário quer adiantar
 
-                for (const id of ids) {
-                    // CORREÇÃO AQUI: Alterado de /lancamentos/ para /controle-cps/
+                let erros = [];
+                let itensProcessados = 0;
+
+                for (const chk of checkedElements) {
+                    // Se já não tem mais nada para adiantar (ex: 0.00), encerra o loop
+                    if (saldoRestanteParaAdiantar <= 0.01) break;
+
+                    const id = chk.dataset.id;
+                    // Busca os dados originais na lista global para calcular o saldo real
+                    const item = window.dadosCpsGlobais.find(i => i.id == id);
+                    
+                    if (!item) continue;
+
+                    const valorTotalItem = parseFloat(item.valor || 0);
+                    const valorJaAdiantado = parseFloat(item.valorAdiantamento || 0);
+                    const saldoDisponivelItem = valorTotalItem - valorJaAdiantado;
+
+                    // Se o item não tem saldo, pula para o próximo
+                    if (saldoDisponivelItem <= 0.01) continue;
+
+                    // Calcula quanto tirar deste item específico
+                    // Pega o MÍNIMO entre "o que o usuário quer" e "o que o item tem"
+                    let valorParaEsteItem = 0;
+                    if (saldoRestanteParaAdiantar >= saldoDisponivelItem) {
+                        valorParaEsteItem = saldoDisponivelItem;
+                    } else {
+                        valorParaEsteItem = saldoRestanteParaAdiantar;
+                    }
+
+                    // Subtrai do montante global
+                    saldoRestanteParaAdiantar -= valorParaEsteItem;
+
+                    // Envia a requisição apenas com o valor parcial deste item
                     const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/${id}/solicitar-adiantamento`, {
                         method: 'POST',
-                        body: JSON.stringify({ valor: valor, usuarioId: uId, justificativa: just })
+                        body: JSON.stringify({ valor: valorParaEsteItem, usuarioId: uId, justificativa: just })
                     });
 
                     if (!res.ok) {
                         const textoErro = await res.text();
                         console.error(`Falha no item ${id}:`, textoErro);
                         erros.push(`Item ${id}: não processado.`);
+                    } else {
+                        itensProcessados++;
                     }
                 }
 
                 if (erros.length > 0) {
-                    if (erros.length === ids.length) {
-                        throw new Error("Falha ao solicitar adiantamento para todos os itens selecionados.");
+                    if (itensProcessados === 0) {
+                        throw new Error("Falha ao solicitar adiantamento. Verifique se os itens selecionados possuem saldo.");
                     } else {
-                        mostrarToast(`Processado parcialmente. ${erros.length} itens falharam.`, "warning");
+                        mostrarToast(`Processado parcialmente. ${itensProcessados} itens ok, ${erros.length} falharam.`, "warning");
                     }
                 } else {
-                    mostrarToast("Solicitações em lote enviadas com sucesso!", "success");
+                    if (itensProcessados === 0) {
+                        mostrarToast("Nenhum item tinha saldo disponível para o adiantamento.", "warning");
+                    } else {
+                        mostrarToast("Solicitações em lote enviadas com sucesso!", "success");
+                    }
                 }
 
             } else {
+                // Fluxo unitário (mantido igual)
                 const id = document.getElementById('adiantamentoLancamentoId').value;
-
-                // CORREÇÃO AQUI TAMBÉM: Alterado de /lancamentos/ para /controle-cps/
                 const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/${id}/solicitar-adiantamento`, {
                     method: 'POST',
                     body: JSON.stringify({ valor: valor, usuarioId: uId, justificativa: just })

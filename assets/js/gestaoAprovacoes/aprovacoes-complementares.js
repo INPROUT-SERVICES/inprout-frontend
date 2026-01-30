@@ -679,59 +679,91 @@ const AprovacoesComplementares = {
     },
 
     salvarAprovacao: async () => {
-        const id = document.getElementById('analiseSolicitacaoId').value;
-        const justificativa = document.getElementById('editJustificativaCoordenador').value;
-        const lpuId = document.getElementById('editLpuSelect').value;
+        const id = AprovacoesComplementares.currentSolicitacao.id;
+        const usuarioId = localStorage.getItem('usuarioId');
 
+        // Verifica qual é o papel atual (Coordenador ou Controller)
         const isController = AprovacoesComplementares.currentSolicitacao.status === 'PENDENTE_CONTROLLER';
+        const endpoint = isController ? 'controller/aprovar' : 'coordenador/aprovar';
 
-        if (!justificativa || justificativa.trim().length < 3) {
-            AprovacoesComplementares.mostrarAlerta('Preencha a Justificativa.');
-            return;
-        }
-        if (!isController && !lpuId) {
-            AprovacoesComplementares.mostrarAlerta('Selecione a LPU da decisão.');
-            return;
-        }
+        // Monta o objeto de dados (DTO)
+        const dto = {
+            aprovadorId: usuarioId,
+            lpuId: document.getElementById('selectLpuEdicao').value,
+            quantidade: document.getElementById('qtdEdicao').value,
+            boq: document.getElementById('boqEdicao').value,
+            statusRegistro: document.getElementById('statusRegistroEdicao').value, // Novo campo
+            justificativa: document.getElementById('justificativaCoordenador').value,
 
-        const alteracoesArray = Object.keys(AprovacoesComplementares.alteracoesBuffer).map(itemId => {
-            return {
-                itemId: parseInt(itemId),
-                ...AprovacoesComplementares.alteracoesBuffer[itemId]
-            };
-        });
-
-        const payload = {
-            aprovadorId: localStorage.getItem('usuarioId'),
-            lpuId: lpuId ? parseInt(lpuId) : null,
-            quantidade: parseInt(document.getElementById('editQuantidade').value),
-            boq: document.getElementById('editBoq').value,
-            statusRegistro: document.getElementById('editStatusRegistro').value,
-            justificativa: justificativa,
-            alteracoesItensExistentesJson: JSON.stringify(alteracoesArray)
+            // Se houver alterações nos itens existentes (JSON)
+            alteracoesItensExistentesJson: JSON.stringify(AprovacoesComplementares.alteracoesBuffer)
         };
 
-        const endpointAction = isController ? 'controller/aprovar' : 'coordenador/aprovar';
+        // 1. LOADING: Sem botão OK e bloqueando clique fora
+        Swal.fire({
+            title: 'Processando...',
+            html: 'Aguarde enquanto salvamos a aprovação.',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false, // <--- REMOVE O BOTÃO OK
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         try {
-            AprovacoesComplementares.mostrarAlerta('Processando...');
-
-            const resp = await fetch(`${AprovacoesComplementares.MS_URL}/${id}/${endpointAction}`, {
+            const response = await fetch(`${AprovacoesComplementares.MS_URL}/${id}/${endpoint}`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dto)
             });
 
-            if (resp.ok) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('modalAnaliseCoordenador'));
-                if (modal) modal.hide();
+            if (!response.ok) {
+                const erroTexto = await response.text();
+                throw new Error(erroTexto || "Erro na resposta do servidor");
+            }
 
-                const alerta = bootstrap.Modal.getInstance(document.getElementById('modalAlerta'));
-                if (alerta) alerta.hide();
+            // 2. SUCESSO: Fecha o modal de edição e mostra o TOAST
 
-                AprovacoesComplementares.carregarPendencias();
-            } else { throw new Error('Erro ao processar'); }
-        } catch (e) { alert('Erro: ' + e.message); }
+            // Fecha o modal grande de edição
+            const modalEl = document.getElementById('modalAnaliseCoordenador');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            // Configuração do Toast (Notificação no canto)
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
+
+            // Dispara a notificação
+            Toast.fire({
+                icon: 'success',
+                title: 'Aprovado com sucesso!'
+            });
+
+            // Recarrega a lista de pendências
+            AprovacoesComplementares.carregarPendencias();
+
+        } catch (error) {
+            console.error(error);
+            // Se der erro, mostra o alerta normal com botão para a pessoa ler
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro ao aprovar',
+                text: error.message
+            });
+        }
     },
 
     prepararRejeicaoInicial: (id) => {
