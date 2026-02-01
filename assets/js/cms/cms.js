@@ -4,10 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================
     const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         ? 'http://localhost:8081/api/materiais'
-        : window.location.origin + '/api/materiais'; // Em produção será https://www.inproutservices.com.br/api/materiais
+        : window.location.origin + '/api/materiais'; // Em produção será http://localhost:8080/materiais
 
     // O Monólito pode permanecer assim ou também usar window.location.origin
-    const API_MONOLITO_URL = 'https://www.inproutservices.com.br/api';
+    const API_MONOLITO_URL = 'http://localhost:8080';
 
     // --- Seletores de Elementos Principais ---
     const containerMateriais = document.getElementById('materiais-container');

@@ -682,47 +682,57 @@ const AprovacoesComplementares = {
         const id = AprovacoesComplementares.currentSolicitacao.id;
         const usuarioId = localStorage.getItem('usuarioId');
 
-        // Verifica qual é o papel atual (Coordenador ou Controller)
+        // Verifica qual é o papel atual
         const isController = AprovacoesComplementares.currentSolicitacao.status === 'PENDENTE_CONTROLLER';
         const endpoint = isController ? 'controller/aprovar' : 'coordenador/aprovar';
 
-        // --- CORREÇÃO AQUI: Usando os IDs corretos (os mesmos do abrirModalAnalise) ---
         const elLpu = document.getElementById('editLpuSelect');
         const elQtd = document.getElementById('editQuantidade');
         const elBoq = document.getElementById('editBoq');
         const elStatus = document.getElementById('editStatusRegistro');
         const elJust = document.getElementById('editJustificativaCoordenador');
 
-        // Validação simples para evitar erro se algum elemento não existir
         if (!elLpu || !elQtd) {
-            Swal.fire('Erro', 'Campos obrigatórios não encontrados no formulário.', 'error');
+            Swal.fire('Erro', 'Campos obrigatórios não encontrados (LPU ou Quantidade).', 'error');
             return;
         }
 
-        // Monta o objeto de dados (DTO)
+        // --- CORREÇÃO PRINCIPAL: Converter o Objeto Buffer em Array para o Java ---
+        // O Java espera uma List<Map>, então precisamos transformar { id: dados } em [ { itemId: id, ...dados } ]
+        let listaAlteracoes = [];
+        if (AprovacoesComplementares.alteracoesBuffer) {
+            listaAlteracoes = Object.entries(AprovacoesComplementares.alteracoesBuffer).map(([keyId, dados]) => {
+                return {
+                    itemId: Number(keyId), // Importante: O ID do item que está sendo alterado
+                    novaQtd: dados.novaQtd ? Number(dados.novaQtd) : null,
+                    novaLpuId: dados.novaLpuId ? Number(dados.novaLpuId) : null,
+                    novoBoq: dados.novoBoq || "",
+                    novoStatus: dados.novoStatus || "ATIVO"
+                };
+            });
+        }
+
         const dto = {
-            aprovadorId: usuarioId,
-            lpuId: elLpu.value,
-            quantidade: elQtd.value,
+            aprovadorId: Number(usuarioId),
+            lpuId: elLpu.value ? Number(elLpu.value) : null,
+            quantidade: elQtd.value ? Number(elQtd.value) : null,
             boq: elBoq ? elBoq.value : '',
             statusRegistro: elStatus ? elStatus.value : 'ATIVO',
             justificativa: elJust ? elJust.value : '',
-
-            // Se houver alterações nos itens existentes (JSON)
-            alteracoesItensExistentesJson: JSON.stringify(AprovacoesComplementares.alteracoesBuffer)
+            // Agora enviamos a string do ARRAY, não do objeto
+            alteracoesItensExistentesJson: listaAlteracoes.length > 0 ? JSON.stringify(listaAlteracoes) : null
         };
-        // -------------------------------------------------------------------------------
 
-        // 1. LOADING: Sem botão OK e bloqueando clique fora
+        // Fecha o modal antes de mostrar o loading para não travar a tela visualmente
+        const modalEl = document.getElementById('modalAnaliseCoordenador');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
         Swal.fire({
             title: 'Processando...',
-            html: 'Aguarde enquanto salvamos a aprovação.',
+            html: 'Salvando aprovação e aplicando alterações...',
             allowOutsideClick: false,
-            allowEscapeKey: false,
-            showConfirmButton: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
+            didOpen: () => Swal.showLoading()
         });
 
         try {
@@ -737,46 +747,28 @@ const AprovacoesComplementares = {
 
             if (!response.ok) {
                 const erroTexto = await response.text();
-                throw new Error(erroTexto || "Erro na resposta do servidor");
+                throw new Error(erroTexto || "Erro desconhecido no servidor.");
             }
 
-            // 2. SUCESSO: Fecha o modal de edição e mostra o TOAST
-
-            // Fecha o modal grande de edição
-            const modalEl = document.getElementById('modalAnaliseCoordenador');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
-
-            // Configuração do Toast (Notificação no canto)
-            const Toast = Swal.mixin({
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
-                didOpen: (toast) => {
-                    toast.addEventListener('mouseenter', Swal.stopTimer)
-                    toast.addEventListener('mouseleave', Swal.resumeTimer)
-                }
-            });
-
-            // Dispara a notificação
-            Toast.fire({
+            Swal.fire({
                 icon: 'success',
-                title: 'Aprovado com sucesso!'
+                title: 'Sucesso!',
+                text: 'Aprovação realizada e alterações aplicadas.',
+                timer: 2000,
+                showConfirmButton: false
             });
 
-            // Recarrega a lista de pendências
             AprovacoesComplementares.carregarPendencias();
 
         } catch (error) {
             console.error(error);
-            // Se der erro, mostra o alerta normal com botão para a pessoa ler
             Swal.fire({
                 icon: 'error',
                 title: 'Erro ao aprovar',
                 text: error.message
             });
+            // Reabre o modal se der erro, para o usuário não perder o que digitou
+            if (modal) modal.show();
         }
     },
 
