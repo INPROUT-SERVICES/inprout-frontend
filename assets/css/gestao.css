@@ -1,11 +1,10 @@
 /* =================================================================== */
-/* CSS ESPECÍFICO PARA A PÁGINA DE GESTÃO DE APROVAÇÕES
+/* CSS ESPECÍFICO PARA A PÁGINA DE GESTÃO DE APROVAÇÕES (COMPLETO)
 /* =================================================================== */
 
 /* --- 1. CONFIGURAÇÕES GERAIS --- */
 body {
     background-color: #f8f9fa;
-    /* Garante rolagem correta mesmo se houver conflito com outros CSS */
     overflow-y: auto !important;
     height: auto !important;
 }
@@ -38,38 +37,35 @@ body {
     font-weight: 600;
 }
 
-/* Correção de Scroll: Aumentada a especificidade para vencer o controle-cps.css */
+/* Correção de Scroll */
 .tab-content .custom-scroll,
 .custom-scroll {
-    max-height: calc(100vh - 280px) !important; /* Ajuste fino para telas menores */
+    max-height: calc(100vh - 280px) !important;
     overflow-y: auto;
     border: 1px solid #ccc;
     border-radius: 8px;
     background-color: #fff;
 }
 
-/* Oculta abas inativas para evitar conflitos de layout */
 .tab-pane:not(.active) {
     display: none !important;
     visibility: hidden !important;
     pointer-events: none !important;
 }
 
-/* Garante que o container de conteúdo não tenha margens fantasmas */
 .tab-content {
     width: 100%;
     position: relative;
     clear: both;
 }
 
-/* --- 3. LAYOUT E CARDS --- */
+/* --- 3. LAYOUT E CARDS (Originais) --- */
 .card {
     border: none;
     border-radius: 0.75rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Sutil sombra padrão */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-/* Remove padding de cards vazios para evitar espaços fantasmas */
 .card-body:empty {
     padding: 0 !important;
     display: none !important;
@@ -99,16 +95,15 @@ body {
     transform: translateY(-2px);
 }
 
-/* Variações de cores */
-.card-stat.card-planejamento { background-color: var(--card-secondary) !important; border-left: 5px solid #889ca3; }
-.card-stat.card-alerta { background-color: var(--card-warning) !important; border-left: 5px solid #d1b154; }
-.card-stat.card-perigo { background-color: #ffab91 !important; border-left: 5px solid var(--bs-orange); }
+.card-stat.card-planejamento { background-color: var(--card-secondary, #e2e3e5) !important; border-left: 5px solid #889ca3; }
+.card-stat.card-alerta { background-color: var(--card-warning, #fff3cd) !important; border-left: 5px solid #d1b154; }
+.card-stat.card-perigo { background-color: #ffab91 !important; border-left: 5px solid var(--bs-orange, #fd7e14); }
 .card-stat.card-perigo p, .card-stat.card-perigo h5 { color: #b95000 !important; font-weight: 600; }
-.card-stat.card-sucesso { background-color: var(--card-success) !important; border-left: 5px solid #6b9b6d; }
+.card-stat.card-sucesso { background-color: var(--card-success, #d1e7dd) !important; border-left: 5px solid #6b9b6d; }
 .card-stat.card-info { background-color: #bbdefb !important; border-left: 5px solid #64b5f6; }
 
 
-/* --- 5. TABELAS MODERNAS --- */
+/* --- 5. TABELAS MODERNAS (Originais) --- */
 .modern-table {
     font-size: 0.9rem;
     background-color: #fff;
@@ -118,7 +113,7 @@ body {
 
 .modern-table thead th {
     background-color: var(--primary-color, #198754);
-    color: #fff; /* Força texto branco no cabeçalho */
+    color: #fff;
     font-weight: 600;
     text-transform: uppercase;
     font-size: 0.85rem;
@@ -139,7 +134,6 @@ body {
 .modern-table tbody tr:nth-child(even) { background-color: #f9f9f9; }
 .modern-table tbody tr:hover { background-color: #e6f3ec; }
 
-/* Correção para tabelas dentro de abas não estourarem */
 .tab-pane .table-responsive,
 .tab-pane .modern-table {
     min-width: 100% !important;
@@ -154,24 +148,23 @@ body {
     font-weight: 500;
     transition: all 0.2s ease-in-out;
     background-color: transparent;
-    border: 1px solid var(--btn-color-borda);
-    color: var(--btn-color-borda);
+    border: 1px solid var(--btn-color-borda, #ccc);
+    color: var(--btn-color-borda, #ccc);
 }
 
 .btn-acao-lote:hover {
-    background-color: var(--btn-color-fundo-hover);
-    color: var(--btn-color-texto-hover);
+    background-color: var(--btn-color-fundo-hover, #ccc);
+    color: var(--btn-color-texto-hover, #fff);
     transform: translateY(-1px);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* Variações de botões */
 .btn-lote-success { --btn-color-borda: #198754; --btn-color-fundo-hover: #198754; --btn-color-texto-hover: white; }
 .btn-lote-danger { --btn-color-borda: #dc3545; --btn-color-fundo-hover: #dc3545; --btn-color-texto-hover: white; }
 .btn-lote-warning { --btn-color-borda: #ffc107; --btn-color-fundo-hover: #ffc107; --btn-color-texto-hover: #212529; }
 
 
-/* --- 7. ACORDEÃO (Accordion) --- */
+/* --- 7. ACORDEÃO (Original) --- */
 .accordion-item {
     border: 1px solid #dee2e6;
     border-radius: 0.5rem !important;
@@ -196,14 +189,12 @@ body {
 
 .accordion-button-vencido { background-color: #f8d7da !important; color: #58151c !important; }
 
-/* Estilização interna do header do acordeão */
 .header-content { display: flex; align-items: center; gap: 1rem; width: 100%; padding-right: 1rem; }
 .header-title-wrapper { display: flex; flex-direction: column; line-height: 1.2; text-align: left; }
 .header-title-project { font-size: 0.75rem; font-weight: 600; color: #6c757d; text-transform: uppercase; }
 .header-title-os { font-size: 1rem; font-weight: 700; color: #212529; }
 .header-badge { margin-left: 1rem; font-size: 0.75rem; padding: 0.4em 0.8em; border-radius: 50rem; }
 
-/* KPIs no Header do Acordeão (Atividades) */
 .header-kpi-wrapper { display: flex; align-items: center; gap: 1.5rem; margin-left: auto; }
 .kpi-group { display: flex; gap: 1.2rem; align-items: flex-end; }
 .kpi-divider { width: 1px; height: 30px; background-color: #cfd8dc; margin: 0 0.5rem; align-self: center; }
@@ -216,11 +207,9 @@ body {
 .accordion-body .table { margin-bottom: 0; }
 
 
-/* --- 8. CONTAINER DE CARREGAMENTO E LOADER --- */
+/* --- 8. LOADER --- */
 .content-loader-container {
     position: relative;
-    /* Ajustado para auto para evitar problemas de layout, 
-       mas mantemos a estrutura relativa para o loader funcionar */
     min-height: auto !important;
     height: auto;
     width: 100%;
@@ -228,7 +217,7 @@ body {
 
 .content-loader-container .overlay-loader {
     position: absolute;
-    z-index: 1040; /* Abaixo do Modal (1050), acima do conteúdo */
+    z-index: 1040;
     top: 0;
     left: 0;
     width: 100%;
@@ -241,8 +230,7 @@ body {
     backdrop-filter: blur(2px);
 }
 
-
-/* --- 9. ABAS COM SCROLL HORIZONTAL (Wrapper) --- */
+/* --- 9. SCROLL E KPI HEADER --- */
 .tabs-wrapper-scroll {
     background-color: #fff;
     border-bottom: 1px solid #dee2e6;
@@ -258,23 +246,13 @@ body {
 .tabs-scroll-container {
     flex-grow: 1;
     overflow-x: auto;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
-    margin: 0 35px; /* Espaço para as setas */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    margin: 0 35px;
     white-space: nowrap;
 }
-.tabs-scroll-container::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+.tabs-scroll-container::-webkit-scrollbar { display: none; }
 
-.tabs-wrapper-scroll .nav-tabs {
-    border-bottom: none;
-    display: flex;
-    flex-wrap: nowrap;
-    margin-bottom: 0;
-    padding-top: 15px;
-    padding-bottom: 10px;
-}
-
-/* Botões de Scroll Lateral */
 .btn-scroll-tab {
     z-index: 10;
     border-radius: 50%;
@@ -300,8 +278,6 @@ body {
 .btn-scroll-tab.left { left: 5px; }
 .btn-scroll-tab.right { right: 5px; }
 
-
-/* --- 10. CARDS KPI NO HEADER DA ABA (Estilo Index) --- */
 .kpi-header-wrapper {
     display: flex;
     gap: 1rem;
@@ -324,12 +300,10 @@ body {
 }
 .card-kpi-header .kpi-title { font-size: 0.7rem; color: #6c757d; font-weight: 600; text-transform: uppercase; }
 .card-kpi-header .kpi-value { font-size: 1rem; font-weight: 700; color: #212529; }
-
 .card-kpi-info { border-left: 4px solid #64b5f6; background-color: #e3f2fd; }
 .card-kpi-success { border-left: 4px solid #81c784; background-color: #e8f5e9; }
 
-
-/* --- 11. AJUSTES RESPONSIVOS (MOBILE) --- */
+/* --- 10. RESPONSIVIDADE E UTILITÁRIOS --- */
 @media (max-width: 768px) {
     .modern-table thead { display: none; }
     .modern-table tbody tr, .modern-table tbody td { display: block; width: 100%; }
@@ -339,30 +313,16 @@ body {
         content: attr(data-label);
         position: absolute; left: 1rem; width: 45%; text-align: left; font-weight: 600; color: #6c757d; font-size: 0.75rem;
     }
-    
-    .kpi-header-wrapper { display: none !important; } /* Esconde KPIs complexos no mobile */
+    .kpi-header-wrapper { display: none !important; }
 }
 
-/* --- 12. UTILITÁRIOS ESPECÍFICOS --- */
 .text-danger-emphasis { color: #dc3545 !important; font-weight: 700 !important; }
-
-.detalhe-diario-truncate {
-    max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; color: #495057;
-}
+.detalhe-diario-truncate { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; color: #495057; }
 .detalhe-diario-truncate:hover { color: var(--primary-color); text-decoration: underline; }
+.table-primary-light { background-color: #e7f1ff !important; }
 
-/* Ajuste de margem quando o dashboard superior está oculto (ex: Documentista ou via JS) */
-body:has(.overview-card[style*="display: none"]) .container-fluid.my-4 {
-    margin-top: 10px !important;
-}
-
-.table-primary-light {
-    background-color: #e7f1ff !important;
-}
-
-/* --- Barra de Filtros (Estilo Padrão) --- */
 .filter-bar {
-    background-color: #f8f9fa; /* Cinza bem claro */
+    background-color: #f8f9fa;
     border: 1px solid #e9ecef;
     border-radius: 10px;
     padding: 15px;
@@ -370,33 +330,6 @@ body:has(.overview-card[style*="display: none"]) .container-fluid.my-4 {
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
-.filter-label {
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: #adb5bd;
-    margin-bottom: 6px;
-    letter-spacing: 0.5px;
-}
-
-.search-input-group .input-group-text {
-    background-color: #ffffff;
-    border-right: none;
-    color: #adb5bd;
-    border-radius: 6px 0 0 6px;
-}
-
-.search-input-group .form-control {
-    border-left: none;
-    border-radius: 0 6px 6px 0;
-}
-
-.search-input-group .form-control:focus {
-    box-shadow: none;
-    border-color: #ced4da; /* Mantém a cor original da borda */
-}
-
-/* Ajuste no contador de registros */
 .results-counter {
     font-size: 0.85rem;
     color: #6c757d;
@@ -407,178 +340,183 @@ body:has(.overview-card[style*="display: none"]) .container-fluid.my-4 {
     display: inline-block;
 }
 
-/* CORREÇÃO DEFINITIVA: SweetAlert sempre acima de Modais Bootstrap */
-.swal2-container {
-    z-index: 20000 !important;
-}
+/* =================================================================== */
+/* 🚀 VISUAL MODERN TECH (MODAL DE ANÁLISE) 
+/* =================================================================== */
+/* Aplicado APENAS ao modal de coordenação para não quebrar o resto */
 
-.swal2-popup {
-    font-size: 0.9rem !important; /* Ajuste opcional para ficar harmônico */
-}
-
-/* Garante que o dropdown do Choices.js dentro do SweetAlert apareça corretamente */
-.choices__list--dropdown, 
-.choices__list[aria-expanded] {
-    z-index: 20001 !important;
-}
-
-/* --- TEMA MODERNO (Cores do Sistema) --- */
 :root {
-    /* Usa as cores definidas no root.css do sistema */
-    --sys-primary: var(--bs-primary, #0d6efd); 
-    --sys-success: var(--bs-success, #198754);
-    --sys-danger: var(--bs-danger, #dc3545);
-    --sys-text: var(--bs-body-color, #212529);
-    --sys-bg-light: var(--bs-light, #f8f9fa);
-    
-    /* Configurações Modernas de UI */
-    --border-radius-lg: 12px;
-    --border-radius-sm: 8px;
-    --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
-    --shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.08);
+    --tech-modal-bg: #f8fafc;        /* Slate 50 */
+    --tech-modal-surface: #ffffff;
+    --tech-modal-primary: #0f766e;   /* Teal 700 */
+    --tech-modal-border: #e2e8f0;    /* Slate 200 */
+    --tech-modal-text: #334155;      /* Slate 700 */
+    --tech-modal-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
-/* CARDS FLUTUANTES */
-.card-modern {
-    background: #fff;
-    border: 1px solid rgba(0,0,0,0.05); /* Borda sutil */
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow-soft);
-    margin-bottom: 1.5rem;
+/* 1. ESTRUTURA DO MODAL (Glassmorphism Sutil) */
+#modalAnaliseCoordenador .modal-content {
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+    box-shadow: var(--tech-modal-shadow);
+    background-color: var(--tech-modal-bg);
+    overflow: hidden;
 }
 
-.card-header-modern {
-    background: transparent;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
+#modalAnaliseCoordenador .modal-header {
+    background: var(--tech-modal-surface);
+    border-bottom: 1px solid var(--tech-modal-border);
     padding: 1.25rem 1.5rem;
 }
 
-.title-modern {
+#modalAnaliseCoordenador .modal-title {
     font-weight: 700;
-    color: var(--sys-text);
-    font-size: 1.1rem;
-    margin-bottom: 0;
+    color: #1e293b; /* Slate 800 */
+    letter-spacing: -0.025em;
+    font-size: 1.2rem;
 }
 
-/* TABELA CLEAN */
-.table.modern-table thead th {
-    border-bottom: 2px solid rgba(0,0,0,0.05);
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #6c757d; /* Text muted do sistema */
-    padding: 1rem;
-    background-color: transparent;
+#modalAnaliseCoordenador .modal-body {
+    padding: 1.5rem;
+    background-color: var(--tech-modal-bg);
 }
 
-.table.modern-table tbody tr {
-    transition: background-color 0.2s;
+#modalAnaliseCoordenador .modal-footer {
+    background: var(--tech-modal-surface);
+    border-top: 1px solid var(--tech-modal-border);
+    padding: 1rem 1.5rem;
 }
 
-.table.modern-table tbody tr:hover {
-    background-color: rgba(var(--bs-primary-rgb), 0.03) !important; /* Highlight sutil com a cor do sistema */
+/* 2. CARDS INTERNOS (Surface Elevation) */
+#modalAnaliseCoordenador .card {
+    border: 1px solid var(--tech-modal-border);
+    background-color: var(--tech-modal-surface);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.table.modern-table td {
-    padding: 1rem;
-    vertical-align: middle;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
+#modalAnaliseCoordenador .card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* 3. INPUTS "CLEAN" (Estilo Linear/Stripe) */
+#modalAnaliseCoordenador .form-control,
+#modalAnaliseCoordenador .form-select {
+    background-color: #f1f5f9; /* Slate 100 */
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
     font-size: 0.9rem;
+    color: var(--tech-modal-text);
+    transition: all 0.2s;
+    font-weight: 500;
 }
 
-/* BADGES (Estilo Pilula Suave) */
-.badge-modern {
-    padding: 0.5em 1em;
-    border-radius: 50px;
-    font-weight: 600;
-    font-size: 0.75em;
+#modalAnaliseCoordenador .form-control:focus,
+#modalAnaliseCoordenador .form-select:focus {
+    background-color: #ffffff;
+    border-color: var(--tech-modal-primary);
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
+    outline: none;
 }
 
-/* WIDGETS DE INFORMAÇÃO NO MODAL */
-.info-widget {
-    background-color: var(--sys-bg-light);
-    border: 1px solid rgba(0,0,0,0.08);
-    border-radius: var(--border-radius-sm);
-    padding: 1rem;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
+#modalAnaliseCoordenador .form-control:disabled {
+    background-color: #e2e8f0;
+    color: #94a3b8;
+    opacity: 0.8;
 }
 
-/* Ícone de fundo sutil */
-.info-widget i {
-    color: var(--sys-primary);
-    opacity: 0.1;
-    font-size: 3rem;
-    position: absolute;
-    right: -5px;
-    top: -5px;
-    transform: rotate(15deg);
+#modalAnaliseCoordenador label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #64748b; /* Slate 500 */
+    margin-bottom: 0.35rem;
+    letter-spacing: 0.02em;
 }
 
-.info-widget-label {
+/* 4. TABELA INTERNA DO MODAL */
+#modalAnaliseCoordenador .table-responsive {
+    border-radius: 12px;
+    border: 1px solid var(--tech-modal-border);
+    background: #fff;
+}
+
+#modalAnaliseCoordenador table thead th {
+    background-color: #f8fafc;
+    color: #64748b;
+    font-weight: 700;
     font-size: 0.7rem;
     text-transform: uppercase;
-    font-weight: 700;
-    color: #6c757d;
-    margin-bottom: 0.25rem;
-    z-index: 1;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--tech-modal-border);
 }
 
-.info-widget-value {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--sys-primary); /* Usa cor do sistema */
-    z-index: 1;
-    word-wrap: break-word;
-}
-
-/* COMPARAÇÃO (ANTES x DEPOIS) */
-.comparison-card {
-    border: 1px solid rgba(0,0,0,0.1);
-    border-radius: var(--border-radius-lg);
-    overflow: hidden;
-    height: 100%;
-}
-
-.comparison-header {
-    padding: 0.75rem 1.25rem;
+#modalAnaliseCoordenador table tbody td {
+    padding: 0.75rem 1rem;
     font-size: 0.85rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: var(--tech-modal-text);
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
 }
 
-/* Cores de fundo baseadas no sistema */
-.comparison-header.original {
-    background-color: #fff3cd; /* Amarelo padrão bootstrap warning */
-    color: #664d03;
-    border-bottom: 1px solid #ffecb5;
+#modalAnaliseCoordenador table tbody tr:last-child td {
+    border-bottom: none;
 }
 
-.comparison-header.proposal {
-    background-color: var(--sys-primary); /* Azul do sistema */
-    color: #fff;
-    border-bottom: 1px solid var(--sys-primary);
+/* 5. BADGES E ÍCONES */
+#modalAnaliseCoordenador .badge {
+    padding: 0.4em 0.8em;
+    border-radius: 6px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
-/* INPUTS MAIS MODERNOS */
-.form-control-modern, .form-select-modern {
-    padding: 0.6rem 1rem;
-    border-radius: var(--border-radius-sm);
-    border: 1px solid #ced4da;
-    background-color: #fff;
+/* Círculos de Ícones (Dashboard) */
+.icon-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
 }
 
-.form-control-modern:focus {
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
-    border-color: var(--sys-primary);
+.bg-icon-primary { background-color: #e0f2f1; color: #00695c; }
+.bg-icon-success { background-color: #dcfce7; color: #15803d; }
+.bg-icon-warning { background-color: #fef9c3; color: #a16207; }
+
+/* 6. ALERTA DE DEVOLUÇÃO */
+#modalAnaliseCoordenador .alert-danger {
+    background-color: #fff1f2;
+    border: 1px solid #fda4af;
+    color: #be123c;
+    border-radius: 12px;
 }
 
-.form-control-modern:disabled {
-    background-color: #e9ecef;
-    opacity: 1;
+/* 7. WIDGETS DE VALOR (Customização Tech) */
+#osDetailsContainer .border {
+    border-color: #e2e8f0 !important;
+}
+
+#osDetailsContainer .bg-light {
+    background-color: #f8fafc !important;
+}
+
+#osDetailsContainer span.fw-bold {
+    font-family: 'Inter', sans-serif; /* Força fonte clean para números */
+    font-variant-numeric: tabular-nums;
+}
+
+/* 8. SCROLLBAR BONITA (Só no modal) */
+#modalAnaliseCoordenador .table-responsive::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+#modalAnaliseCoordenador .table-responsive::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 4px;
 }
