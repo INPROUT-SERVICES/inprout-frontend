@@ -413,6 +413,7 @@ const AprovacoesComplementares = {
             const btnIcon = isController ? 'bi-check-lg' : 'bi-pencil-square';
             const btnTitle = isController ? 'Aprovar Solicitação' : 'Analisar / Corrigir';
 
+            // CORREÇÃO AQUI: Adicionado '${item.status}' no onclick do botão de rejeição (último botão)
             tr.innerHTML = `
             <td><span class="os-placeholder-${item.osId} text-dark fw-bold">${osDisplay}</span></td>
             <td><small class="segmento-placeholder-${item.osId} ${loadingClass}">${segmentoDisplay}</small></td>
@@ -424,7 +425,7 @@ const AprovacoesComplementares = {
             <td class="text-center"><span class="${badgeClass}">${iconeStatus} ${statusTexto}</span></td>
             <td class="text-center">
                 <button class="btn btn-sm ${btnClass}" onclick="AprovacoesComplementares.abrirModalAnalise('${item.id}')" title="${btnTitle}"><i class="bi ${btnIcon}"></i></button>
-                <button class="btn btn-sm btn-outline-danger" onclick="AprovacoesComplementares.prepararRejeicaoInicial('${item.id}')" title="Rejeitar"><i class="bi bi-x-lg"></i></button>
+                <button class="btn btn-sm btn-outline-danger" onclick="AprovacoesComplementares.prepararRejeicaoInicial('${item.id}', '${item.status}')" title="Rejeitar"><i class="bi bi-x-lg"></i></button>
             </td>
         `;
             tbody.appendChild(tr);
@@ -587,7 +588,7 @@ const AprovacoesComplementares = {
             // 3. Injeta Alerta de Devolução
             if (solicitacao.status === 'DEVOLVIDO_CONTROLLER' || solicitacao.justificativaController) {
                 const divAlerta = document.getElementById('container-alerta-controller');
-                if(divAlerta) {
+                if (divAlerta) {
                     divAlerta.innerHTML = `
                         <div class="alert alert-danger border-0 border-start border-4 border-danger shadow-sm d-flex align-items-start p-3" role="alert">
                             <div class="me-3">
@@ -600,7 +601,6 @@ const AprovacoesComplementares = {
                                 <p class="mb-0 small text-danger-emphasis">
                                     "${solicitacao.justificativaController || 'Motivo não especificado.'}"
                                 </p>
-                                <small class="text-muted fst-italic mt-1 d-block">Por favor, ajuste os valores e envie novamente.</small>
                             </div>
                         </div>
                     `;
@@ -981,13 +981,25 @@ const AprovacoesComplementares = {
             return;
         }
 
-        // --- CORREÇÃO PRINCIPAL: Converter o Objeto Buffer em Array para o Java ---
-        // O Java espera uma List<Map>, então precisamos transformar { id: dados } em [ { itemId: id, ...dados } ]
+        // --- NOVA VALIDAÇÃO: Justificativa obrigatória para Coordenador ---
+        if (!isController) {
+            if (!elJust || !elJust.value || elJust.value.trim() === '') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Justificativa Obrigatória',
+                    text: 'Por favor, insira uma justificativa para enviar a proposta.'
+                });
+                return; // Interrompe o envio
+            }
+        }
+        // ------------------------------------------------------------------
+
+        // O Java espera uma List<Map>, então transformamos { id: dados } em [ { itemId: id, ...dados } ]
         let listaAlteracoes = [];
         if (AprovacoesComplementares.alteracoesBuffer) {
             listaAlteracoes = Object.entries(AprovacoesComplementares.alteracoesBuffer).map(([keyId, dados]) => {
                 return {
-                    itemId: Number(keyId), // Importante: O ID do item que está sendo alterado
+                    itemId: Number(keyId),
                     novaQtd: dados.novaQtd ? Number(dados.novaQtd) : null,
                     novaLpuId: dados.novaLpuId ? Number(dados.novaLpuId) : null,
                     novoBoq: dados.novoBoq || "",
@@ -1003,11 +1015,9 @@ const AprovacoesComplementares = {
             boq: elBoq ? elBoq.value : '',
             statusRegistro: elStatus ? elStatus.value : 'ATIVO',
             justificativa: elJust ? elJust.value : '',
-            // Agora enviamos a string do ARRAY, não do objeto
             alteracoesItensExistentesJson: listaAlteracoes.length > 0 ? JSON.stringify(listaAlteracoes) : null
         };
 
-        // Fecha o modal antes de mostrar o loading para não travar a tela visualmente
         const modalEl = document.getElementById('modalAnaliseCoordenador');
         const modal = bootstrap.Modal.getInstance(modalEl);
         if (modal) modal.hide();
@@ -1046,18 +1056,16 @@ const AprovacoesComplementares = {
 
         } catch (error) {
             console.error(error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Erro ao aprovar',
-                text: error.message
-            });
-            // Reabre o modal se der erro, para o usuário não perder o que digitou
+            Swal.fire({ icon: 'error', title: 'Erro ao aprovar', text: error.message });
             if (modal) modal.show();
         }
     },
 
-    prepararRejeicaoInicial: (id) => {
+    prepararRejeicaoInicial: (id, status) => {
         document.getElementById('analiseSolicitacaoId').value = id;
+
+        AprovacoesComplementares.statusRejeicaoTemp = status;
+
         AprovacoesComplementares.prepararRejeicao();
     },
 
@@ -1077,17 +1085,25 @@ const AprovacoesComplementares = {
             alert("Digite o motivo."); return;
         }
 
-        // Fecha modais imediatamente
         const modalRejeitar = bootstrap.Modal.getInstance(document.getElementById('modalRejeitar'));
         if (modalRejeitar) modalRejeitar.hide();
 
         const modalMain = bootstrap.Modal.getInstance(document.getElementById('modalAnaliseCoordenador'));
         if (modalMain) modalMain.hide();
 
-        // Loading
         Swal.fire({ title: 'Registrando recusa...', didOpen: () => Swal.showLoading() });
 
-        const isController = AprovacoesComplementares.currentSolicitacao?.status === 'PENDENTE_CONTROLLER';
+        // --- CORREÇÃO: Verifica o status que veio da tabela OU do modal de análise ---
+        let statusRef = AprovacoesComplementares.statusRejeicaoTemp;
+
+        // Fallback: Se não veio da tabela, tenta pegar do objeto currentSolicitacao (caso o modal de análise esteja aberto)
+        if (!statusRef && AprovacoesComplementares.currentSolicitacao) {
+            statusRef = AprovacoesComplementares.currentSolicitacao.status;
+        }
+
+        const isController = statusRef === 'PENDENTE_CONTROLLER';
+        // -----------------------------------------------------------------------------
+
         const endpointAction = isController ? 'controller/devolver' : 'coordenador/rejeitar';
 
         try {
@@ -1106,6 +1122,8 @@ const AprovacoesComplementares = {
                 showConfirmButton: false
             });
 
+            // Limpa a variável temporária
+            AprovacoesComplementares.statusRejeicaoTemp = null;
             AprovacoesComplementares.carregarPendencias();
         } catch (e) {
             Swal.fire('Erro', 'Não foi possível rejeitar.', 'error');
