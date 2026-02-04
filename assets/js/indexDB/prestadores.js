@@ -1,3 +1,61 @@
+// Variável global para gerenciar as instâncias do Choices.js
+const choicesInstances = new Map();
+
+/**
+ * Aplica o Choices.js em um elemento <select> pelo ID.
+ */
+function aplicarChoices(selectId, placeholderValue = 'Selecione uma opção') {
+    const elemento = document.getElementById(selectId);
+    if (!elemento) return;
+
+    if (choicesInstances.has(selectId)) {
+        choicesInstances.get(selectId).destroy();
+        choicesInstances.delete(selectId);
+    }
+
+    const instance = new Choices(elemento, {
+        searchEnabled: true,
+        itemSelectText: '',
+        noResultsText: 'Nenhum resultado encontrado',
+        searchPlaceholderValue: 'Buscar...',
+        placeholder: true,
+        placeholderValue: placeholderValue,
+        shouldSort: false,
+        position: 'bottom',
+        searchResultLimit: 10,
+        // Configuração para busca mais exata (resolve o problema de mostrar parecidos)
+        fuseOptions: {
+            threshold: 0.1, // 0.0 = exato, 0.6 = padrão (frouxo). 0.1 garante que só traga muito parecidos.
+            distance: 100   // Distância da busca, padrão funciona bem com threshold baixo
+        }
+    });
+
+    choicesInstances.set(selectId, instance);
+}
+
+function exibirCarregando(selectId) {
+    const elemento = document.getElementById(selectId);
+    if (!elemento) return;
+
+    if (choicesInstances.has(selectId)) {
+        choicesInstances.get(selectId).destroy();
+        choicesInstances.delete(selectId);
+    }
+
+    elemento.innerHTML = '<option value="">Carregando dados...</option>';
+    elemento.disabled = true;
+
+    const instance = new Choices(elemento, {
+        searchEnabled: false,
+        placeholder: true,
+        placeholderValue: 'Aguarde...',
+        itemSelectText: '',
+        position: 'bottom',
+    });
+    
+    choicesInstances.set(selectId, instance);
+}
+
 async function inicializarPrestadores() {
     const form = document.getElementById("formAdicionarPrestador");
     if (form) {
@@ -9,7 +67,6 @@ async function inicializarPrestadores() {
                 return elemento?.value?.trim() || null;
             };
 
-            // --- LÓGICA DO BANCO CORRIGIDA ---
             const selectBanco = document.getElementById('selectBancoCadastro');
             const bancoOption = selectBanco.options[selectBanco.selectedIndex];
 
@@ -19,11 +76,9 @@ async function inicializarPrestadores() {
 
             if (selectBanco.value) {
                 bancoId = Number(selectBanco.value);
-                // Pega do dataset que populamos na função carregarSelectBancosDinamicamente
                 codigoBancoLegado = bancoOption.dataset.codigo;
                 nomeBancoLegado = bancoOption.dataset.nome;
             }
-            // ----------------------------------
 
             const prestador = {
                 codigoPrestador: Number(getValor("codigoPrestador")) || null,
@@ -35,12 +90,9 @@ async function inicializarPrestadores() {
                 rg: getValor("rgPrestador"),
                 cpf: getValor("cpfPrestador"),
                 cnpj: getValor("cnpjPrestador"),
-
-                // Campos de Banco Corrigidos
                 bancoId: bancoId,
                 codigoBanco: codigoBancoLegado,
                 banco: nomeBancoLegado,
-
                 agencia: getValor("agenciaPrestador"),
                 conta: getValor("contaPrestador"),
                 tipoDeConta: getValor("tipoConta"),
@@ -64,7 +116,7 @@ async function inicializarPrestadores() {
 
                 mostrarToast("Prestador salvo com sucesso!", "success");
                 form.reset();
-                selectBanco.value = ""; // Reseta o select
+                selectBanco.value = ""; 
 
                 await carregarTabelaPrestadores(getColunasAtuaisPorRole());
                 bootstrap.Modal.getInstance(document.getElementById("modalAdicionarPrestador")).hide();
@@ -78,10 +130,8 @@ async function inicializarPrestadores() {
         });
     }
 
-    // Carregamento inicial da tabela
     await carregarTabelaPrestadores(getColunasAtuaisPorRole());
 
-    // Listener para carregar os bancos quando abrir o modal
     const modalAdicionar = document.getElementById('modalAdicionarPrestador');
     if (modalAdicionar) {
         modalAdicionar.addEventListener('show.bs.modal', () => {
@@ -93,8 +143,6 @@ async function inicializarPrestadores() {
 async function carregarTabelaPrestadores(camposOriginais) {
     const thead = document.getElementById("thead-prestadores");
     const tbody = document.getElementById("tbody-prestadores");
-
-    // Adiciona a coluna de status no início
     const campos = ['status', ...camposOriginais];
 
     const titulosFormatados = {
@@ -107,13 +155,10 @@ async function carregarTabelaPrestadores(camposOriginais) {
         regiao: "Região",
         cpf: "CPF",
         cnpj: "CNPJ",
-
-        // 1. Título alterado para "Instituição Financeira"
         banco: "Instituição Financeira",
         agencia: "Agência",
         conta: "Conta",
         tipoDeConta: "Tipo Conta",
-
         telefone: "Telefone",
         email: "E-mail",
         tipoPix: "Tipo de PIX",
@@ -123,10 +168,7 @@ async function carregarTabelaPrestadores(camposOriginais) {
 
     try {
         const response = await fetchComAuth("http://localhost:8080/index/prestadores");
-
-        if (!response.ok) {
-            throw new Error("Erro ao buscar prestadores.");
-        }
+        if (!response.ok) throw new Error("Erro ao buscar prestadores.");
 
         const todosOsPrestadores = await response.json();
 
@@ -136,34 +178,22 @@ async function carregarTabelaPrestadores(camposOriginais) {
             return;
         }
 
-        // Gera o Cabeçalho (THEAD)
-        thead.innerHTML = `
-            <tr>
-                ${campos.map(campo => `<th>${titulosFormatados[campo] || campo}</th>`).join("")}
-            </tr>
-        `;
+        thead.innerHTML = `<tr>${campos.map(campo => `<th>${titulosFormatados[campo] || campo}</th>`).join("")}</tr>`;
 
-        // Gera o Corpo (TBODY)
         tbody.innerHTML = todosOsPrestadores.map(prestador => {
             const linhaHtml = campos.map(campo => {
                 if (campo === 'status') {
                     const statusClass = prestador.ativo ? 'active' : 'inactive';
                     return `<td><span class="status-indicator ${statusClass}"></span></td>`;
                 }
-
-                // 2. Lógica para concatenar Código + Nome na coluna Instituição Financeira (banco)
                 if (campo === 'banco') {
                     const codigo = prestador.codigoBanco || "";
                     const nome = prestador.banco || "";
-                    // Se ambos existirem, concatena com hífen; caso contrário, mostra o que estiver disponível
                     const display = (codigo && nome) ? `${codigo} - ${nome}` : (codigo || nome || "");
                     return `<td>${display}</td>`;
                 }
-
-                // Retorna o valor padrão para os outros campos
                 return `<td>${prestador[campo] ?? ""}</td>`;
             }).join("");
-
             return `<tr>${linhaHtml}</tr>`;
         }).join("");
 
@@ -174,47 +204,123 @@ async function carregarTabelaPrestadores(camposOriginais) {
     }
 }
 
-/**
- * Busca a lista de prestadores da API e popula um elemento <select>.
- * @param {HTMLSelectElement} elementoSelect - O elemento <select> a ser preenchido.
- */
-async function preencherSelectComPrestadores(elementoSelect) {
-    // URL do seu endpoint de prestadores
+// Busca TODOS os prestadores (Usado no EDITAR para poder selecionar qualquer um)
+async function preencherSelectComTodosPrestadores(elementoSelect) {
     const urlPrestadores = "http://localhost:8080/index/prestadores";
+    const selectId = elementoSelect.id;
 
     try {
         const response = await fetchComAuth(urlPrestadores);
-        if (!response.ok) {
-            throw new Error("Não foi possível carregar a lista de prestadores.");
+        
+        if (choicesInstances.has(selectId)) {
+            choicesInstances.get(selectId).destroy();
+            choicesInstances.delete(selectId);
         }
+        
+        if (!response.ok) throw new Error("Erro ao carregar lista.");
         const prestadores = await response.json();
 
-        // Limpa o select e adiciona a opção padrão
         elementoSelect.innerHTML = '<option value="">Selecione o prestador</option>';
+        elementoSelect.disabled = false;
 
-        // Itera sobre a lista de prestadores e cria as opções
         prestadores.forEach(prestador => {
             const opt = document.createElement("option");
-
-            // O 'value' da opção deve ser o ID único do prestador
             opt.value = prestador.id;
-
-            // O texto visível será no formato "Código - Nome"
             opt.textContent = `${prestador.codigoPrestador} - ${prestador.prestador}`;
-
             elementoSelect.appendChild(opt);
         });
 
+        aplicarChoices(selectId, 'Selecione o prestador');
+
     } catch (error) {
-        console.error("Erro ao preencher select de prestadores:", error);
-        // Em caso de erro, exibe uma mensagem dentro do select
+        console.error("Erro ao preencher select:", error);
         elementoSelect.innerHTML = '<option value="">Erro ao carregar</option>';
-        mostrarToast(error.message, 'error');
+        mostrarToast("Erro ao carregar lista de prestadores.", 'error');
+        aplicarChoices(selectId, 'Erro ao carregar');
+    }
+}
+
+// [NOVO] Busca APENAS prestadores ATIVOS (Usado no DESATIVAR)
+async function preencherSelectComPrestadoresAtivos(elementoSelect) {
+    const urlPrestadoresAtivos = "http://localhost:8080/index/prestadores/ativos"; // Endpoint filtrado
+    const selectId = elementoSelect.id;
+
+    try {
+        const response = await fetchComAuth(urlPrestadoresAtivos);
+        
+        if (choicesInstances.has(selectId)) {
+            choicesInstances.get(selectId).destroy();
+            choicesInstances.delete(selectId);
+        }
+        
+        if (!response.ok) throw new Error("Erro ao carregar lista de ativos.");
+        const prestadores = await response.json();
+
+        elementoSelect.innerHTML = '<option value="">Selecione o prestador ativo</option>';
+        elementoSelect.disabled = false;
+
+        if (prestadores.length === 0) {
+            elementoSelect.innerHTML = '<option value="">Nenhum prestador ativo</option>';
+        } else {
+            prestadores.forEach(prestador => {
+                const opt = document.createElement("option");
+                opt.value = prestador.id;
+                opt.textContent = `${prestador.codigoPrestador} - ${prestador.prestador}`;
+                elementoSelect.appendChild(opt);
+            });
+        }
+
+        aplicarChoices(selectId, 'Selecione o prestador ativo');
+
+    } catch (error) {
+        console.error("Erro ao preencher select:", error);
+        elementoSelect.innerHTML = '<option value="">Erro ao carregar</option>';
+        mostrarToast("Erro ao carregar lista de ativos.", 'error');
+        aplicarChoices(selectId, 'Erro ao carregar');
+    }
+}
+
+// Busca APENAS prestadores DESATIVADOS (Usado no ATIVAR)
+async function preencherSelectComPrestadoresDesativados(elementoSelect) {
+    const urlPrestadoresDesativados = "http://localhost:8080/index/prestadores/desativados";
+    const selectId = elementoSelect.id;
+
+    try {
+        const response = await fetchComAuth(urlPrestadoresDesativados);
+        
+        if (choicesInstances.has(selectId)) {
+            choicesInstances.get(selectId).destroy();
+            choicesInstances.delete(selectId);
+        }
+
+        if (!response.ok) throw new Error("Erro ao carregar lista.");
+        const prestadores = await response.json();
+
+        elementoSelect.innerHTML = '<option value="">Selecione o prestador desativado</option>';
+        elementoSelect.disabled = false;
+
+        if (prestadores.length === 0) {
+            elementoSelect.innerHTML = '<option value="">Nenhum prestador inativo</option>';
+        } else {
+            prestadores.forEach(prestador => {
+                const opt = document.createElement("option");
+                opt.value = prestador.id;
+                opt.textContent = `${prestador.codigoPrestador} - ${prestador.prestador}`;
+                elementoSelect.appendChild(opt);
+            });
+        }
+
+        aplicarChoices(selectId, 'Selecione o prestador desativado');
+
+    } catch (error) {
+        console.error("Erro:", error);
+        elementoSelect.innerHTML = '<option value="">Erro ao carregar</option>';
+        mostrarToast("Erro ao carregar lista.", 'error');
+        aplicarChoices(selectId, 'Erro ao carregar');
     }
 }
 
 async function carregarSelectBancosDinamicamente() {
-    // Lista de IDs dos selects que vamos popular (Cadastro e Edição futuramente)
     const selectsIds = ['selectBancoCadastro', 'selectBancoEditar'];
 
     try {
@@ -222,59 +328,51 @@ async function carregarSelectBancosDinamicamente() {
         if (!response.ok) return;
 
         const bancos = await response.json();
-
-        // Ordenar por código
         bancos.sort((a, b) => a.codigo.localeCompare(b.codigo));
 
         selectsIds.forEach(id => {
             const selectEl = document.getElementById(id);
             if (!selectEl) return;
-
-            // Mantém valor selecionado caso já tenha (útil para edição)
             const valorAtual = selectEl.value;
             selectEl.innerHTML = '<option value="">Selecione o banco...</option>';
-
             bancos.forEach(banco => {
                 const option = document.createElement('option');
-                // IMPORTANTE: Value é o ID para o vínculo relacional
                 option.value = banco.id;
-
-                // Guardamos o código e nome em dataset para enviar como fallback (legado)
                 option.dataset.codigo = banco.codigo;
                 option.dataset.nome = banco.nome;
-
                 option.textContent = `${banco.codigo} - ${banco.nome}`;
                 selectEl.appendChild(option);
             });
-
             if (valorAtual) selectEl.value = valorAtual;
         });
-
     } catch (error) {
         console.error("Erro ao carregar bancos:", error);
     }
 }
 
 function configurarModaisPrestadores() {
-    // --- Modal de Edição de Prestador ---
+    // --- Modal de Edição (Mostra TODOS) ---
     const modalEditar = document.getElementById("modalEditarPrestador");
     if (modalEditar) {
         modalEditar.addEventListener("show.bs.modal", () => {
-            const selectParaEditar = document.getElementById("selectPrestadorEditar");
-            if (selectParaEditar) {
-                preencherSelectComPrestadores(selectParaEditar);
+            const selectEl = document.getElementById("selectPrestadorEditar");
+            if (selectEl) {
+                exibirCarregando("selectPrestadorEditar");
+                preencherSelectComTodosPrestadores(selectEl);
             }
             carregarSelectBancosDinamicamente();
         });
     }
 
-    // --- Modal de Desativação de Prestador ---
+    // --- Modal de Desativação (Mostra só ATIVOS) ---
     const modalDesativar = document.getElementById("modalDesativarPrestador");
     if (modalDesativar) {
         modalDesativar.addEventListener("show.bs.modal", () => {
-            const selectParaDesativar = document.getElementById("selectPrestadorDesativar");
-            if (selectParaDesativar) {
-                preencherSelectComPrestadores(selectParaDesativar);
+            const selectEl = document.getElementById("selectPrestadorDesativar");
+            if (selectEl) {
+                exibirCarregando("selectPrestadorDesativar");
+                // CORRIGIDO: Usa a função de ativos
+                preencherSelectComPrestadoresAtivos(selectEl);
             }
         });
     }
@@ -287,127 +385,9 @@ function configurarModalDesativarPrestador() {
     const btnConfirmar = document.getElementById("btnConfirmarDesativar");
     const aviso = document.getElementById("avisoPrestadorSelecionado");
 
-    if (!modalEl) {
-        return;
-    }
+    if (!modalEl) return;
 
     modalEl.addEventListener('show.bs.modal', () => {
-        preencherSelectComPrestadores(select);
-        select.value = '';
-        aviso.classList.add('d-none');
-        btnConfirmar.disabled = true;
-    });
-
-    select.addEventListener('change', () => {
-        const prestadorSelecionado = select.value;
-        if (prestadorSelecionado) {
-            aviso.classList.remove('d-none');
-            btnConfirmar.disabled = false;
-        } else {
-            aviso.classList.add('d-none');
-            btnConfirmar.disabled = true;
-        }
-    });
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const prestadorId = select.value;
-        if (!prestadorId) {
-            mostrarToast("Por favor, selecione um prestador para desativar.", "warning");
-            return;
-        }
-        toggleLoader(true);
-
-        try {
-            // --- INÍCIO DA CORREÇÃO ---
-            // 1. Busca todos os prestadores para encontrar o código
-            const prestadoresResponse = await fetchComAuth("http://localhost:8080/index/prestadores/ativos");
-            const prestadores = await prestadoresResponse.json();
-            const prestadorSelecionado = prestadores.find(p => p.id == prestadorId);
-
-            if (!prestadorSelecionado) {
-                throw new Error('Não foi possível encontrar o prestador selecionado.');
-            }
-
-            const prestadorCodigo = prestadorSelecionado.codigoPrestador;
-
-            // 2. Usa o CÓDIGO na URL, como o backend espera
-            const response = await fetchComAuth(`http://localhost:8080/index/prestadores/desativar/${prestadorCodigo}`, {
-                method: 'PUT',
-            });
-            // --- FIM DA CORREÇÃO ---
-
-            if (!response.ok) {
-                throw new Error('Falha ao desativar o prestador. Tente novamente.');
-            }
-
-            mostrarToast("Prestador desativado com sucesso!", 'success');
-            bootstrap.Modal.getInstance(modalEl).hide();
-
-            const colunas = getColunasAtuaisPorRole();
-            await carregarTabelaPrestadores(colunas);
-
-        } catch (error) {
-            console.error("Erro ao desativar prestador:", error);
-            mostrarToast(error.message, 'error');
-        } finally {
-            toggleLoader(false);
-        }
-    });
-}
-
-/**
- * Busca a lista de prestadores INATIVOS da API e popula um elemento <select>.
- * @param {HTMLSelectElement} elementoSelect - O elemento <select> a ser preenchido.
- */
-async function preencherSelectComPrestadoresDesativados(elementoSelect) {
-    const urlPrestadoresDesativados = "http://localhost:8080/index/prestadores/desativados";
-
-    try {
-        const response = await fetchComAuth(urlPrestadoresDesativados);
-        if (!response.ok) {
-            throw new Error("Não foi possível carregar a lista de prestadores desativados.");
-        }
-        const prestadores = await response.json();
-
-        elementoSelect.innerHTML = '<option value="">Selecione o prestador desativado</option>';
-
-        if (prestadores.length === 0) {
-            elementoSelect.innerHTML = '<option value="">Nenhum prestador inativo</option>';
-            return;
-        }
-
-        prestadores.forEach(prestador => {
-            const opt = document.createElement("option");
-            opt.value = prestador.id;
-            opt.textContent = `${prestador.codigoPrestador} - ${prestador.prestador}`;
-            elementoSelect.appendChild(opt);
-        });
-
-    } catch (error) {
-        console.error("Erro ao preencher select de prestadores desativados:", error);
-        elementoSelect.innerHTML = '<option value="">Erro ao carregar</option>';
-        mostrarToast(error.message, 'error');
-    }
-}
-
-function configurarModalAtivarPrestador() {
-    const modalEl = document.getElementById("modalAtivarPrestador");
-    const form = document.getElementById("formAtivarPrestador");
-    const select = document.getElementById("selectPrestadorAtivar");
-    const btnConfirmar = document.getElementById("btnConfirmarAtivar");
-    const aviso = document.getElementById("avisoPrestadorSelecionadoAtivar");
-
-    if (!modalEl) {
-        return;
-    }
-
-    modalEl.addEventListener('show.bs.modal', () => {
-        // Usamos a nova função para mostrar apenas prestadores inativos
-        preencherSelectComPrestadoresDesativados(select);
-
-        // Reseta o estado do modal
-        select.value = '';
         aviso.classList.add('d-none');
         btnConfirmar.disabled = true;
     });
@@ -426,42 +406,24 @@ function configurarModalAtivarPrestador() {
         e.preventDefault();
         const prestadorId = select.value;
         if (!prestadorId) {
-            mostrarToast("Por favor, selecione um prestador para ativar.", "warning");
+            mostrarToast("Selecione um prestador.", "warning");
             return;
         }
         toggleLoader(true);
-
         try {
-            // --- INÍCIO DA CORREÇÃO ---
-            // 1. Busca os prestadores INATIVOS para encontrar o código
-            const prestadoresResponse = await fetchComAuth("http://localhost:8080/index/prestadores/desativados");
+            // Busca a lista de ATIVOS para encontrar o objeto (já que o select só tem ativos)
+            const prestadoresResponse = await fetchComAuth("http://localhost:8080/index/prestadores/ativos");
             const prestadores = await prestadoresResponse.json();
-            const prestadorSelecionado = prestadores.find(p => p.id == prestadorId);
+            const selecionado = prestadores.find(p => p.id == prestadorId);
+            if (!selecionado) throw new Error('Prestador não encontrado.');
+            
+            const response = await fetchComAuth(`http://localhost:8080/index/prestadores/desativar/${selecionado.codigoPrestador}`, { method: 'PUT' });
+            if (!response.ok) throw new Error('Falha ao desativar.');
 
-            if (!prestadorSelecionado) {
-                throw new Error('Não foi possível encontrar o prestador selecionado.');
-            }
-
-            const prestadorCodigo = prestadorSelecionado.codigoPrestador;
-
-            // 2. Usa o CÓDIGO na URL
-            const response = await fetchComAuth(`http://localhost:8080/index/prestadores/ativar/${prestadorCodigo}`, {
-                method: 'PUT',
-            });
-            // --- FIM DA CORREÇÃO ---
-
-            if (!response.ok) {
-                throw new Error('Falha ao ativar o prestador. Tente novamente.');
-            }
-
-            mostrarToast("Prestador ativado com sucesso!", 'success');
+            mostrarToast("Desativado com sucesso!", 'success');
             bootstrap.Modal.getInstance(modalEl).hide();
-
-            const colunas = getColunasAtuaisPorRole();
-            await carregarTabelaPrestadores(colunas);
-
+            await carregarTabelaPrestadores(getColunasAtuaisPorRole());
         } catch (error) {
-            console.error("Erro ao ativar prestador:", error);
             mostrarToast(error.message, 'error');
         } finally {
             toggleLoader(false);
@@ -469,28 +431,72 @@ function configurarModalAtivarPrestador() {
     });
 }
 
-/**
- * Retorna a lista de nomes de colunas de prestadores com base
- * na 'role' do usuário armazenada no localStorage.
- * @returns {string[]} Um array com os nomes das colunas.
- */
+function configurarModalAtivarPrestador() {
+    const modalEl = document.getElementById("modalAtivarPrestador");
+    const form = document.getElementById("formAtivarPrestador");
+    const select = document.getElementById("selectPrestadorAtivar");
+    const btnConfirmar = document.getElementById("btnConfirmarAtivar");
+    const aviso = document.getElementById("avisoPrestadorSelecionadoAtivar");
+
+    if (!modalEl) return;
+
+    modalEl.addEventListener('show.bs.modal', () => {
+        exibirCarregando("selectPrestadorAtivar");
+        // Busca apenas DESATIVADOS
+        preencherSelectComPrestadoresDesativados(select);
+        
+        aviso.classList.add('d-none');
+        btnConfirmar.disabled = true;
+    });
+
+    select.addEventListener('change', () => {
+        if (select.value) {
+            aviso.classList.remove('d-none');
+            btnConfirmar.disabled = false;
+        } else {
+            aviso.classList.add('d-none');
+            btnConfirmar.disabled = true;
+        }
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const prestadorId = select.value;
+        if (!prestadorId) return;
+        toggleLoader(true);
+        try {
+            // Busca a lista de DESATIVADOS
+            const resLista = await fetchComAuth("http://localhost:8080/index/prestadores/desativados");
+            const lista = await resLista.json();
+            const selecionado = lista.find(p => p.id == prestadorId);
+            if (!selecionado) throw new Error('Não encontrado.');
+
+            const response = await fetchComAuth(`http://localhost:8080/index/prestadores/ativar/${selecionado.codigoPrestador}`, { method: 'PUT' });
+            if (!response.ok) throw new Error('Falha ao ativar.');
+
+            mostrarToast("Ativado com sucesso!", 'success');
+            bootstrap.Modal.getInstance(modalEl).hide();
+            await carregarTabelaPrestadores(getColunasAtuaisPorRole());
+        } catch (error) {
+            mostrarToast(error.message, 'error');
+        } finally {
+            toggleLoader(false);
+        }
+    });
+}
+
 function getColunasAtuaisPorRole() {
-    const colunasPorRole = {
+    const role = (localStorage.getItem("role") || "").trim().toUpperCase();
+    const map = {
         ADMIN: ['codigoPrestador', 'prestador', 'razaoSocial', 'cidade', 'uf', 'regiao', 'cpf', 'cnpj', 'banco', 'agencia', 'conta', 'tipoDeConta', 'telefone', 'email', 'tipoPix', 'chavePix', 'observacoes'],
         COORDINATOR: ['codigoPrestador', 'prestador', 'cidade', 'uf', 'regiao', 'telefone', 'email'],
         MANAGER: ['codigoPrestador', 'prestador', 'cidade', 'uf', 'regiao', 'telefone', 'email'],
         CONTROLLER: ['codigoPrestador', 'prestador', 'cidade', 'uf', 'regiao', 'telefone', 'email'],
         ASSISTANT: ['codigoPrestador', 'prestador', 'razaoSocial', 'cidade', 'uf', 'regiao', 'cpf', 'cnpj', 'banco', 'agencia', 'conta', 'tipoDeConta', 'telefone', 'email', 'tipoPix', 'chavePix', 'observacoes']
     };
-
-    const role = (localStorage.getItem("role") || "").trim().toUpperCase();
-    return colunasPorRole[role] ?? ['codigoPrestador', 'prestador'];
+    return map[role] ?? ['codigoPrestador', 'prestador'];
 }
 
-/**
- * Configura a lógica completa do modal de Edição de Prestador,
- * usando o padrão de interruptor e com o mapeamento de campos corrigido.
- */
 function configurarModalEditarPrestador() {
     const modalEl = document.getElementById("modalEditarPrestador");
     if (!modalEl) return;
@@ -501,7 +507,6 @@ function configurarModalEditarPrestador() {
     const btnSalvar = document.getElementById("btnSalvarEdicaoPrestador");
     let todosOsPrestadores = [];
 
-    // Mapeamento dos campos (ID do HTML : Propriedade do Objeto)
     const mapeamentoCampos = {
         codigoPrestador: 'codigoPrestador_Editar',
         prestador: 'nomePrestador_Editar',
@@ -523,32 +528,21 @@ function configurarModalEditarPrestador() {
     };
 
     const preencherFormularioEdicao = (prestador) => {
-        // 1. Preenche campos simples
         for (const key in mapeamentoCampos) {
             const campoId = mapeamentoCampos[key];
             if (campoId) {
                 const campo = document.getElementById(campoId);
-                if (campo) {
-                    campo.value = prestador[key] ?? '';
-                }
+                if (campo) campo.value = prestador[key] ?? '';
             }
         }
-
-        // 2. Lógica Especial para o Banco (Select)
         const selectBanco = document.getElementById('selectBancoEditar');
         if (selectBanco) {
             if (prestador.bancoReferencia && prestador.bancoReferencia.id) {
-                // Se o prestador já tem o objeto bancoReferencia (novo modelo)
                 selectBanco.value = prestador.bancoReferencia.id;
             } else {
-                // Fallback: Tenta encontrar pelo código antigo (legado)
                 const options = Array.from(selectBanco.options);
                 const optionEncontrada = options.find(opt => opt.dataset.codigo === prestador.codigoBanco);
-                if (optionEncontrada) {
-                    selectBanco.value = optionEncontrada.value;
-                } else {
-                    selectBanco.value = "";
-                }
+                selectBanco.value = optionEncontrada ? optionEncontrada.value : "";
             }
         }
     };
@@ -565,13 +559,12 @@ function configurarModalEditarPrestador() {
     modalEl.addEventListener('show.bs.modal', async () => {
         formCampos.classList.add('d-none');
         btnSalvar.disabled = true;
-        selectEl.value = '';
         resetarFormulario();
         try {
             toggleLoader(true);
-            // Carrega a lista de bancos antes de tudo
             await carregarSelectBancosDinamicamente();
-            await preencherSelectComPrestadores(selectEl);
+            // Para editar, buscamos TODOS (ativos e inativos)
+            await preencherSelectComTodosPrestadores(selectEl);
 
             const response = await fetchComAuth("http://localhost:8080/index/prestadores");
             todosOsPrestadores = await response.json();
@@ -597,14 +590,13 @@ function configurarModalEditarPrestador() {
         }
     });
 
-    // Lógica do Toggle (Switch) de editar
     formCampos.addEventListener('change', (e) => {
         if (e.target.classList.contains('toggle-editar')) {
-            const targetSelector = e.target.getAttribute('data-target');
-            const inputTarget = document.querySelector(targetSelector);
-            if (inputTarget) {
-                inputTarget.disabled = !e.target.checked;
-                if (e.target.checked) inputTarget.focus();
+            const target = e.target.getAttribute('data-target');
+            const input = document.querySelector(target);
+            if (input) {
+                input.disabled = !e.target.checked;
+                if (e.target.checked) input.focus();
             }
         }
     });
@@ -613,12 +605,9 @@ function configurarModalEditarPrestador() {
         e.preventDefault();
         const prestadorId = parseInt(selectEl.value);
         if (!prestadorId) return;
-
         toggleLoader(true);
 
         const dadosAtualizados = {};
-
-        // 1. Pega valores dos campos mapeados
         for (const key in mapeamentoCampos) {
             const campo = document.getElementById(mapeamentoCampos[key]);
             if (campo) {
@@ -628,27 +617,20 @@ function configurarModalEditarPrestador() {
             }
         }
 
-        // 2. CORREÇÃO PRINCIPAL: Pega valor do Banco Novo e monta o objeto correto
         const selectBanco = document.getElementById('selectBancoEditar');
         if (selectBanco && selectBanco.value) {
             const bancoId = Number(selectBanco.value);
-
-            // Aqui enviamos o objeto bancoReferencia para o Java mapear corretamente
             dadosAtualizados.bancoReferencia = { id: bancoId };
-
-            // Preenche legado para garantir compatibilidade visual imediata
             const option = selectBanco.options[selectBanco.selectedIndex];
             dadosAtualizados.codigoBanco = option.dataset.codigo;
             dadosAtualizados.banco = option.dataset.nome;
         } else {
-            // Se o usuário limpou o banco, enviamos null para remover o vínculo
             dadosAtualizados.bancoReferencia = null;
             dadosAtualizados.codigoBanco = null;
             dadosAtualizados.banco = null;
         }
 
         dadosAtualizados.id = prestadorId;
-        // Mantém o status ativo original
         dadosAtualizados.ativo = todosOsPrestadores.find(p => p.id === prestadorId)?.ativo;
 
         try {
@@ -659,7 +641,6 @@ function configurarModalEditarPrestador() {
             });
 
             if (!response.ok) throw new Error("Falha ao atualizar.");
-
             mostrarToast("Atualizado com sucesso!", 'success');
             bootstrap.Modal.getInstance(modalEl).hide();
             await carregarTabelaPrestadores(getColunasAtuaisPorRole());

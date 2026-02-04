@@ -347,6 +347,10 @@ function criarHtmlCard(solicitacao, index, ehPendente, podeAprovar) {
             </tr>`;
     }).join('');
 
+    const site = (solicitacao.lpu && solicitacao.lpu.site && solicitacao.lpu.site !== '-') 
+                 ? solicitacao.lpu.site 
+                 : 'Sem Site';
+
     return `
         <div class="pedido-header collapsed" data-bs-toggle="collapse" data-bs-target="#collapse-${pedidoId}-${sufixoId}">
             <div class="d-flex align-items-center w-100 gap-3">
@@ -357,8 +361,12 @@ function criarHtmlCard(solicitacao, index, ehPendente, podeAprovar) {
                 ` : ''}
 
                 <div class="d-flex flex-column flex-grow-1">
-                    <div class="d-flex align-items-center gap-2 mb-1">
+                    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                         <span class="badge-os">OS ${osReal}</span>
+                        
+                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">
+                            <i class="bi bi-geo-alt-fill me-1"></i>${site}
+                        </span>
                         ${statusGeralBadge}
                         <span class="text-muted text-xs ms-auto d-md-none">${dataStr}</span>
                     </div>
