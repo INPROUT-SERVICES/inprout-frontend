@@ -40,9 +40,85 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnUpdateOriginal) btnUpdateOriginal.addEventListener('click', acaoAtualizar);
 
         // Carregamento inicial
+        atualizarDashboardFixo();
         carregarPendenciasCPS();
     }, 100);
 });
+
+async function atualizarDashboardFixo() {
+    const userId = localStorage.getItem('usuarioId');
+    const hoje = new Date();
+    
+    // --- LÓGICA DE COMPETÊNCIA (Regra do dia 7) ---
+    // Se hoje for dia 7 ou menos, a referência é o mês anterior.
+    // Se for dia 8 ou mais, a referência é o mês atual.
+    let dataReferencia = new Date(hoje);
+    
+    if (hoje.getDate() <= 7) {
+        dataReferencia.setMonth(dataReferencia.getMonth() - 1);
+    }
+    
+    // Define início (dia 1) e fim (último dia) da competência calculada
+    const inicio = new Date(dataReferencia.getFullYear(), dataReferencia.getMonth(), 1);
+    const fim = new Date(dataReferencia.getFullYear(), dataReferencia.getMonth() + 1, 0);
+
+    // --- ATUALIZAÇÃO VISUAL DO LABEL ---
+    const nomesMeses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const textoMes = `${nomesMeses[inicio.getMonth()]}/${inicio.getFullYear()}`;
+    
+    // Tenta encontrar ou criar o aviso na tela
+    let labelContainer = document.getElementById('cps-dashboard-label-container');
+    if (!labelContainer) {
+        // Se não existir, cria dinamicamente logo acima dos filtros ou do dashboard
+        const pane = document.getElementById('cps-pendencias-pane');
+        if (pane) {
+            labelContainer = document.createElement('div');
+            labelContainer.id = 'cps-dashboard-label-container';
+            // Estilo "badge" elegante e discreto
+            labelContainer.className = 'd-flex align-items-center mb-3 text-secondary';
+            labelContainer.innerHTML = `
+                <div class="bg-white border rounded-pill px-3 py-1 shadow-sm d-flex align-items-center" style="font-size: 0.85rem;">
+                    <i class="bi bi-graph-up-arrow text-primary me-2"></i>
+                    <span class="me-1">Dashboard Referência:</span>
+                    <strong class="text-dark" id="cps-dashboard-ref-text">...</strong>
+                    ${hoje.getDate() <= 7 ? '<span class="badge bg-warning text-dark ms-2" style="font-size:0.7rem">Dados disponiveis até dia 07.</span>' : '<span class="badge bg-success-subtle text-success ms-2" style="font-size:0.7rem">Mês Vigente</span>'}
+                </div>
+            `;
+            // Insere no topo da aba de pendências
+            pane.insertBefore(labelContainer, pane.firstChild);
+        }
+    }
+    
+    // Atualiza o texto do mês se o elemento existir
+    const txtEl = document.getElementById('cps-dashboard-ref-text');
+    if (txtEl) txtEl.textContent = textoMes;
+
+    // --- BUSCA DADOS NO BACKEND ---
+    const params = new URLSearchParams({
+        inicio: inicio.toISOString().split('T')[0],
+        fim: fim.toISOString().split('T')[0],
+        segmentoId: '', // Fixo geral
+        prestadorId: '' // Fixo geral
+    });
+
+    try {
+        const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/dashboard?${params.toString()}`, { headers: { 'X-User-ID': userId } });
+        if (res.ok) {
+            const d = await res.json();
+            const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+
+            document.querySelectorAll('.kpi-cps-total-mes-value').forEach(e => e.textContent = fmt(d.valorTotal));
+            document.querySelectorAll('.kpi-cps-total-adiantado-value').forEach(e => e.textContent = fmt(d.valorTotalAdiantado));
+            document.querySelectorAll('.kpi-cps-total-confirmado-value').forEach(e => e.textContent = fmt(d.valorTotalConfirmado));
+            document.querySelectorAll('.kpi-cps-total-pendente-value').forEach(e => e.textContent = fmt(d.valorTotalPendente));
+            document.querySelectorAll('.kpi-cps-total-pago-value').forEach(e => e.textContent = fmt(d.valorTotalPago));
+            
+            if (d.quantidadeItens !== undefined) {
+                document.querySelectorAll('.kpi-cps-qtd-itens-value').forEach(e => e.textContent = d.quantidadeItens);
+            }
+        }
+    } catch (e) { console.error("Erro dashboard fixo:", e); }
+}
 
 // --- CSS Injetado (Styles Dinâmicos) ---
 if (!document.getElementById('cps-custom-styles')) {
@@ -298,96 +374,163 @@ async function carregarPendenciasCPS() {
     const userId = localStorage.getItem('usuarioId');
 
     try {
-        // 1. CAPTURA OS FILTROS
-        const segmentoEl = document.getElementById('cps-filtro-segmento');
-        const prestadorEl = document.getElementById('cps-filtro-prestador');
-        const mesEl = document.getElementById('cps-filtro-mes-ref');
-
-        const segmentoId = (segmentoEl && segmentoEl.value) ? segmentoEl.value : '';
-
+        // 1. Captura os valores dos filtros
+        const segmentoId = document.getElementById('cps-filtro-segmento')?.value || '';
+        const mesVal = document.getElementById('cps-filtro-mes-ref')?.value || '';
+        
+        // Tratamento especial para o Choices.js do prestador
         let prestadorId = '';
+        const prestadorEl = document.getElementById('cps-filtro-prestador');
         if (window.choicesCpsPrestador && prestadorEl) {
             prestadorId = window.choicesCpsPrestador.getValue(true) || '';
-        } else {
-            prestadorId = (prestadorEl && prestadorEl.value) ? prestadorEl.value : '';
+        } else if (prestadorEl) {
+            prestadorId = prestadorEl.value || '';
         }
 
-        const mesVal = (mesEl && mesEl.value) ? mesEl.value : '';
-
-        // 2. PREPARA PARÂMETROS PARA A LISTA (Backend)
+        // 2. Prepara parâmetros para a API (Trazendo dados para filtrar)
         const paramsLista = {};
-
-        if (segmentoId) paramsLista.segmentoId = segmentoId;
-        if (prestadorId) paramsLista.prestadorId = prestadorId;
-
-        // Lógica de Data: Se tiver mês selecionado, manda pro backend. 
-        // Se for "Todos" (vazio), não manda data (traz tudo) e filtramos visualmente se precisar.
+        
+        // Se houver mês selecionado, usamos para limitar a busca no banco (otimização)
+        // Se for "Todos", não enviamos data, trazendo tudo pendente
         if (mesVal) {
             const [ano, mes] = mesVal.split('-');
             paramsLista.inicio = `${ano}-${mes}-01`;
             paramsLista.fim = `${ano}-${mes}-${new Date(ano, mes, 0).getDate()}`;
         }
+        // Nota: Opcionalmente enviamos segmento/prestador ao back ou filtramos só no front.
+        // Aqui enviamos para reduzir payload, mas garantimos filtro no front também.
+        if (segmentoId) paramsLista.segmentoId = segmentoId;
+        if (prestadorId) paramsLista.prestadorId = prestadorId;
 
-        // --- REMOVIDO: A chamada ao backend do Dashboard foi retirada daqui ---
-        // await atualizarHeaderKpiCPS(...); // <--- NÃO USAMOS MAIS ISSO
-
-        // 3. BUSCA A LISTA BRUTA
+        // 3. Busca a lista
         const paramsUrl = new URLSearchParams(paramsLista);
         const res = await fetchComAuth(`${API_BASE_URL}/controle-cps?${paramsUrl.toString()}`, { headers: { 'X-User-ID': userId } });
         if (!res.ok) throw new Error('Erro ao buscar pendências.');
 
         const dadosBrutos = await res.json();
 
-        // 4. FILTRAGEM LOCAL (Aplicação rigorosa dos filtros na tela)
+        // 4. Filtragem Rigorosa no Front-end (Lógica "E")
         const dadosFiltrados = dadosBrutos.filter(item => {
+            let match = true;
+
             // Filtro Prestador
-            if (prestadorId && (!item.prestador || item.prestador.id != prestadorId)) return false;
+            if (prestadorId) {
+                if (!item.prestador || String(item.prestador.id) !== String(prestadorId)) match = false;
+            }
 
-            // Filtro Segmento
-            const idSegItem = item.os?.segmentoId || item.segmentoId || item.os?.segmento?.id;
-            if (segmentoId && idSegItem && idSegItem != segmentoId) return false;
+            // Filtro Segmento (verifica vários locais onde o ID pode estar)
+            if (segmentoId && match) {
+                const idSegItem = item.os?.segmentoId || item.segmentoId || item.os?.segmento?.id;
+                if (String(idSegItem) !== String(segmentoId)) match = false;
+            }
 
-            // Filtro Data de Atividade
-            if (mesVal) {
-                if (!item.dataAtividade) return false;
-
-                let anoItem, mesItem;
-                if (item.dataAtividade.includes('/')) { // DD/MM/YYYY
-                    const p = item.dataAtividade.split('/');
-                    if (p.length === 3) { mesItem = p[1]; anoItem = p[2]; }
-                } else if (item.dataAtividade.includes('-')) { // YYYY-MM-DD
-                    const p = item.dataAtividade.split('-');
-                    if (p.length === 3) { anoItem = p[0]; mesItem = p[1]; }
-                }
-
-                const [anoFiltro, mesFiltro] = mesVal.split('-');
-                if (anoItem && mesItem && (anoItem !== anoFiltro || mesItem !== mesFiltro)) {
-                    return false;
+            // Filtro Mês/Competência
+            if (mesVal && match) {
+                if (!item.dataAtividade) {
+                    match = false;
+                } else {
+                    // Normaliza datas (YYYY-MM-DD ou DD/MM/YYYY)
+                    let itemAno, itemMes;
+                    if (item.dataAtividade.includes('/')) { 
+                        [, itemMes, itemAno] = item.dataAtividade.split('/'); 
+                    } else { 
+                        [itemAno, itemMes] = item.dataAtividade.split('-'); 
+                    }
+                    const [anoFiltro, mesFiltro] = mesVal.split('-');
+                    if (itemAno !== anoFiltro || itemMes !== mesFiltro) match = false;
                 }
             }
-            return true;
+
+            return match;
         });
 
-        // 5. ATUALIZA A TELA
+        // 5. Atualiza a tela (Somente Lista)
         window.dadosCpsGlobais = dadosFiltrados;
-
-        // A. Renderiza a Lista
         renderizarAcordeonCPS(window.dadosCpsGlobais, 'accordionPendenciasCPS', 'msg-sem-pendencias-cps', true);
 
-        // B. Calcula o Dashboard com BASE NO QUE ESTÁ NA TELA
-        calcularDashboardLocal(window.dadosCpsGlobais);
-
-        // C. Reaplica busca textual se houver
+        // Reaplica busca textual se houver algo digitado
         const inputBusca = document.getElementById('input-busca-cps-pendencias');
         if (inputBusca && inputBusca.value) {
             aplicarFiltroVisualCPS('accordionPendenciasCPS', 'input-busca-cps-pendencias');
         }
+        
+        // IMPORTANTE: Não chamamos atualização do Dashboard aqui para mantê-lo fixo.
 
     } catch (error) {
         console.error(error);
         mostrarToast(error.message, 'error');
     } finally {
         toggleLoader(false, '#cps-pendencias-pane');
+    }
+}
+
+async function confirmarPagamentoComData(ids, tipo) {
+    const hoje = new Date().toISOString().split('T')[0];
+    const titulo = tipo === 'ADIANTAMENTO' ? 'Pagar Adiantamentos' : 'Realizar Pagamento CPS';
+    
+    // HTML do SweetAlert com campo de Data
+    const htmlContent = `
+        <div class="text-start">
+            <label class="form-label small fw-bold">Data do Pagamento *</label>
+            <input type="date" id="swal-data-pag" class="form-control mb-3" value="${hoje}">
+            <div class="alert alert-info small py-2">
+                <i class="bi bi-info-circle me-1"></i>
+                Confirmar pagamento de <b>${ids.length}</b> item(ns)?
+            </div>
+        </div>
+    `;
+
+    const { value: formValues } = await Swal.fire({
+        title: titulo,
+        html: htmlContent,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Confirmar Pagamento',
+        cancelButtonText: 'Cancelar',
+        focusConfirm: false,
+        preConfirm: () => {
+            const data = document.getElementById('swal-data-pag').value;
+            if (!data) Swal.showValidationMessage('A data do pagamento é obrigatória');
+            return { data };
+        }
+    });
+
+    if (formValues) {
+        // Define Endpoint e Body
+        // Se for 1 item ou lote, o backend deve estar preparado para receber lista ou ID
+        const url = tipo === 'ADIANTAMENTO' ? '/lancamentos/pagar-adiantamento-lote' : '/controle-cps/pagar-lote';
+        
+        const body = {
+            lancamentoIds: ids,
+            usuarioId: localStorage.getItem('usuarioId'),
+            controllerId: localStorage.getItem('usuarioId'),
+            dataPagamento: formValues.data // DATA INCLUÍDA AQUI
+        };
+
+        // Envia para o Backend
+        Swal.fire({ title: 'Processando...', didOpen: () => Swal.showLoading() });
+        try {
+            const res = await fetchComAuth(`${API_BASE_URL}${url}`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body) 
+            });
+
+            if (res.ok) {
+                Swal.fire('Sucesso!', 'Pagamento registrado com a data informada.', 'success');
+                
+                // Limpa seleção e recarrega a lista e o dashboard (para atualizar os "Pagos")
+                document.querySelectorAll('.cps-check').forEach(c => c.checked = false);
+                
+                // Atualiza ambos para refletir a mudança de status
+                carregarPendenciasCPS();
+                atualizarDashboardFixo();
+            } else {
+                throw new Error(await res.text());
+            }
+        } catch (e) {
+            Swal.fire('Erro', e.message, 'error');
+        }
     }
 }
 
@@ -956,24 +1099,26 @@ window.executarAcaoLote = function (acao) {
     const ids = Array.from(document.querySelectorAll('.cps-check:checked')).map(c => parseInt(c.dataset.id));
     if (!ids.length) return;
 
+    // Configura flags dos modais existentes (mantido da lógica original)
     if (window.modalAlterarValorCPS) window.modalAlterarValorCPS._element.dataset.acaoEmLote = 'true';
     if (window.modalRecusarCPS) window.modalRecusarCPS._element.dataset.acaoEmLote = 'true';
 
+    // --- AÇÕES DO COORDENADOR (Mantidas iguais) ---
     if (acao === 'fechar') {
+        // ... (Mantenha o código original do 'fechar' aqui) ...
         document.getElementById('formAlterarValorCPS').reset();
         document.querySelector('#modalAlterarValorCPS .modal-title').innerHTML = '<i class="bi bi-check-all text-success me-2"></i> Fechar Lote';
         document.getElementById('cpsAcaoCoordenador').value = 'fechar';
         document.getElementById('divCompetenciaCps').style.display = 'block';
         gerarOpcoesCompetencia();
         const valInput = document.getElementById('cpsValorPagamentoInput');
-        valInput.value = 'Vários';
-        valInput.disabled = true;
+        valInput.value = 'Vários'; valInput.disabled = true;
         const btn = document.getElementById('btnConfirmarAcaoCPS');
-        btn.className = 'btn btn-success';
-        btn.textContent = "Confirmar Lote";
+        btn.className = 'btn btn-success'; btn.textContent = "Confirmar Lote";
         if (window.modalAlterarValorCPS) window.modalAlterarValorCPS.show();
     }
     else if (acao === 'solicitarAdiantamento') {
+        // ... (Mantenha o código original do 'solicitarAdiantamento' aqui) ...
         const modalEl = document.getElementById('modalSolicitarAdiantamento');
         if (modalEl) {
             modalEl.dataset.acaoEmLote = 'true';
@@ -985,6 +1130,7 @@ window.executarAcaoLote = function (acao) {
         }
     }
     else if (acao === 'recusarCoord') {
+        // ... (Mantenha o código original do 'recusarCoord' aqui) ...
         const form = document.getElementById('formAlterarValorCPS');
         form.reset();
         document.querySelector('#modalAlterarValorCPS .modal-title').innerHTML = '<i class="bi bi-x-circle text-danger"></i> Recusar Lote';
@@ -993,25 +1139,19 @@ window.executarAcaoLote = function (acao) {
         document.getElementById('cpsValorPagamentoInput').disabled = true;
         document.getElementById('cpsJustificativaInput').required = true;
         const btn = document.getElementById('btnConfirmarAcaoCPS');
-        btn.className = 'btn btn-danger';
-        btn.textContent = "Recusar Lote";
+        btn.className = 'btn btn-danger'; btn.textContent = "Recusar Lote";
         if (window.modalAlterarValorCPS) window.modalAlterarValorCPS.show();
     }
-    else if (acao === 'pagarController' || acao === 'pagarAdiantamento') {
-        const m = new bootstrap.Modal(document.getElementById('modalConfirmacaoGenerica'));
-        document.getElementById('modalGenericoTitulo').innerText = acao === 'pagarController' ? 'Pagar CPS' : 'Pagar Adiantamentos';
-        document.getElementById('modalGenericoTexto').innerText = `Confirma o pagamento de ${ids.length} itens selecionados?`;
-
-        const btn = document.getElementById('btnGenericoConfirmar');
-        const novoBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(novoBtn, btn);
-        novoBtn.addEventListener('click', () => {
-            const url = acao === 'pagarController' ? '/controle-cps/pagar-lote' : '/lancamentos/pagar-adiantamento-lote';
-            const body = acao === 'pagarController' ? { lancamentoIds: ids, controllerId: localStorage.getItem('usuarioId') } : { lancamentoIds: ids, usuarioId: localStorage.getItem('usuarioId') };
-            processarAcaoControllerDireta(url, body, m);
-        });
-        m.show();
+    
+    // --- AÇÕES DO CONTROLLER (ALTERADAS PARA USAR DATA) ---
+    else if (acao === 'pagarController') {
+        confirmarPagamentoComData(ids, 'QUITACAO');
     }
+    else if (acao === 'pagarAdiantamento') {
+        confirmarPagamentoComData(ids, 'ADIANTAMENTO');
+    }
+    
+    // --- RECUSAS DO CONTROLLER (Mantidas iguais) ---
     else if (acao === 'recusarController') {
         if (window.modalRecusarCPS) {
             window.modalRecusarCPS._element.dataset.acaoEmLote = 'true';

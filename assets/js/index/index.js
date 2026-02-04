@@ -2031,6 +2031,135 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function verificarTrocaSenhaObrigatoria() {
+        const usuarioId = localStorage.getItem('usuarioId');
+        if (!usuarioId) return;
+
+        const hoje = new Date();
+        const dataLimiteInicio = new Date('2026-01-31T23:59:59'); // Data de corte solicitada
+
+        // Chave de armazenamento: data_troca_senha_ID_DO_USUARIO
+        const storageKey = `data_troca_senha_${usuarioId}`;
+        const ultimaTrocaStr = localStorage.getItem(storageKey);
+
+        let forcarTroca = false;
+
+        // 1. Se hoje for depois de 31/01/2026
+        if (hoje > dataLimiteInicio) {
+            if (!ultimaTrocaStr) {
+                // Nunca trocou ou não tem registro local -> Forçar
+                forcarTroca = true;
+            } else {
+                // Verifica se faz mais de 12 meses (365 dias)
+                const dataUltimaTroca = new Date(ultimaTrocaStr);
+                const diferencaTempo = hoje - dataUltimaTroca;
+                const diasPassados = diferencaTempo / (1000 * 3600 * 24);
+
+                if (diasPassados > 365) {
+                    forcarTroca = true;
+                }
+            }
+        }
+
+        // Se for necessário trocar, exibe o modal bloqueante
+        if (forcarTroca) {
+            const modalEl = document.getElementById('modalTrocaSenhaObrigatoria');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl, {
+                    backdrop: 'static', // Impede fechar clicando fora
+                    keyboard: false     // Impede fechar com ESC
+                });
+                modal.show();
+                configurarFormularioSenhaObrigatoria(modal, storageKey);
+            }
+        }
+    }
+
+    function configurarFormularioSenhaObrigatoria(modalInstance, storageKey) {
+        const form = document.getElementById('formTrocaSenhaObrigatoria');
+        const usernameInput = document.getElementById('usernameObrig'); // NOVO
+        const senhaAtualInput = document.getElementById('senhaAtualObrig');
+        const novaSenhaInput = document.getElementById('novaSenhaObrig');
+        const confirmaSenhaInput = document.getElementById('confirmaSenhaObrig');
+        const btnSalvar = document.getElementById('btnSalvarSenhaObrig');
+        const erroMesma = document.getElementById('erroMesmaSenha');
+        const erroDiferente = document.getElementById('erroSenhaDiferente');
+
+        // --- NOVO: Preenche o username oculto para o Chrome ---
+        // Tenta pegar o email do localStorage (verifique se a chave é 'email', 'usuarioEmail' ou 'userEmail' no seu login.js)
+        const emailUser = localStorage.getItem('email') || localStorage.getItem('usuarioEmail') || '';
+        if (usernameInput) usernameInput.value = emailUser;
+        // -------------------------------------------------------
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            erroMesma.classList.add('d-none');
+            erroDiferente.classList.add('d-none');
+
+            const atual = senhaAtualInput.value;
+            const nova = novaSenhaInput.value;
+            const confirma = confirmaSenhaInput.value;
+
+            if (atual === nova) {
+                erroMesma.classList.remove('d-none');
+                novaSenhaInput.focus();
+                return;
+            }
+
+            if (nova !== confirma) {
+                erroDiferente.classList.remove('d-none');
+                confirmaSenhaInput.focus();
+                return;
+            }
+
+            btnSalvar.disabled = true;
+            const originalText = btnSalvar.innerHTML;
+            btnSalvar.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Atualizando...`;
+
+            try {
+                const usuarioId = localStorage.getItem('usuarioId');
+
+                // AJUSTE PARA O SEU BACKEND CORRETO (PORTA 8082, 8080, etc)
+                // Use a URL base correta do seu sistema
+                const response = await fetchComAuth(`http://localhost:8080/usuarios/${usuarioId}/alterar-senha`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        senhaAtual: atual,
+                        novaSenha: nova
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorTxt = await response.text();
+                    throw new Error(errorTxt || "Senha atual incorreta ou erro no servidor.");
+                }
+
+                localStorage.setItem(storageKey, new Date().toISOString());
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Senha Atualizada!',
+                    text: 'Sua senha foi alterada com segurança. O sistema será recarregado.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+                modalInstance.hide();
+                window.location.reload();
+
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Erro', error.message, 'error');
+            } finally {
+                btnSalvar.disabled = false;
+                btnSalvar.innerHTML = originalText;
+            }
+        });
+    }
+
+    verificarTrocaSenhaObrigatoria();
+
     const btnExportar = document.getElementById('btnExportar');
     if (btnExportar) {
         btnExportar.addEventListener('click', () => {
@@ -2114,6 +2243,37 @@ document.addEventListener('DOMContentLoaded', () => {
         renderizarCabecalho(colunasMinhasPendencias, document.querySelector('#minhasPendencias-pane thead'));
         renderizarCabecalho(colunasMinhasPendencias, document.querySelector('#paralisados-pane thead'));
         renderizarCabecalho(colunasPendenteDoc, document.querySelector('#pendente-doc-pane thead'));
+    }
+
+    const btnLogout = document.getElementById('logoutBtn');
+    if (btnLogout) {
+        // Remove event listeners antigos (hack para garantir que este rode por último ou substitua)
+        const novoBtnLogout = btnLogout.cloneNode(true);
+        btnLogout.parentNode.replaceChild(novoBtnLogout, btnLogout);
+
+        novoBtnLogout.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // 1. Identifica todas as chaves de "data_troca_senha_" para salvar
+            const backupTrocas = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('data_troca_senha_')) {
+                    backupTrocas[key] = localStorage.getItem(key);
+                }
+            }
+
+            // 2. Limpa o storage (remove token, dados do usuário, etc)
+            localStorage.clear();
+
+            // 3. Restaura apenas as datas de troca de senha
+            Object.keys(backupTrocas).forEach(key => {
+                localStorage.setItem(key, backupTrocas[key]);
+            });
+
+            // 4. Redireciona para o login
+            window.location.href = 'login.html';
+        });
     }
 
     inicializarCabecalhos();
