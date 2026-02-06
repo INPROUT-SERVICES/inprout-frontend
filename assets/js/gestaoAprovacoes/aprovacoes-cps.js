@@ -297,11 +297,17 @@ async function initFiltrosCPS() {
 
     // (O restante do código para Histórico e Segmentos permanece igual...)
     if (selectMesHist && selectMesHist.options.length === 0) {
+
+        // 1. ADICIONE: Opção padrão "Todos" selecionada (true, true)
+        selectMesHist.add(new Option("Todos os Meses", "", true, true));
+
         for (let i = 0; i < 12; i++) {
             const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
             const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
             const txt = `${nomesMeses[d.getMonth()]}/${d.getFullYear()}`;
-            selectMesHist.add(new Option(txt, val, i === 0, i === 0));
+
+            // 2. ALTERE: Remova a seleção automática do mês atual (remova os true, true do final)
+            selectMesHist.add(new Option(txt, val));
         }
     }
 
@@ -712,31 +718,31 @@ async function carregarHistoricoCPS(reset = false) {
         window.cpsHistoricoPage = 0; // Reinicia página
         window.dadosCpsHistorico = []; // Limpa lista
         window.cpsHistoricoLast = false; // Reinicia flag de fim
-        
+
         // Limpa visualmente o acordeão
         const elAccordion = document.getElementById('accordionHistoricoCPS');
         if (elAccordion) elAccordion.innerHTML = '';
-        
+
         // Esconde botão "Carregar Mais" durante o reset
         toggleBtnCarregarMais(false);
     } else {
         // Se já carregou tudo, não faz nada
         if (window.cpsHistoricoLast) return;
-        
+
         // Incrementa página (Aqui é onde dava NaN se não fosse número antes)
-        window.cpsHistoricoPage++; 
+        window.cpsHistoricoPage++;
     }
 
     window.cpsHistoricoLoading = true;
     toggleLoader(true, '#cps-historico-pane');
-    
+
     // Desabilita botão enquanto carrega
     const btnMais = document.getElementById('btn-carregar-mais-historico-cps');
     if (btnMais) btnMais.disabled = true;
 
     try {
         const userId = localStorage.getItem('usuarioId');
-        
+
         // --- COLETA DOS FILTROS ---
         const segmentoId = document.getElementById('cps-hist-filtro-segmento')?.value || '';
         let prestadorId = '';
@@ -765,22 +771,22 @@ async function carregarHistoricoCPS(reset = false) {
         if (prestadorId) params.append('prestadorId', prestadorId);
 
         // --- CHAMADA AO BACKEND ---
-        const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/historico?${params.toString()}`, { 
-            headers: { 'X-User-ID': userId } 
+        const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/historico?${params.toString()}`, {
+            headers: { 'X-User-ID': userId }
         });
-        
+
         if (!res.ok) {
             const txt = await res.text();
             throw new Error(txt || 'Erro ao buscar histórico.');
         }
-        
+
         const pageData = await res.json();
         const novosItens = pageData.content || [];
         window.cpsHistoricoLast = pageData.last; // Atualiza se é a última página
 
         // Adiciona novos itens à lista global
         window.dadosCpsHistorico = [...window.dadosCpsHistorico, ...novosItens];
-        
+
         // Renderiza
         renderizarAcordeonCPS(window.dadosCpsHistorico, 'accordionHistoricoCPS', 'msg-sem-historico-cps', false);
 
@@ -799,10 +805,10 @@ async function carregarHistoricoCPS(reset = false) {
     } catch (error) {
         console.error("Erro no histórico:", error);
         mostrarToast("Erro ao carregar histórico: " + error.message, 'error');
-        
+
         // Se deu erro, volta a página para tentar de novo na próxima vez
         if (!reset && window.cpsHistoricoPage > 0) window.cpsHistoricoPage--;
-        
+
     } finally {
         toggleLoader(false, '#cps-historico-pane');
         window.cpsHistoricoLoading = false;
@@ -927,6 +933,10 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         const linhas = grp.itens.map(l => {
             let btns = `<button class="btn btn-sm btn-outline-info me-1" title="Ver" onclick="verComentarios(${l.id})"><i class="bi bi-eye"></i></button>`;
             let showRowCheck = false;
+
+            if (['COORDINATOR','ADMIN'].includes(userRole) && l.statusPagamento === 'FECHADO') {
+                btns += `<button class="btn btn-sm btn-outline-warning me-1" title="Solicitar Adiantamento" onclick="abrirModalSolicitarAdiantamento(${l.id}, ${l.valor}, ${l.valorAdiantamento})"><i class="bi bi-cash-stack"></i></button>`;
+            }
 
             const isConfirmado = l.statusPagamento === 'FECHADO' || l.statusPagamento === 'ALTERACAO_SOLICITADA';
             const isPago = l.statusPagamento === 'PAGO' || l.statusPagamento === 'CONCLUIDO';
