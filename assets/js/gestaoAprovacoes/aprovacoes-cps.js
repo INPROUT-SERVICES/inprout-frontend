@@ -7,6 +7,10 @@ window.choicesCpsPrestador = null;
 window.choicesCpsHistPrestador = null;
 window.dadosCpsGlobais = [];
 window.dadosCpsHistorico = [];
+window.dadosCpsHistorico = [];
+window.cpsHistoricoPage = 0;
+window.cpsHistoricoLast = false;
+window.cpsHistoricoLoading = false;
 
 // --- Inicialização ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -694,48 +698,52 @@ async function atualizarHeaderKpiCPS(filtrosExternos = null) {
 }
 
 async function carregarHistoricoCPS(reset = false) {
-    // 1. Evita chamadas simultâneas
+    // 1. Evita chamadas simultâneas (Trava de segurança)
     if (window.cpsHistoricoLoading) return;
 
-    // 2. Inicialização de segurança (Corrige o erro NaN)
+    // 2. Inicialização de Segurança (CORREÇÃO DO ERRO NaN)
+    // Se a variável estiver indefinida ou for NaN, força ser 0
     if (typeof window.cpsHistoricoPage === 'undefined' || isNaN(window.cpsHistoricoPage)) {
         window.cpsHistoricoPage = 0;
     }
 
-    // 3. Lógica de Reset ou Incremento
+    // 3. Lógica de Reset (Nova Busca) vs Carregar Mais
     if (reset) {
-        window.cpsHistoricoPage = 0;
-        window.dadosCpsHistorico = [];
-        window.cpsHistoricoLast = false;
-        const accordion = document.getElementById('accordionHistoricoCPS');
-        if (accordion) accordion.innerHTML = '';
+        window.cpsHistoricoPage = 0; // Reinicia página
+        window.dadosCpsHistorico = []; // Limpa lista
+        window.cpsHistoricoLast = false; // Reinicia flag de fim
         
-        // Esconde o botão carregar mais temporariamente
-        const btnMais = document.getElementById('btn-carregar-mais-historico-cps');
-        if (btnMais) btnMais.classList.add('d-none');
+        // Limpa visualmente o acordeão
+        const elAccordion = document.getElementById('accordionHistoricoCPS');
+        if (elAccordion) elAccordion.innerHTML = '';
+        
+        // Esconde botão "Carregar Mais" durante o reset
+        toggleBtnCarregarMais(false);
     } else {
-        // Se já carregou tudo, para aqui
+        // Se já carregou tudo, não faz nada
         if (window.cpsHistoricoLast) return;
-        window.cpsHistoricoPage++;
+        
+        // Incrementa página (Aqui é onde dava NaN se não fosse número antes)
+        window.cpsHistoricoPage++; 
     }
 
     window.cpsHistoricoLoading = true;
     toggleLoader(true, '#cps-historico-pane');
     
-    const btnCarregarMais = document.getElementById('btn-carregar-mais-historico-cps');
-    if (btnCarregarMais) btnCarregarMais.disabled = true;
+    // Desabilita botão enquanto carrega
+    const btnMais = document.getElementById('btn-carregar-mais-historico-cps');
+    if (btnMais) btnMais.disabled = true;
 
     try {
         const userId = localStorage.getItem('usuarioId');
         
-        // Filtros
+        // --- COLETA DOS FILTROS ---
         const segmentoId = document.getElementById('cps-hist-filtro-segmento')?.value || '';
         let prestadorId = '';
         if (window.choicesCpsHistPrestador) {
             prestadorId = window.choicesCpsHistPrestador.getValue(true) || '';
         }
 
-        // Data
         const mesRef = document.getElementById('cps-hist-filtro-mes-ref')?.value;
         let inicio = '', fim = '';
         if (mesRef) {
@@ -745,53 +753,68 @@ async function carregarHistoricoCPS(reset = false) {
             fim = `${ano}-${mes}-${lastDay}`;
         }
 
-        // Monta parametros (O page agora garantidamente é um número)
+        // --- MONTAGEM DA URL ---
         const params = new URLSearchParams({
-            page: window.cpsHistoricoPage, // <--- Aqui estava o problema
+            page: window.cpsHistoricoPage, // Agora garantidamente um inteiro (0, 1, 2...)
             size: 20
         });
 
-        // Só adiciona os filtros se tiverem valor (evita enviar string vazia para Long)
         if (inicio) params.append('inicio', inicio);
         if (fim) params.append('fim', fim);
         if (segmentoId) params.append('segmentoId', segmentoId);
         if (prestadorId) params.append('prestadorId', prestadorId);
 
+        // --- CHAMADA AO BACKEND ---
         const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/historico?${params.toString()}`, { 
             headers: { 'X-User-ID': userId } 
         });
         
-        if (!res.ok) throw new Error('Erro ao buscar histórico.');
+        if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt || 'Erro ao buscar histórico.');
+        }
         
         const pageData = await res.json();
         const novosItens = pageData.content || [];
-        window.cpsHistoricoLast = pageData.last;
+        window.cpsHistoricoLast = pageData.last; // Atualiza se é a última página
 
-        // Atualiza dados globais
+        // Adiciona novos itens à lista global
         window.dadosCpsHistorico = [...window.dadosCpsHistorico, ...novosItens];
         
         // Renderiza
         renderizarAcordeonCPS(window.dadosCpsHistorico, 'accordionHistoricoCPS', 'msg-sem-historico-cps', false);
 
-        // Atualiza botão "Carregar Mais"
-        if (btnCarregarMais) {
-            btnCarregarMais.disabled = false;
+        // Atualiza estado do botão "Carregar Mais"
+        if (btnMais) {
+            btnMais.disabled = false;
             if (window.cpsHistoricoLast) {
-                btnCarregarMais.classList.add('d-none'); // Esconde se acabou
+                btnMais.textContent = "Todos os registros carregados";
+                btnMais.classList.add('d-none'); // Ou deixe visível mas desabilitado se preferir
             } else {
-                btnCarregarMais.classList.remove('d-none');
-                btnCarregarMais.textContent = "Carregar Mais";
+                btnMais.textContent = "Carregar Mais";
+                btnMais.classList.remove('d-none');
             }
         }
 
     } catch (error) {
-        console.error(error);
+        console.error("Erro no histórico:", error);
         mostrarToast("Erro ao carregar histórico: " + error.message, 'error');
-        // Em caso de erro, decrementa a página para tentar de novo depois
+        
+        // Se deu erro, volta a página para tentar de novo na próxima vez
         if (!reset && window.cpsHistoricoPage > 0) window.cpsHistoricoPage--;
+        
     } finally {
         toggleLoader(false, '#cps-historico-pane');
         window.cpsHistoricoLoading = false;
+    }
+}
+
+// Helper simples para o botão
+function toggleBtnCarregarMais(show) {
+    const btn = document.getElementById('btn-carregar-mais-historico-cps');
+    if (btn) {
+        if (show) btn.classList.remove('d-none');
+        else btn.classList.add('d-none');
     }
 }
 
