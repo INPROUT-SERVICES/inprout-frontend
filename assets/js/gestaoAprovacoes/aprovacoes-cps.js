@@ -837,11 +837,10 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
     if (!container) return;
     container.innerHTML = '';
 
-    // 1. Definições essenciais (Corrigindo o erro [Object object])
     const userRole = (localStorage.getItem("role") || localStorage.getItem("userRole") || "").trim().toUpperCase();
     const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
-    // Filtros de visualização por perfil (Client Side)
+    // Filtros de visualização por perfil
     if (isPendencia) {
         lista = lista.filter(l => {
             if (['COORDINATOR', 'MANAGER'].includes(userRole)) return l.statusPagamento === 'EM_ABERTO';
@@ -863,7 +862,7 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         const id = l.os?.id || 0;
         if (!acc[id]) {
             acc[id] = {
-                osId: l.os?.id, // ID da OS para o botão
+                osId: l.os?.id,
                 os: l.os?.os, 
                 projeto: l.os?.projeto,
                 totalCps: 0,
@@ -872,7 +871,7 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         }
 
         // Somatórias
-        acc[id].totalCps += parseFloat(l.valorCps || l.valor || 0); // Ajuste para garantir soma total
+        acc[id].totalCps += parseFloat(l.valorCps || l.valor || 0);
         if (l.valorAdiantamento) acc[id].totalAdiantado += parseFloat(l.valorAdiantamento) || 0;
         if (['FECHADO', 'ALTERACAO_SOLICITADA', 'PAGO', 'CONCLUIDO'].includes(l.statusPagamento)) acc[id].totalConfirmado += parseFloat(l.valorPagamento || l.valor) || 0;
         if (['PAGO', 'CONCLUIDO'].includes(l.statusPagamento)) acc[id].totalPago += parseFloat(l.valorPagamento || l.valor) || 0;
@@ -883,7 +882,7 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
 
     const listaGrupos = Object.values(gruposMap);
 
-    // Ordenação (Prioridade Visual)
+    // Ordenação
     listaGrupos.sort((a, b) => {
         const aTemAdiant = a.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
         const bTemAdiant = b.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
@@ -897,8 +896,8 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
     listaGrupos.forEach((grp, idx) => {
         const uid = `cps-${isPendencia ? 'pend' : 'hist'}-${idx}`;
 
-        // --- 2. LÓGICA DO BOTÃO NO HEADER (CONTAINER) ---
-        let btnAdiantamentoHeader = '';
+        // --- LÓGICA DO ÍCONE DE ADIANTAMENTO ---
+        let btnAdiantamentoIcon = '';
         
         // Regra: Coordenador/Gestor/Admin vê o botão se houver saldo FECHADO
         if (['COORDINATOR', 'MANAGER', 'ADMIN'].includes(userRole)) {
@@ -908,15 +907,15 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
                 const saldoParaAdiantar = itensFechados.reduce((acc, i) => acc + (parseFloat(i.valorPagamento || i.valor) || 0), 0);
                 
                 if (grp.osId && saldoParaAdiantar > 0) {
-                    // Botão inserido no Header com stopPropagation
-                    btnAdiantamentoHeader = `
-                        <button class="btn btn-sm btn-outline-warning fw-bold d-flex align-items-center me-3" 
-                                type="button"
-                                onclick="event.stopPropagation(); abrirModalAdiantamentoOS(${grp.osId}, ${saldoParaAdiantar}, '${grp.os}')"
-                                title="Solicitar Adiantamento: ${fmt(saldoParaAdiantar)}"
-                                style="height: 28px; padding: 0 10px; white-space: nowrap; font-size: 0.75rem; border-width: 1px;">
-                            <i class="bi bi-lightning-charge-fill me-1"></i> Adiantar
-                        </button>
+                    // USO DE <span> EM VEZ DE <button> PARA NÃO QUEBRAR O LAYOUT
+                    btnAdiantamentoIcon = `
+                        <span role="button" 
+                              class="text-warning d-flex align-items-center justify-content-center me-2 p-1 rounded-circle hover-bg-light"
+                              onclick="event.stopPropagation(); abrirModalAdiantamentoOS(${grp.osId}, ${saldoParaAdiantar}, '${grp.os}')"
+                              title="Solicitar Adiantamento: ${fmt(saldoParaAdiantar)}"
+                              style="width: 28px; height: 28px; cursor: pointer; transition: background 0.2s;">
+                            <i class="bi bi-lightning-charge-fill fs-6"></i>
+                        </span>
                     `;
                 }
             }
@@ -948,6 +947,7 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         const checkHtml = showHeaderCheck ? `<div class="position-absolute top-50 start-0 translate-middle-y ms-3 check-container-header" style="z-index: 5;"><input class="form-check-input cps-select-all shadow-sm" type="checkbox" data-target-body="collapse-${uid}"></div>` : '';
         const pl = showHeaderCheck ? 'ps-5' : 'ps-3';
 
+        // --- LAYOUT DO HEADER CORRIGIDO ---
         const headerHtml = `
             <div class="header-content w-100">
                 <div class="header-title-wrapper">
@@ -956,10 +956,16 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
                     ${temSolicitacaoAdiantamento && userRole === 'CONTROLLER' ? '<span class="badge bg-warning text-dark ms-2"><i class="bi bi-exclamation-triangle-fill"></i> Adiantamento</span>' : ''}
                 </div>
                 
-                <div class="header-kpi-wrapper d-flex gap-3 align-items-center">
-                    ${btnAdiantamentoHeader}
+                <div class="header-kpi-wrapper d-flex gap-4 align-items-center">
+                    
+                    <div class="d-flex align-items-center">
+                        ${btnAdiantamentoIcon}
+                        <div class="header-kpi">
+                            <span class="kpi-label">TOTAL CPS</span>
+                            <span class="kpi-value">${fmt(grp.totalCps)}</span>
+                        </div>
+                    </div>
 
-                    <div class="header-kpi"><span class="kpi-label">TOTAL CPS</span><span class="kpi-value">${fmt(grp.totalCps)}</span></div>
                     <div class="header-kpi"><span class="kpi-label text-primary">CONFIRMADO</span><span class="kpi-value text-primary">${fmt(grp.totalConfirmado)}</span></div>
                     <div class="header-kpi"><span class="kpi-label text-warning">ADIANTADO</span><span class="kpi-value text-warning">${fmt(grp.totalAdiantado)}</span></div>
                     <div class="header-kpi"><span class="kpi-label text-success">PAGO</span><span class="kpi-value text-success">${fmt(grp.totalPago)}</span></div>
@@ -981,7 +987,6 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
             if (isPendencia) {
                 if (['COORDINATOR', 'MANAGER', 'ADMIN'].includes(userRole) && l.statusPagamento === 'EM_ABERTO') {
                     btns += `<button class="btn btn-sm btn-outline-success me-1" title="Fechar" onclick="abrirModalCpsValor(${l.id}, 'fechar')"><i class="bi bi-check-circle"></i></button>`;
-                    // REMOVIDO BOTÃO DE ADIANTAMENTO DA LINHA
                     btns += `<button class="btn btn-sm btn-outline-danger" title="Recusar" onclick="abrirModalCpsValor(${l.id}, 'recusar')"><i class="bi bi-x-circle"></i></button>`;
                     showRowCheck = true;
                 } else if (['CONTROLLER', 'ADMIN'].includes(userRole)) {
@@ -996,8 +1001,6 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
                 }
             }
             const checkTd = showRowCheck ? `<td><input type="checkbox" class="form-check-input cps-check" data-id="${l.id}" data-status="${l.statusPagamento}"></td>` : (isPendencia ? '<td></td>' : '');
-
-            // USANDO ESTRITAMENTE statusPagamento COMO SOLICITADO
             const statusTexto = l.statusPagamento ? l.statusPagamento.replace(/_/g, ' ') : '';
 
             return `
@@ -1047,7 +1050,6 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         if (typeof configurarBuscaCps === 'function') configurarBuscaCps('input-busca-cps-historico', 'accordionHistoricoCPS');
     }
 }
-
 
 // ==========================================================
 // FUNÇÃO CENTRALIZADA DE FILTRO VISUAL (NOVO)
@@ -1349,6 +1351,9 @@ function toggleLoader(show, selector) {
 async function confirmarSolicitacaoAdiantamento() {
     const inputValor = document.getElementById('inputValorAdiantamento');
     const valorSolicitado = parseFloat(inputValor.value);
+    
+    // Recupera o ID do usuário logado do localStorage
+    const usuarioId = localStorage.getItem('usuarioId');
 
     // Validações Front-end
     if (!idOsParaAdiantamento) return;
@@ -1363,17 +1368,17 @@ async function confirmarSolicitacaoAdiantamento() {
 
     try {
         const btn = document.getElementById('btnConfirmarAdiantamento');
-        const txtOriginal = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
+        if (btn) {
+            btn.dataset.originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
+        }
 
-        // Chamada para a API (Ajuste a URL conforme seu Controller)
-        // O Backend espera: osId, valorSolicitado (e usuarioId via token/contexto)
-        const response = await fetch(`${API_BASE_URL}/controle-cps/solicitar-adiantamento-os`, {
+        const response = await fetchComAuth(`${API_BASE_URL}/controle-cps/solicitar-adiantamento-os`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${getToken()}` // Função que pega o JWT
+                'X-User-ID': usuarioId // <--- CORREÇÃO: Adicionado o cabeçalho obrigatório
             },
             body: JSON.stringify({
                 osId: idOsParaAdiantamento,
@@ -1382,21 +1387,22 @@ async function confirmarSolicitacaoAdiantamento() {
         });
 
         if (!response.ok) {
-            const erro = await response.text(); // ou response.json() dependendo do seu backend
+            const erro = await response.text();
             throw new Error(erro || 'Erro ao solicitar adiantamento');
         }
 
-        // Sucesso
+        // Fecha o modal antes do alerta de sucesso
         const modalEl = document.getElementById('modalSolicitarAdiantamentoOS');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        modal.hide();
+        if (modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
 
         Swal.fire({
             icon: 'success',
             title: 'Solicitação Enviada!',
             text: 'O Controller foi notificado sobre a solicitação de adiantamento para esta OS.'
         }).then(() => {
-            // Recarrega a tela para atualizar os status
             if (typeof carregarHistoricoCPS === 'function') {
                 carregarHistoricoCPS(); 
             } else {
@@ -1406,12 +1412,22 @@ async function confirmarSolicitacaoAdiantamento() {
 
     } catch (error) {
         console.error(error);
+
+        // Fecha o modal em caso de erro também
+        const modalEl = document.getElementById('modalSolicitarAdiantamentoOS');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+
         Swal.fire('Erro', 'Falha ao processar solicitação: ' + error.message, 'error');
+
     } finally {
         const btn = document.getElementById('btnConfirmarAdiantamento');
-        if(btn) {
+        if (btn) {
             btn.disabled = false;
-            btn.innerHTML = 'Confirmar Solicitação';
+            if (btn.dataset.originalText) btn.innerHTML = btn.dataset.originalText;
+            else btn.innerHTML = 'Confirmar Solicitação';
         }
     }
 }
