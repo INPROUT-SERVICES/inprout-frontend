@@ -1219,7 +1219,6 @@ function atualizarBotoesLoteCPS() {
         if (temEmAberto && !temAdiantamento && !temFechado) {
             htmlBtns += `
                 <button class="btn btn-sm btn-success rounded-pill px-3" onclick="executarAcaoLote('fechar')"><i class="bi bi-check-circle me-1"></i> Fechar</button>
-                <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="executarAcaoLote('solicitarAdiantamento')"><i class="bi bi-cash-stack me-1"></i> Adiantar</button>
                 <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="executarAcaoLote('recusarCoord')"><i class="bi bi-x-circle me-1"></i> Recusar</button>`;
         }
     }

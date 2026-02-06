@@ -769,12 +769,19 @@ document.addEventListener('DOMContentLoaded', () => {
             selectLPU.disabled = true;
             try {
                 selectLPU.innerHTML = '<option value="" selected disabled>Selecione a LPU...</option>';
-                const response = await fetchComAuth(`http://localhost:8080/os/${osId}`);
+                
+                // --- ALTERAÇÃO AQUI: Usa o novo endpoint leve ---
+                const response = await fetchComAuth(`http://localhost:8080/os/${osId}/itens-dropdown`);
+                // ------------------------------------------------
+                
                 if (!response.ok) throw new Error('Falha ao buscar detalhes da OS.');
-                const osData = await response.json();
-                const lpusParaExibir = osData.detalhes;
+                
+                // O retorno agora é diretamente a lista, não precisa acessar .detalhes
+                const lpusParaExibir = await response.json(); 
+
                 if (lpusParaExibir && lpusParaExibir.length > 0) {
                     lpusParaExibir.forEach(item => {
+                        // A lógica abaixo continua funcionando com o novo Map
                         const lpu = item.lpu || item;
                         const quantidade = item.quantidade || 'N/A';
                         const key = item.key || 'N/A';
