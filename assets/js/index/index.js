@@ -534,9 +534,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetchComAuth('http://localhost:8080/lancamentos');
             if (!response.ok) throw new Error(`Erro na rede: ${response.statusText}`);
             const lancamentosDaApi = await response.json();
+            
+            // Filtra e atualiza a variável global
             todosLancamentos = filtrarLancamentosParaUsuario(lancamentosDaApi);
+            
+            // Renderiza os componentes da tela
             renderizarCardsDashboard(todosLancamentos);
-            popularFiltroOS();
+            
+            // --- AQUI É A CHAMADA IMPORTANTE ---
+            popularFiltroOS(); 
+            // -----------------------------------
+            
             renderizarTodasAsTabelas();
         } catch (error) {
             console.error('Falha ao buscar lançamentos:', error);
@@ -1467,9 +1475,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function popularFiltroOS() {
-        const osUnicas = [...new Map(todosLancamentos.map(l => [l.os.id, l.os])).values()]
+        // Limpa as opções atuais, mantendo apenas a primeira (placeholder/todas)
+        while (filtroOsEl.options.length > 1) {
+            filtroOsEl.remove(1);
+        }
+
+        if (!todosLancamentos || todosLancamentos.length === 0) return;
+
+        // Cria um Map para garantir OS únicas
+        const osMap = new Map();
+        
+        todosLancamentos.forEach(l => {
+            if (l.os && l.os.id && l.os.os) {
+                // Usa o ID como chave para unicidade
+                if (!osMap.has(l.os.id)) {
+                    osMap.set(l.os.id, l.os.os);
+                }
+            }
+        });
+
+        // Converte para array e ordena alfabeticamente
+        const osUnicas = Array.from(osMap.entries())
+            .map(([id, osNome]) => ({ id, os: osNome }))
             .sort((a, b) => a.os.localeCompare(b.os));
-        osUnicas.forEach(os => filtroOsEl.add(new Option(os.os, os.id)));
+
+        // Adiciona as opções ao select
+        osUnicas.forEach(item => {
+            filtroOsEl.add(new Option(item.os, item.id));
+        });
     }
 
     document.querySelector('.dropdown-menu.p-3').addEventListener('click', (e) => {
