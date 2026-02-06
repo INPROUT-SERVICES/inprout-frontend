@@ -1151,11 +1151,21 @@ function configurarBuscaCps(inputId, accordionId) {
     const input = document.getElementById(inputId);
     if (!input) return;
 
-    // Sobrescreve handlers para evitar duplicação de listeners
+    // Bloqueia o envio de formulário ao apertar Enter
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // <--- IMPEDE O RELOAD
+            aplicarFiltroVisualCPS(accordionId, inputId);
+        }
+    });
+
     input.onkeyup = function () {
         aplicarFiltroVisualCPS(accordionId, inputId);
     };
-    input.onsearch = function () {
+    
+    // O evento 'search' (clicar no X) às vezes dispara submit, prevenimos também
+    input.onsearch = function (e) {
+        e.preventDefault(); 
         aplicarFiltroVisualCPS(accordionId, inputId);
     };
 }
@@ -1261,7 +1271,7 @@ window.executarAcaoLote = function (acao) {
 
     // --- AÇÕES DO COORDENADOR (Mantidas iguais) ---
     if (acao === 'fechar') {
-        const ids = obterSelecionadosCPS();
+        
         if (ids.length === 0) return Swal.fire('Atenção', 'Selecione pelo menos um item.', 'warning');
 
         document.getElementById('formAlterarValorCPS').reset();
