@@ -831,53 +831,106 @@ function toggleBtnCarregarMais(show) {
 // RENDERIZAÇÃO DA TABELA (Acordeões)
 // ==========================================================
 
-function renderizarAcordeonCPS(listaGrupos, containerId, isPendencia) {
+function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
     const container = document.getElementById(containerId);
+    const msgDiv = document.getElementById(msgVazioId);
     if (!container) return;
     container.innerHTML = '';
 
-    if (!listaGrupos || listaGrupos.length === 0) {
-        container.innerHTML = '<div class="alert alert-info text-center shadow-sm">Nenhum registro encontrado.</div>';
-        return;
+    // 1. Definições essenciais (Corrigindo o erro [Object object])
+    const userRole = (localStorage.getItem("role") || localStorage.getItem("userRole") || "").trim().toUpperCase();
+    const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+
+    // Filtros de visualização por perfil (Client Side)
+    if (isPendencia) {
+        lista = lista.filter(l => {
+            if (['COORDINATOR', 'MANAGER'].includes(userRole)) return l.statusPagamento === 'EM_ABERTO';
+            if (userRole === 'CONTROLLER') return ['FECHADO', 'ALTERACAO_SOLICITADA', 'SOLICITACAO_ADIANTAMENTO'].includes(l.statusPagamento);
+            return true;
+        });
     }
 
+    if (!lista || lista.length === 0) {
+        if (msgDiv) msgDiv.classList.remove('d-none');
+        const toolbar = document.getElementById('cps-toolbar-lote');
+        if (toolbar) toolbar.classList.add('d-none');
+        return;
+    }
+    if (msgDiv) msgDiv.classList.add('d-none');
+
+    // Agrupamento por OS
+    const gruposMap = lista.reduce((acc, l) => {
+        const id = l.os?.id || 0;
+        if (!acc[id]) {
+            acc[id] = {
+                osId: l.os?.id, // ID da OS para o botão
+                os: l.os?.os, 
+                projeto: l.os?.projeto,
+                totalCps: 0,
+                totalPago: 0, totalAdiantado: 0, totalConfirmado: 0, itens: []
+            };
+        }
+
+        // Somatórias
+        acc[id].totalCps += parseFloat(l.valorCps || l.valor || 0); // Ajuste para garantir soma total
+        if (l.valorAdiantamento) acc[id].totalAdiantado += parseFloat(l.valorAdiantamento) || 0;
+        if (['FECHADO', 'ALTERACAO_SOLICITADA', 'PAGO', 'CONCLUIDO'].includes(l.statusPagamento)) acc[id].totalConfirmado += parseFloat(l.valorPagamento || l.valor) || 0;
+        if (['PAGO', 'CONCLUIDO'].includes(l.statusPagamento)) acc[id].totalPago += parseFloat(l.valorPagamento || l.valor) || 0;
+
+        acc[id].itens.push(l);
+        return acc;
+    }, {});
+
+    const listaGrupos = Object.values(gruposMap);
+
+    // Ordenação (Prioridade Visual)
+    listaGrupos.sort((a, b) => {
+        const aTemAdiant = a.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
+        const bTemAdiant = b.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
+        if (userRole === 'CONTROLLER') {
+            if (aTemAdiant && !bTemAdiant) return -1;
+            if (!aTemAdiant && bTemAdiant) return 1;
+        }
+        return 0;
+    });
+
     listaGrupos.forEach((grp, idx) => {
-        // --- CORREÇÃO DE SEGURANÇA: Garante que 'itens' nunca seja undefined ---
-        const itens = grp.itens || [];
         const uid = `cps-${isPendencia ? 'pend' : 'hist'}-${idx}`;
 
-        // 1. LÓGICA DO BOTÃO NO HEADER (Sem alterar layout)
+        // --- 2. LÓGICA DO BOTÃO NO HEADER (CONTAINER) ---
         let btnAdiantamentoHeader = '';
+        
+        // Regra: Coordenador/Gestor/Admin vê o botão se houver saldo FECHADO
         if (['COORDINATOR', 'MANAGER', 'ADMIN'].includes(userRole)) {
-            // Usa a variável segura 'itens'
-            const itensFechados = itens.filter(i => i.statusPagamento === 'FECHADO');
-
+            const itensFechados = grp.itens.filter(i => i.statusPagamento === 'FECHADO');
+            
             if (itensFechados.length > 0) {
                 const saldoParaAdiantar = itensFechados.reduce((acc, i) => acc + (parseFloat(i.valorPagamento || i.valor) || 0), 0);
-                const osId = itens[0]?.os?.id;
-                const osNumero = grp.os;
-
-                if (osId && saldoParaAdiantar > 0) {
+                
+                if (grp.osId && saldoParaAdiantar > 0) {
+                    // Botão inserido no Header com stopPropagation
                     btnAdiantamentoHeader = `
                         <button class="btn btn-sm btn-outline-warning fw-bold d-flex align-items-center me-3" 
                                 type="button"
-                                onclick="event.stopPropagation(); abrirModalAdiantamentoOS(${osId}, ${saldoParaAdiantar}, '${osNumero}')"
+                                onclick="event.stopPropagation(); abrirModalAdiantamentoOS(${grp.osId}, ${saldoParaAdiantar}, '${grp.os}')"
+                                title="Solicitar Adiantamento: ${fmt(saldoParaAdiantar)}"
                                 style="height: 28px; padding: 0 10px; white-space: nowrap; font-size: 0.75rem; border-width: 1px;">
-                            <i class="bi bi-cash-stack me-1"></i> Adiantar
+                            <i class="bi bi-lightning-charge-fill me-1"></i> Adiantar
                         </button>
                     `;
                 }
             }
         }
+        // ---------------------------------------------------------
 
-        // Ordenação (Usa variável segura 'itens')
-        itens.sort((a, b) => {
+        // Ordenação interna
+        grp.itens.sort((a, b) => {
             if (a.statusPagamento === 'SOLICITACAO_ADIANTAMENTO') return -1;
             if (b.statusPagamento === 'SOLICITACAO_ADIANTAMENTO') return 1;
             return 0;
         });
 
-        const temSolicitacaoAdiantamento = itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
+        const temSolicitacaoAdiantamento = grp.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
         let headerStyleClass = '';
         let headerStyleInline = '';
 
@@ -888,14 +941,13 @@ function renderizarAcordeonCPS(listaGrupos, containerId, isPendencia) {
 
         let showHeaderCheck = false;
         if (isPendencia) {
-            if (['ADMIN', 'COORDINATOR', 'MANAGER'].includes(userRole) && itens.some(i => i.statusPagamento === 'EM_ABERTO')) showHeaderCheck = true;
-            else if (['CONTROLLER', 'ADMIN'].includes(userRole) && itens.some(i => ['FECHADO', 'ALTERACAO_SOLICITADA', 'SOLICITACAO_ADIANTAMENTO'].includes(i.statusPagamento))) showHeaderCheck = true;
+            if (['ADMIN', 'COORDINATOR', 'MANAGER'].includes(userRole) && grp.itens.some(i => i.statusPagamento === 'EM_ABERTO')) showHeaderCheck = true;
+            else if (['CONTROLLER', 'ADMIN'].includes(userRole) && grp.itens.some(i => ['FECHADO', 'ALTERACAO_SOLICITADA', 'SOLICITACAO_ADIANTAMENTO'].includes(i.statusPagamento))) showHeaderCheck = true;
         }
 
         const checkHtml = showHeaderCheck ? `<div class="position-absolute top-50 start-0 translate-middle-y ms-3 check-container-header" style="z-index: 5;"><input class="form-check-input cps-select-all shadow-sm" type="checkbox" data-target-body="collapse-${uid}"></div>` : '';
         const pl = showHeaderCheck ? 'ps-5' : 'ps-3';
 
-        // 2. HTML DO HEADER (Estrutura Original Restaurada)
         const headerHtml = `
             <div class="header-content w-100">
                 <div class="header-title-wrapper">
@@ -905,9 +957,8 @@ function renderizarAcordeonCPS(listaGrupos, containerId, isPendencia) {
                 </div>
                 
                 <div class="header-kpi-wrapper d-flex gap-3 align-items-center">
-                    
                     ${btnAdiantamentoHeader}
-                    
+
                     <div class="header-kpi"><span class="kpi-label">TOTAL CPS</span><span class="kpi-value">${fmt(grp.totalCps)}</span></div>
                     <div class="header-kpi"><span class="kpi-label text-primary">CONFIRMADO</span><span class="kpi-value text-primary">${fmt(grp.totalConfirmado)}</span></div>
                     <div class="header-kpi"><span class="kpi-label text-warning">ADIANTADO</span><span class="kpi-value text-warning">${fmt(grp.totalAdiantado)}</span></div>
@@ -915,8 +966,7 @@ function renderizarAcordeonCPS(listaGrupos, containerId, isPendencia) {
                 </div>
             </div>`;
 
-        // Geração das Linhas (Usa variável segura 'itens')
-        const linhas = itens.map(l => {
+        const linhas = grp.itens.map(l => {
             let btns = `<button class="btn btn-sm btn-outline-info me-1" title="Ver" onclick="verComentarios(${l.id})"><i class="bi bi-eye"></i></button>`;
             let showRowCheck = false;
 
@@ -931,6 +981,7 @@ function renderizarAcordeonCPS(listaGrupos, containerId, isPendencia) {
             if (isPendencia) {
                 if (['COORDINATOR', 'MANAGER', 'ADMIN'].includes(userRole) && l.statusPagamento === 'EM_ABERTO') {
                     btns += `<button class="btn btn-sm btn-outline-success me-1" title="Fechar" onclick="abrirModalCpsValor(${l.id}, 'fechar')"><i class="bi bi-check-circle"></i></button>`;
+                    // REMOVIDO BOTÃO DE ADIANTAMENTO DA LINHA
                     btns += `<button class="btn btn-sm btn-outline-danger" title="Recusar" onclick="abrirModalCpsValor(${l.id}, 'recusar')"><i class="bi bi-x-circle"></i></button>`;
                     showRowCheck = true;
                 } else if (['CONTROLLER', 'ADMIN'].includes(userRole)) {
@@ -946,15 +997,14 @@ function renderizarAcordeonCPS(listaGrupos, containerId, isPendencia) {
             }
             const checkTd = showRowCheck ? `<td><input type="checkbox" class="form-check-input cps-check" data-id="${l.id}" data-status="${l.statusPagamento}"></td>` : (isPendencia ? '<td></td>' : '');
 
-            // Fallback do Status
-            const statusExibicao = l.statusPagamento || l.situacaoAprovacao || '';
-            const statusFormatado = statusExibicao.replace(/_/g, ' ');
+            // USANDO ESTRITAMENTE statusPagamento COMO SOLICITADO
+            const statusTexto = l.statusPagamento ? l.statusPagamento.replace(/_/g, ' ') : '';
 
             return `
             <tr class="${rowClass}">
                 ${checkTd}
                 <td class="text-center bg-transparent">${btns}</td>
-                <td class="bg-transparent"><span class="badge text-bg-secondary">${statusFormatado}</span></td>
+                <td class="bg-transparent"><span class="badge text-bg-secondary">${statusTexto}</span></td>
                 <td class="bg-transparent">${l.dataAtividade || '-'}</td>
                 <td class="bg-transparent fw-bold text-primary">${l.dataCompetencia || '-'}</td>
                 <td class="bg-transparent">${l.detalhe?.site || '-'}</td>
@@ -987,7 +1037,17 @@ function renderizarAcordeonCPS(listaGrupos, containerId, isPendencia) {
             </div>
         </div>`);
     });
+
+    if (isPendencia) {
+        if (typeof registrarEventosCps === 'function') registrarEventosCps();
+        if (typeof configurarSelectAllVisiveis === 'function') configurarSelectAllVisiveis();
+        if (typeof atualizarBotoesLoteCPS === 'function') atualizarBotoesLoteCPS();
+        if (typeof configurarBuscaCps === 'function') configurarBuscaCps('input-busca-cps-pendencias', 'accordionPendenciasCPS');
+    } else {
+        if (typeof configurarBuscaCps === 'function') configurarBuscaCps('input-busca-cps-historico', 'accordionHistoricoCPS');
+    }
 }
+
 
 // ==========================================================
 // FUNÇÃO CENTRALIZADA DE FILTRO VISUAL (NOVO)
