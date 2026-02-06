@@ -1405,6 +1405,9 @@ function toggleLoader(show, selector) {
 async function confirmarSolicitacaoAdiantamento() {
     const inputValor = document.getElementById('inputValorAdiantamento');
     const valorSolicitado = parseFloat(inputValor.value);
+    
+    // 1. CAPTURA O ID DO USUÁRIO
+    const usuarioId = localStorage.getItem('usuarioId');
 
     // Validações Front-end
     if (!idOsParaAdiantamento) return;
@@ -1425,12 +1428,12 @@ async function confirmarSolicitacaoAdiantamento() {
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
         }
 
-        // --- CORREÇÃO PRINCIPAL ---
-        // Substituído 'fetch' manual por 'fetchComAuth' para resolver o erro 'getToken is not defined'
+        // --- CORREÇÃO: ADICIONADO O HEADER X-User-ID ---
         const response = await fetchComAuth(`${API_BASE_URL}/controle-cps/solicitar-adiantamento-os`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-User-ID': usuarioId // <--- LINHA ADICIONADA
             },
             body: JSON.stringify({
                 osId: idOsParaAdiantamento,
@@ -1466,7 +1469,6 @@ async function confirmarSolicitacaoAdiantamento() {
     } catch (error) {
         console.error(error);
 
-        // --- CORREÇÃO UX ---
         // Fecha o modal também em caso de erro para que o alerta não fique "escondido" ou sem foco
         const modalEl = document.getElementById('modalSolicitarAdiantamentoOS');
         if (modalEl) {
