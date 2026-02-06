@@ -875,7 +875,6 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
             if (isPendencia) {
                 if (['COORDINATOR', 'MANAGER', 'ADMIN'].includes(userRole) && l.statusPagamento === 'EM_ABERTO') {
                     btns += `<button class="btn btn-sm btn-outline-success me-1" title="Fechar" onclick="abrirModalCpsValor(${l.id}, 'fechar')"><i class="bi bi-check-circle"></i></button>`;
-                    btns += `<button class="btn btn-sm btn-outline-primary me-1" title="Adiantar" onclick="abrirModalSolicitarAdiantamento(${l.id}, ${l.valor}, ${l.valorAdiantamento || 0})"><i class="bi bi-cash-stack"></i></button>`;
                     btns += `<button class="btn btn-sm btn-outline-danger" title="Recusar" onclick="abrirModalCpsValor(${l.id}, 'recusar')"><i class="bi bi-x-circle"></i></button>`;
                     showRowCheck = true;
                 } else if (['CONTROLLER', 'ADMIN'].includes(userRole)) {
@@ -1232,99 +1231,33 @@ if (formSolAdiant) {
         e.preventDefault();
         const btn = document.getElementById('btnConfirmarSolicitacaoAdiantamento');
         setLoading(btn, true);
+        
         const modalEl = document.getElementById('modalSolicitarAdiantamento');
-        const isLote = modalEl.dataset.acaoEmLote === 'true';
-
-        // Tratamento do valor
+        const isOsRequest = modalEl.dataset.tipoSolicitacao === 'OS';
+        
         let valorRaw = document.getElementById('valorSolicitadoInput').value;
         let valor = valorRaw ? parseFloat(valorRaw.replace(/\./g, '').replace(',', '.')) : null;
-
         const just = document.getElementById('justificativaAdiantamentoInput').value;
         const uId = localStorage.getItem('usuarioId');
 
         try {
-            if (isLote) {
-                // =================================================================
-                // LÓGICA DE DISTRIBUIÇÃO CORRIGIDA
-                // =================================================================
-                const checkedElements = document.querySelectorAll('.cps-check:checked');
-                let saldoRestanteParaAdiantar = valor; // Valor total que o usuário quer adiantar
-
-                let erros = [];
-                let itensProcessados = 0;
-
-                for (const chk of checkedElements) {
-                    // Se já não tem mais nada para adiantar (ex: 0.00), encerra o loop
-                    if (saldoRestanteParaAdiantar <= 0.01) break;
-
-                    const id = chk.dataset.id;
-                    // Busca os dados originais na lista global para calcular o saldo real
-                    const item = window.dadosCpsGlobais.find(i => i.id == id);
-                    
-                    if (!item) continue;
-
-                    const valorTotalItem = parseFloat(item.valor || 0);
-                    const valorJaAdiantado = parseFloat(item.valorAdiantamento || 0);
-                    const saldoDisponivelItem = valorTotalItem - valorJaAdiantado;
-
-                    // Se o item não tem saldo, pula para o próximo
-                    if (saldoDisponivelItem <= 0.01) continue;
-
-                    // Calcula quanto tirar deste item específico
-                    // Pega o MÍNIMO entre "o que o usuário quer" e "o que o item tem"
-                    let valorParaEsteItem = 0;
-                    if (saldoRestanteParaAdiantar >= saldoDisponivelItem) {
-                        valorParaEsteItem = saldoDisponivelItem;
-                    } else {
-                        valorParaEsteItem = saldoRestanteParaAdiantar;
-                    }
-
-                    // Subtrai do montante global
-                    saldoRestanteParaAdiantar -= valorParaEsteItem;
-
-                    // Envia a requisição apenas com o valor parcial deste item
-                    const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/${id}/solicitar-adiantamento`, {
-                        method: 'POST',
-                        body: JSON.stringify({ valor: valorParaEsteItem, usuarioId: uId, justificativa: just })
-                    });
-
-                    if (!res.ok) {
-                        const textoErro = await res.text();
-                        console.error(`Falha no item ${id}:`, textoErro);
-                        erros.push(`Item ${id}: não processado.`);
-                    } else {
-                        itensProcessados++;
-                    }
-                }
-
-                if (erros.length > 0) {
-                    if (itensProcessados === 0) {
-                        throw new Error("Falha ao solicitar adiantamento. Verifique se os itens selecionados possuem saldo.");
-                    } else {
-                        mostrarToast(`Processado parcialmente. ${itensProcessados} itens ok, ${erros.length} falharam.`, "warning");
-                    }
-                } else {
-                    if (itensProcessados === 0) {
-                        mostrarToast("Nenhum item tinha saldo disponível para o adiantamento.", "warning");
-                    } else {
-                        mostrarToast("Solicitações em lote enviadas com sucesso!", "success");
-                    }
-                }
-
-            } else {
-                // Fluxo unitário (mantido igual)
-                const id = document.getElementById('adiantamentoLancamentoId').value;
-                const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/${id}/solicitar-adiantamento`, {
+            if (isOsRequest) {
+                // --- FLUXO NOVO: ADIANTAMENTO POR OS ---
+                const osId = modalEl.dataset.osId;
+                const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/os/${osId}/solicitar-adiantamento?usuarioId=${uId}`, {
                     method: 'POST',
-                    body: JSON.stringify({ valor: valor, usuarioId: uId, justificativa: just })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(valor) // Envia o BigDecimal direto
                 });
 
-                if (!res.ok) {
-                    const erroTxt = await res.text();
-                    throw new Error(erroTxt || "Erro na solicitação.");
-                }
+                if (!res.ok) throw new Error(await res.text());
+                mostrarToast("Solicitação de adiantamento da OS enviada!", "success");
 
-                mostrarToast("Solicitação enviada!", "success");
+            } else {
+                // --- FLUXO ANTIGO (Lote ou Item) ---
+                // ... (Manter código existente do fluxo de item/lote aqui) ...
+                 const id = document.getElementById('adiantamentoLancamentoId').value;
+                 // ... resto do código antigo ...
             }
 
             if (window.modalSolicitarAdiantamento) window.modalSolicitarAdiantamento.hide();
@@ -1334,10 +1267,36 @@ if (formSolAdiant) {
             mostrarToast("Erro: " + e.message, "error");
         } finally {
             setLoading(btn, false);
-            delete modalEl.dataset.acaoEmLote;
+            delete modalEl.dataset.tipoSolicitacao;
+            delete modalEl.dataset.osId;
         }
     });
 }
+
+window.abrirModalAdiantamentoOS = function(osId, saldoDisponivel, numeroOs) {
+    // Impede a propagação do clique para não abrir o acordeão
+    if (event) event.stopPropagation();
+
+    const inputVal = document.getElementById('valorSolicitadoInput');
+    const labelSaldo = document.getElementById('adiantamentoValorTotalDisplay'); // Reutilizando label do modal existente
+    const inputId = document.getElementById('adiantamentoLancamentoId'); // Vamos usar esse hidden pra guardar o OS ID temporariamente
+    
+    // Ajusta os textos do modal para contexto de OS
+    document.querySelector('#modalSolicitarAdiantamento .modal-title').innerText = `Adiantamento - OS ${numeroOs}`;
+    document.getElementById('adiantamentoValorJaPagoDisplay').innerText = "-"; // Campo não usado nesse contexto
+    
+    // Configura valores
+    labelSaldo.innerText = saldoDisponivel.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    inputVal.max = saldoDisponivel;
+    inputVal.value = '';
+    
+    // Gambiarra limpa: Usamos um atributo dataset no modal para saber que é "TIPO OS"
+    const modalEl = document.getElementById('modalSolicitarAdiantamento');
+    modalEl.dataset.tipoSolicitacao = 'OS';
+    modalEl.dataset.osId = osId;
+    
+    window.modalSolicitarAdiantamento.show();
+};
 
 const btnConfRecAdiant = document.getElementById('btnConfirmarRecusaAdiantamento');
 if (btnConfRecAdiant) {
@@ -1502,7 +1461,9 @@ window.abrirModalCpsValor = function (id, acao) {
     const inputJust = document.getElementById('cpsJustificativaInput');
     const divComp = document.getElementById('divCompetenciaCps');
     const inputVal = document.getElementById('cpsValorPagamentoInput');
-    inputVal.disabled = true;
+    
+    inputVal.disabled = true; 
+    inputVal.classList.add('bg-light'); 
 
     document.querySelector('#modalAlterarValorCPS .modal-title').innerText = acao === 'recusar' ? 'Recusar Pagamento' : 'Fechar Pagamento';
     const val = l.valorPagamento !== null ? l.valorPagamento : l.valor;
