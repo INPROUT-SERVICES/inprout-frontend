@@ -890,7 +890,34 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
     listaGrupos.forEach((grp, idx) => {
         const uid = `cps-${isPendencia ? 'pend' : 'hist'}-${idx}`;
 
-        // Ordenação interna
+        // 1. LÓGICA DO BOTÃO (Cálculo do Saldo)
+        let btnAdiantarHtml = '';
+        
+        // Regra: Coordenador/Gestor + Itens FECHADOS
+        if (['COORDINATOR', 'MANAGER', 'ADMIN'].includes(userRole)) {
+            const itensFechados = grp.itens.filter(i => i.statusPagamento === 'FECHADO');
+            
+            if (itensFechados.length > 0) {
+                const saldoParaAdiantar = itensFechados.reduce((acc, i) => acc + (parseFloat(i.valorPagamento || i.valor) || 0), 0);
+                const osId = grp.itens[0]?.os?.id;
+                const osNumero = grp.os;
+
+                if (osId && saldoParaAdiantar > 0) {
+                    // Estilo ajustado: Pequeno, sem sombra pesada, alinhado.
+                    btnAdiantarHtml = `
+                        <button class="btn btn-warning text-dark fw-bold d-flex align-items-center justify-content-center me-3" 
+                                type="button"
+                                onclick="event.stopPropagation(); abrirModalAdiantamentoOS(${osId}, ${saldoParaAdiantar}, '${osNumero}')"
+                                title="Solicitar Adiantamento do valor fechado"
+                                style="font-size: 0.7rem; padding: 2px 12px; height: 26px; border-radius: 12px; border: 1px solid #c69500;">
+                            <i class="bi bi-lightning-charge-fill me-1"></i> Adiantar
+                        </button>
+                    `;
+                }
+            }
+        }
+
+        // Ordenação das linhas
         grp.itens.sort((a, b) => {
             if (a.statusPagamento === 'SOLICITACAO_ADIANTAMENTO') return -1;
             if (b.statusPagamento === 'SOLICITACAO_ADIANTAMENTO') return 1;
@@ -898,14 +925,16 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         });
 
         const temSolicitacaoAdiantamento = grp.itens.some(i => i.statusPagamento === 'SOLICITACAO_ADIANTAMENTO');
+        
+        // Estilo de alerta se houver solicitação pendente (para Controller)
         let headerStyleClass = '';
         let headerStyleInline = '';
-
         if (isPendencia && userRole === 'CONTROLLER' && temSolicitacaoAdiantamento) {
             headerStyleClass = 'bg-warning-subtle';
             headerStyleInline = 'background-color: #fff3cd !important; color: #664d03;';
         }
 
+        // Checkbox do Header (Seleção em Lote)
         let showHeaderCheck = false;
         if (isPendencia) {
             if (['ADMIN', 'COORDINATOR', 'MANAGER'].includes(userRole) && grp.itens.some(i => i.statusPagamento === 'EM_ABERTO')) showHeaderCheck = true;
@@ -915,41 +944,62 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         const checkHtml = showHeaderCheck ? `<div class="position-absolute top-50 start-0 translate-middle-y ms-3 check-container-header" style="z-index: 5;"><input class="form-check-input cps-select-all shadow-sm" type="checkbox" data-target-body="collapse-${uid}"></div>` : '';
         const pl = showHeaderCheck ? 'ps-5' : 'ps-3';
 
+        // --- 2. LAYOUT DO HEADER REFINADO ---
         const headerHtml = `
-            <div class="header-content w-100">
-                <div class="header-title-wrapper">
-                    <span class="header-title-project">${grp.projeto || '-'}</span>
-                    <span class="header-title-os">${grp.os || '-'}</span>
-                    ${temSolicitacaoAdiantamento && userRole === 'CONTROLLER' ? '<span class="badge bg-warning text-dark ms-2"><i class="bi bi-exclamation-triangle-fill"></i> Adiantamento</span>' : ''}
+            <div class="header-content w-100 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                
+                <div class="header-title-wrapper d-flex align-items-center" style="min-width: 0; flex: 1;">
+                    <span class="header-title-project text-truncate fw-bold me-2" style="font-size: 0.9rem; color: #495057;">${grp.projeto || '-'}</span>
+                    <span class="header-title-os badge bg-light text-secondary border me-2">${grp.os || '-'}</span>
+                    ${temSolicitacaoAdiantamento && userRole === 'CONTROLLER' ? '<span class="badge bg-warning text-dark" style="font-size: 0.65rem;"><i class="bi bi-exclamation-triangle-fill"></i> Solicitação</span>' : ''}
                 </div>
-                <div class="header-kpi-wrapper d-flex gap-3">
-                    <div class="header-kpi"><span class="kpi-label">TOTAL CPS</span><span class="kpi-value">${fmt(grp.totalCps)}</span></div>
-                    <div class="header-kpi"><span class="kpi-label text-primary">CONFIRMADO</span><span class="kpi-value text-primary">${fmt(grp.totalConfirmado)}</span></div>
-                    <div class="header-kpi"><span class="kpi-label text-warning">ADIANTADO</span><span class="kpi-value text-warning">${fmt(grp.totalAdiantado)}</span></div>
-                    <div class="header-kpi"><span class="kpi-label text-success">PAGO</span><span class="kpi-value text-success">${fmt(grp.totalPago)}</span></div>
+                
+                <div class="header-kpi-wrapper d-flex align-items-center ms-auto">
+                    
+                    ${btnAdiantarHtml}
+                    
+                    <div class="d-flex gap-3 ms-1 border-start ps-3" style="border-color: #dee2e6;">
+                        <div class="header-kpi text-end">
+                            <span class="d-block text-muted text-uppercase" style="font-size: 0.6rem; font-weight: 700;">Total CPS</span>
+                            <span class="d-block text-dark fw-bold" style="font-size: 0.85rem;">${fmt(grp.totalCps)}</span>
+                        </div>
+                        
+                        <div class="header-kpi text-end d-none d-sm-block">
+                            <span class="d-block text-primary text-uppercase" style="font-size: 0.6rem; font-weight: 700;">Confirmado</span>
+                            <span class="d-block text-primary fw-bold" style="font-size: 0.85rem;">${fmt(grp.totalConfirmado)}</span>
+                        </div>
+
+                        <div class="header-kpi text-end d-none d-md-block">
+                            <span class="d-block text-warning text-uppercase" style="font-size: 0.6rem; font-weight: 700;">Adiantado</span>
+                            <span class="d-block text-warning fw-bold" style="font-size: 0.85rem;">${fmt(grp.totalAdiantado)}</span>
+                        </div>
+                        
+                         <div class="header-kpi text-end d-none d-lg-block">
+                            <span class="d-block text-success text-uppercase" style="font-size: 0.6rem; font-weight: 700;">Pago</span>
+                            <span class="d-block text-success fw-bold" style="font-size: 0.85rem;">${fmt(grp.totalPago)}</span>
+                        </div>
+                    </div>
                 </div>
             </div>`;
 
         const linhas = grp.itens.map(l => {
-            let btns = `<button class="btn btn-sm btn-outline-info me-1" title="Ver" onclick="verComentarios(${l.id})"><i class="bi bi-eye"></i></button>`;
+            let btns = `<button class="btn btn-sm btn-outline-info me-1 border-0" title="Ver Comentários" onclick="verComentarios(${l.id})"><i class="bi bi-chat-text"></i></button>`;
             let showRowCheck = false;
-
-            if (['COORDINATOR','ADMIN'].includes(userRole) && l.statusPagamento === 'FECHADO') {
-                btns += `<button class="btn btn-sm btn-outline-warning me-1" title="Solicitar Adiantamento" onclick="abrirModalSolicitarAdiantamento(${l.id}, ${l.valor}, ${l.valorAdiantamento})"><i class="bi bi-cash-stack"></i></button>`;
-            }
 
             const isConfirmado = l.statusPagamento === 'FECHADO' || l.statusPagamento === 'ALTERACAO_SOLICITADA';
             const isPago = l.statusPagamento === 'PAGO' || l.statusPagamento === 'CONCLUIDO';
             const isAdiantado = (parseFloat(l.valorAdiantamento) || 0) > 0;
             const isSolicitacao = l.statusPagamento === 'SOLICITACAO_ADIANTAMENTO';
 
-            let rowClass = isPago ? 'table-success' : (isConfirmado ? 'table-primary-light' : (isAdiantado ? 'table-warning-light' : ''));
+            let rowClass = isPago ? 'table-success-subtle' : (isConfirmado ? 'table-primary-subtle' : (isAdiantado ? 'table-warning-subtle' : ''));
             if (isSolicitacao) rowClass = 'table-warning';
 
+            // Regras de botões de ação na linha (Mantendo a lógica original, mas sem o adiantamento por linha)
             if (isPendencia) {
                 if (['COORDINATOR', 'MANAGER', 'ADMIN'].includes(userRole) && l.statusPagamento === 'EM_ABERTO') {
-                    btns += `<button class="btn btn-sm btn-outline-success me-1" title="Fechar" onclick="abrirModalCpsValor(${l.id}, 'fechar')"><i class="bi bi-check-circle"></i></button>`;
-                    btns += `<button class="btn btn-sm btn-outline-danger" title="Recusar" onclick="abrirModalCpsValor(${l.id}, 'recusar')"><i class="bi bi-x-circle"></i></button>`;
+                    // Fechar / Recusar individual
+                    btns += `<button class="btn btn-sm btn-outline-success me-1 border-0" title="Fechar Item" onclick="abrirModalCpsValor(${l.id}, 'fechar')"><i class="bi bi-check-lg"></i></button>`;
+                    btns += `<button class="btn btn-sm btn-outline-danger border-0" title="Recusar Item" onclick="abrirModalCpsValor(${l.id}, 'recusar')"><i class="bi bi-x-lg"></i></button>`;
                     showRowCheck = true;
                 } else if (['CONTROLLER', 'ADMIN'].includes(userRole)) {
                     if (l.statusPagamento === 'SOLICITACAO_ADIANTAMENTO') {
@@ -957,30 +1007,35 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
                         btns += `<button class="btn btn-sm btn-outline-danger" onclick="recusarAdiantamento(${l.id})"><i class="bi bi-x-lg"></i></button>`;
                         showRowCheck = true;
                     } else if (isConfirmado) {
-                        btns += `<button class="btn btn-sm btn-outline-danger" onclick="abrirModalCpsRecusarController(${l.id})"><i class="bi bi-arrow-counterclockwise"></i></button>`;
+                        btns += `<button class="btn btn-sm btn-outline-danger border-0" onclick="abrirModalCpsRecusarController(${l.id})"><i class="bi bi-arrow-counterclockwise"></i></button>`;
                         showRowCheck = true;
                     }
                 }
             }
-            const checkTd = showRowCheck ? `<td><input type="checkbox" class="form-check-input cps-check" data-id="${l.id}" data-status="${l.statusPagamento}"></td>` : (isPendencia ? '<td></td>' : '');
+            const checkTd = showRowCheck ? `<td style="width: 40px;"><input type="checkbox" class="form-check-input cps-check" data-id="${l.id}" data-status="${l.statusPagamento}"></td>` : (isPendencia ? '<td></td>' : '');
+
+            // Fallback do Status
+            const statusExibicao = l.statusPagamento || l.situacaoAprovacao || '';
+            const statusFormatado = statusExibicao.replace(/_/g, ' ');
 
             return `
             <tr class="${rowClass}">
                 ${checkTd}
-                <td class="text-center bg-transparent">${btns}</td>
-                <td class="bg-transparent"><span class="badge text-bg-secondary">${(l.statusPagamento || '').replace(/_/g, ' ')}</span></td>
-                <td class="bg-transparent">${l.dataAtividade || '-'}</td>
-                <td class="bg-transparent fw-bold text-primary">${l.dataCompetencia || '-'}</td>
-                <td class="bg-transparent">${l.detalhe?.site || '-'}</td>
-                <td class="bg-transparent">${l.detalhe?.lpu?.nomeLpu || '-'}</td>
-                <td class="bg-transparent">${l.prestador?.nome || '-'}</td>
-                <td class="bg-transparent">${l.manager?.nome || '-'}</td>
-                <td class="bg-transparent fw-bold text-end">${fmt(l.valorPagamento || l.valor)}</td>
+                <td class="text-center bg-transparent" style="white-space: nowrap;">${btns}</td>
+                <td class="bg-transparent"><span class="badge text-bg-light border text-secondary" style="font-weight: 500;">${statusFormatado}</span></td>
+                <td class="bg-transparent text-muted">${l.dataAtividade || '-'}</td>
+                <td class="bg-transparent fw-bold text-dark">${l.dataCompetencia || '-'}</td>
+                <td class="bg-transparent text-muted">${l.detalhe?.site || '-'}</td>
+                <td class="bg-transparent text-muted text-truncate" style="max-width: 150px;" title="${l.detalhe?.lpu?.nomeLpu || ''}">${l.detalhe?.lpu?.nomeLpu || '-'}</td>
+                <td class="bg-transparent text-muted">${l.prestador?.nome || '-'}</td>
+                <td class="bg-transparent text-muted">${l.manager?.nome || '-'}</td>
+                <td class="bg-transparent fw-bold text-end text-dark">${fmt(l.valorPagamento || l.valor)}</td>
             </tr>`;
         }).join('');
 
+        // Montagem Final do Acordeão
         container.insertAdjacentHTML('beforeend', `
-        <div class="accordion-item border mb-2 shadow-sm" style="border-radius: 8px; overflow: hidden;">
+        <div class="accordion-item border mb-3 shadow-sm" style="border-radius: 8px; overflow: hidden; border-color: #e9ecef !important;">
             <h2 class="accordion-header position-relative" id="heading-${uid}">
                 ${checkHtml}
                 <button class="accordion-button collapsed ${pl} ${headerStyleClass}" type="button" 
@@ -992,8 +1047,21 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
             <div id="collapse-${uid}" class="accordion-collapse collapse">
                 <div class="accordion-body p-0">
                     <div class="table-responsive">
-                        <table class="table mb-0 align-middle small table-hover">
-                            <thead class="table-light"><tr>${isPendencia ? '<th><i class="bi bi-check-all"></i></th>' : ''}<th class="text-center">Ações</th><th>Status</th><th>Data</th><th>Comp.</th><th>Site</th><th>Item</th><th>Prestador</th><th>Gestor</th><th class="text-end">Valor</th></tr></thead>
+                        <table class="table mb-0 align-middle small table-hover" style="font-size: 0.85rem;">
+                            <thead class="bg-light text-secondary">
+                                <tr>
+                                    ${isPendencia ? '<th style="width: 40px;"></th>' : ''}
+                                    <th class="text-center" style="width: 100px;">Ações</th>
+                                    <th>Status</th>
+                                    <th>Data</th>
+                                    <th>Comp.</th>
+                                    <th>Site</th>
+                                    <th>Item</th>
+                                    <th>Prestador</th>
+                                    <th>Gestor</th>
+                                    <th class="text-end">Valor</th>
+                                </tr>
+                            </thead>
                             <tbody id="tbody-${uid}">${linhas}</tbody>
                         </table>
                     </div>
@@ -1178,11 +1246,12 @@ window.executarAcaoLote = function (acao) {
 
     // --- AÇÕES DO COORDENADOR (Mantidas iguais) ---
     if (acao === 'fechar') {
-        // ... (Mantenha o código original do 'fechar' aqui) ...
+
         document.getElementById('formAlterarValorCPS').reset();
         document.querySelector('#modalAlterarValorCPS .modal-title').innerHTML = '<i class="bi bi-check-all text-success me-2"></i> Fechar Lote';
         document.getElementById('cpsAcaoCoordenador').value = 'fechar';
         document.getElementById('divCompetenciaCps').style.display = 'block';
+        document.getElementById('cpsJustificativaInput').required = false;
         gerarOpcoesCompetencia();
         const valInput = document.getElementById('cpsValorPagamentoInput');
         valInput.value = 'Vários'; valInput.disabled = true;
