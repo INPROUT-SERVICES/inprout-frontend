@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elAprAdiant = document.getElementById('modalAprovarAdiantamento');
     const elRecAdiant = document.getElementById('modalRecusarAdiantamento');
     const elSolAdiantOS = document.getElementById('modalSolicitarAdiantamentoOS');
+    let timeoutBuscaHistorico = null;
 
     if (elAlterar) window.modalAlterarValorCPS = new bootstrap.Modal(elAlterar);
     if (elRecusar) window.modalRecusarCPS = new bootstrap.Modal(elRecusar);
@@ -33,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CORREÇÃO DO BOTÃO CARREGAR MAIS (Event Delegation) ---
     // Vincula o evento ao documento para garantir que funcione sempre
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         if (e.target && e.target.id === 'btn-carregar-mais-historico-cps') {
             e.preventDefault();
             carregarHistoricoCPS(false); // false = Carregar próxima página
@@ -54,6 +55,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    const inputBuscaHist = document.getElementById('input-busca-cps-historico');
+    if (inputBuscaHist) {
+        inputBuscaHist.addEventListener('keyup', () => {
+            clearTimeout(timeoutBuscaHistorico);
+            // Espera 500ms após parar de digitar para chamar o backend
+            timeoutBuscaHistorico = setTimeout(() => {
+                carregarHistoricoCPS(true); // true = Reset (Volta para página 0)
+            }, 500);
+        });
+
+        // Evita submit do form se estiver dentro de um
+        inputBuscaHist.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    }
+
     // Inicia a lógica de filtros e carregamento inicial
     setTimeout(async () => {
         await initFiltrosCPS();
@@ -64,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Carregamento inicial (Pendências e Dashboard)
         atualizarDashboardFixo();
         carregarPendenciasCPS();
-        
+
         // Se já estiver na aba de histórico por algum motivo, carrega
         if (document.querySelector('#cps-historico-pane.active')) {
             carregarHistoricoCPS(true);
@@ -568,13 +585,15 @@ async function confirmarPagamentoComData(ids, tipo) {
     });
 
     if (formValues) {
-        const url = tipo === 'ADIANTAMENTO' ? '/lancamentos/pagar-adiantamento-lote' : '/controle-cps/pagar-lote';
+        const url = tipo === 'ADIANTAMENTO' ? '/controle-cps/pagar-adiantamento-lote' : '/controle-cps/pagar-lote';
         const usuarioId = localStorage.getItem('usuarioId');
 
         const body = {
             lancamentoIds: ids,
             usuarioId: usuarioId,
             controllerId: usuarioId,
+            coordenadorId: usuarioId,
+            aprovadorId: usuarioId,
             dataPagamento: formValues.data
         };
 
@@ -793,43 +812,57 @@ async function carregarHistoricoCPS(reset = false) {
 
     // 3. Lógica de Reset (Nova Busca) vs Carregar Mais
     if (reset) {
-        window.cpsHistoricoPage = 0; // Reinicia página
-        window.dadosCpsHistorico = []; // Limpa lista
-        window.cpsHistoricoLast = false; // Reinicia flag de fim
+        window.cpsHistoricoPage = 0;      // Reinicia página para 0
+        window.dadosCpsHistorico = [];    // Limpa lista local
+        window.cpsHistoricoLast = false;  // Reinicia flag de fim
 
-        // Limpa visualmente o acordeão
+        // Limpa visualmente o acordeão antes de buscar
         const elAccordion = document.getElementById('accordionHistoricoCPS');
         if (elAccordion) elAccordion.innerHTML = '';
 
-        // Esconde botão "Carregar Mais" durante o reset
+        // Esconde botão "Carregar Mais" e mensagens durante o reset
         toggleBtnCarregarMais(false);
+        const msgSemDados = document.getElementById('msg-sem-historico-cps');
+        if (msgSemDados) msgSemDados.classList.add('d-none');
+
     } else {
-        // Se já carregou tudo, não faz nada
+        // Se não é reset, verifica se já chegou no fim
         if (window.cpsHistoricoLast) return;
 
-        // Incrementa página (Aqui é onde dava NaN se não fosse número antes)
+        // Se vai carregar mais, incrementa a página
         window.cpsHistoricoPage++;
     }
 
+    // Trava e Mostra Loader
     window.cpsHistoricoLoading = true;
     toggleLoader(true, '#cps-historico-pane');
 
-    // Desabilita botão enquanto carrega
+    // Desabilita botão "Carregar Mais" visualmente enquanto carrega
     const btnMais = document.getElementById('btn-carregar-mais-historico-cps');
-    if (btnMais) btnMais.disabled = true;
+    if (btnMais) {
+        btnMais.disabled = true;
+        btnMais.textContent = "Carregando...";
+    }
 
     try {
         const userId = localStorage.getItem('usuarioId');
 
         // --- COLETA DOS FILTROS ---
+
+        // 1. Segmento
         const segmentoId = document.getElementById('cps-hist-filtro-segmento')?.value || '';
+
+        // 2. Prestador (via Choices.js)
         let prestadorId = '';
         if (window.choicesCpsHistPrestador) {
             prestadorId = window.choicesCpsHistPrestador.getValue(true) || '';
         }
 
+        // 3. Mês de Referência
         const mesRef = document.getElementById('cps-hist-filtro-mes-ref')?.value;
         let inicio = '', fim = '';
+
+        // Se tiver mês selecionado, calcula inicio e fim do mês
         if (mesRef) {
             const [ano, mes] = mesRef.split('-');
             inicio = `${ano}-${mes}-01`;
@@ -837,10 +870,14 @@ async function carregarHistoricoCPS(reset = false) {
             fim = `${ano}-${mes}-${lastDay}`;
         }
 
-        // --- MONTAGEM DA URL ---
+        // 4. Termo de Busca (NOVO - Busca Server Side)
+        const termoBusca = document.getElementById('input-busca-cps-historico')?.value || '';
+
+
+        // --- MONTAGEM DA URL (Query Params) ---
         const params = new URLSearchParams({
-            page: window.cpsHistoricoPage, // Agora garantidamente um inteiro (0, 1, 2...)
-            size: 20
+            page: window.cpsHistoricoPage, // Inteiro da página atual
+            size: 20                       // Tamanho da página
         });
 
         if (inicio) params.append('inicio', inicio);
@@ -848,56 +885,102 @@ async function carregarHistoricoCPS(reset = false) {
         if (segmentoId) params.append('segmentoId', segmentoId);
         if (prestadorId) params.append('prestadorId', prestadorId);
 
+        // Adiciona o termo se existir
+        if (termoBusca) params.append('termo', termoBusca);
+
+
         // --- CHAMADA AO BACKEND ---
-        const res = await fetchComAuth(`${API_BASE_URL}/controle-cps/historico?${params.toString()}`, {
-            headers: { 'X-User-ID': userId }
+        // Nota: Certifique-se que seu Controller aceita todos esses parâmetros
+        const url = `${API_BASE_URL}/controle-cps/historico?${params.toString()}`;
+
+        const res = await fetchComAuth(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-User-ID': userId
+            }
         });
 
         if (!res.ok) {
-            const txt = await res.text();
-            throw new Error(txt || 'Erro ao buscar histórico.');
+            // Tenta ler erro do backend ou usa genérico
+            let msgErro = 'Erro ao buscar histórico.';
+            try {
+                const errJson = await res.json();
+                if (errJson.message) msgErro = errJson.message;
+            } catch (e) { /* ignore */ }
+            throw new Error(msgErro);
         }
 
+        // --- PROCESSAMENTO DA RESPOSTA ---
         const pageData = await res.json();
         const novosItens = pageData.content || [];
-        window.cpsHistoricoLast = pageData.last; // Atualiza se é a última página
 
-        // Adiciona novos itens à lista global
-        window.dadosCpsHistorico = [...window.dadosCpsHistorico, ...novosItens];
+        // Atualiza flag se é a última página
+        window.cpsHistoricoLast = pageData.last;
 
-        // Renderiza
+        // Se for Reset, a lista é nova. Se for loadMore, concatena.
+        if (reset) {
+            window.dadosCpsHistorico = novosItens;
+        } else {
+            window.dadosCpsHistorico = [...window.dadosCpsHistorico, ...novosItens];
+        }
+
+        // --- RENDERIZAÇÃO ---
+        // Chama a função que desenha o HTML (passando true no ultimo param para indicar append se não for reset)
+        // Mas sua função renderizarAcordeonCPS atual costuma limpar e redesenhar tudo baseada no array completo.
+        // Vamos usar o array completo 'window.dadosCpsHistorico'
         renderizarAcordeonCPS(window.dadosCpsHistorico, 'accordionHistoricoCPS', 'msg-sem-historico-cps', false);
 
-        // Atualiza estado do botão "Carregar Mais"
+
+        // --- ATUALIZAÇÃO DO BOTÃO "CARREGAR MAIS" ---
         if (btnMais) {
             btnMais.disabled = false;
+
             if (window.cpsHistoricoLast) {
+                // Se acabou, esconde ou muda texto
                 btnMais.textContent = "Todos os registros carregados";
-                btnMais.classList.add('d-none'); // Ou deixe visível mas desabilitado se preferir
+                btnMais.classList.add('d-none');
             } else {
+                // Se tem mais, mostra
                 btnMais.textContent = "Carregar Mais";
                 btnMais.classList.remove('d-none');
             }
+        }
+
+        // Se a lista estiver vazia após a busca
+        const msgSemDados = document.getElementById('msg-sem-historico-cps');
+        if (window.dadosCpsHistorico.length === 0) {
+            if (msgSemDados) msgSemDados.classList.remove('d-none');
+        } else {
+            if (msgSemDados) msgSemDados.classList.add('d-none');
         }
 
     } catch (error) {
         console.error("Erro no histórico:", error);
         mostrarToast("Erro ao carregar histórico: " + error.message, 'error');
 
-        // Se deu erro, volta a página para tentar de novo na próxima vez
-        if (!reset && window.cpsHistoricoPage > 0) window.cpsHistoricoPage--;
+        // Em caso de erro no "Carregar Mais", volta o contador para tentar de novo na mesma página
+        if (!reset && window.cpsHistoricoPage > 0) {
+            window.cpsHistoricoPage--;
+        }
+
+        if (btnMais) {
+            btnMais.disabled = false;
+            btnMais.textContent = "Tentar Novamente";
+        }
 
     } finally {
+        // Libera a trava e esconde o loader
         toggleLoader(false, '#cps-historico-pane');
         window.cpsHistoricoLoading = false;
     }
 }
 
-// Helper simples para o botão
-function toggleBtnCarregarMais(show) {
+// Função auxiliar para esconder/mostrar botão (caso não tenha no seu global.js)
+function toggleBtnCarregarMais(visivel) {
     const btn = document.getElementById('btn-carregar-mais-historico-cps');
     if (btn) {
-        if (show) btn.classList.remove('d-none');
+        if (visivel) btn.classList.remove('d-none');
         else btn.classList.add('d-none');
     }
 }
@@ -937,7 +1020,9 @@ function renderizarAcordeonCPS(lista, containerId, msgVazioId, isPendencia) {
         const id = l.os?.id || 0;
         if (!acc[id]) acc[id] = { osId: l.os?.id, os: l.os?.os, projeto: l.os?.projeto, totalCps: 0, totalPago: 0, totalAdiantado: 0, totalConfirmado: 0, itens: [] };
 
-        acc[id].totalCps += parseFloat(l.valorCps || l.valor || 0);
+        // CORREÇÃO: Usamos apenas l.valor (item individual) para que a soma final bata com o total real
+        acc[id].totalCps += parseFloat(l.valor || 0);
+
         if (l.valorAdiantamento) acc[id].totalAdiantado += parseFloat(l.valorAdiantamento) || 0;
         if (['FECHADO', 'ALTERACAO_SOLICITADA', 'PAGO', 'CONCLUIDO'].includes(l.statusPagamento)) acc[id].totalConfirmado += parseFloat(l.valorPagamento || l.valor) || 0;
         if (['PAGO', 'CONCLUIDO'].includes(l.statusPagamento)) acc[id].totalPago += parseFloat(l.valorPagamento || l.valor) || 0;
@@ -1152,7 +1237,7 @@ function configurarBuscaCps(inputId, accordionId) {
     if (!input) return;
 
     // Bloqueia o envio de formulário ao apertar Enter
-    input.addEventListener('keydown', function(e) {
+    input.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
             e.preventDefault(); // <--- IMPEDE O RELOAD
             aplicarFiltroVisualCPS(accordionId, inputId);
@@ -1162,10 +1247,10 @@ function configurarBuscaCps(inputId, accordionId) {
     input.onkeyup = function () {
         aplicarFiltroVisualCPS(accordionId, inputId);
     };
-    
+
     // O evento 'search' (clicar no X) às vezes dispara submit, prevenimos também
     input.onsearch = function (e) {
-        e.preventDefault(); 
+        e.preventDefault();
         aplicarFiltroVisualCPS(accordionId, inputId);
     };
 }
@@ -1271,7 +1356,7 @@ window.executarAcaoLote = function (acao) {
 
     // --- AÇÕES DO COORDENADOR (Mantidas iguais) ---
     if (acao === 'fechar') {
-        
+
         if (ids.length === 0) return Swal.fire('Atenção', 'Selecione pelo menos um item.', 'warning');
 
         document.getElementById('formAlterarValorCPS').reset();
@@ -1405,7 +1490,7 @@ function toggleLoader(show, selector) {
 async function confirmarSolicitacaoAdiantamento() {
     const inputValor = document.getElementById('inputValorAdiantamento');
     const valorSolicitado = parseFloat(inputValor.value);
-    
+
     // 1. CAPTURA O ID DO USUÁRIO
     const usuarioId = localStorage.getItem('usuarioId');
 
@@ -1572,7 +1657,7 @@ if (btnLoadMore) {
     btnLoadMore.addEventListener('click', () => {
         carregarHistoricoCPS(false); // false indica que NÃO é um reset, é paginação
     });
-}   
+}
 
 const btnConfRecAdiant = document.getElementById('btnConfirmarRecusaAdiantamento');
 if (btnConfRecAdiant) {
@@ -1644,6 +1729,8 @@ if (btnAprovarAdiant) {
         }
     });
 }
+
+
 
 const formAlterar = document.getElementById('formAlterarValorCPS');
 if (formAlterar) {

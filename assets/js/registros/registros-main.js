@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // 3. Listener de Busca
     const searchInput = document.getElementById('searchInput');
+    
     if (searchInput) {
         searchInput.addEventListener('input', RegistrosRender.renderizarTabelaComFiltro);
     }
