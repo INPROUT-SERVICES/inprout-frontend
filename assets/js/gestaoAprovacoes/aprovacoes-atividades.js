@@ -2,6 +2,10 @@
 // 2. LÓGICA DE ATIVIDADES E HISTÓRICO (aprovacoes-atividades.js)
 // ==========================================================
 
+// ==========================================================
+// 2. LÓGICA DE ATIVIDADES E HISTÓRICO (aprovacoes-atividades.js)
+// ==========================================================
+
 async function carregarDadosAtividades() {
     toggleLoader(true, '#atividades-pane');
     try {
@@ -185,7 +189,7 @@ function renderizarAcordeonPendencias(dados) {
         });
 
         const primeiroLancamento = grupo.linhas[0];
-        const dadosOS = primeiroLancamento.os || {};
+        let dadosOS = primeiroLancamento.os || {};
         const isComplementar = get(primeiroLancamento, 'detalhe.key', '').includes('_AC_');
         let tituloOS = grupo.os;
         if (isComplementar) {
@@ -195,20 +199,34 @@ function renderizarAcordeonPendencias(dados) {
 
         const buttonClass = isVencido ? 'accordion-button collapsed accordion-button-vencido' : 'accordion-button collapsed';
 
-        // --- CÁLCULOS DE KPI ATUALIZADOS (CORREÇÃO AQUI) ---
-        // Recalcular Total OS ignorando INATIVOS e separando Em Análise
+        // --- CÁLCULOS DE KPI CORRIGIDOS ---
         let valorTotalOSCalculado = 0;
         let valorEmAnalise = 0;
-        const detalhes = get(dadosOS, 'detalhes', []);
+
+        // Tenta pegar os detalhes da pendência atual
+        let detalhes = get(dadosOS, 'detalhes', []);
+
+        // CORREÇÃO: Fallback - Se não tiver detalhes (API pendentes incompleta), busca no global
+        if ((!detalhes || detalhes.length === 0) && window.todosOsLancamentosGlobais) {
+            const lancamentoGlobal = window.todosOsLancamentosGlobais.find(l => l.os && l.os.id === grupo.id);
+            if (lancamentoGlobal && lancamentoGlobal.os && lancamentoGlobal.os.detalhes) {
+                detalhes = lancamentoGlobal.os.detalhes;
+                // Atualiza a referência de dadosOS para usar os dados completos se precisar de outras infos
+                dadosOS = lancamentoGlobal.os; 
+            }
+        }
 
         detalhes.forEach(det => {
-            // Se INATIVO, pula (não soma no Total OS, mas CPS continua somando normal via grupo.valorCps)
+            // Se INATIVO, pula
             if (det.statusRegistro === 'INATIVO') return;
 
-            const val = det.valorTotal || 0;
-            const boq = det.boq ? String(det.boq).trim() : '-';
+            const val = parseFloat(det.valorTotal || 0);
 
-            if (boq === '-' || boq === '') {
+            // Verifica BOQ (Lógica idêntica ao RegistrosRender)
+            let boq = det.boq ? String(det.boq).trim() : '';
+            if (boq === '') boq = '-';
+
+            if (boq === '-') {
                 valorEmAnalise += val;
             } else {
                 valorTotalOSCalculado += val;

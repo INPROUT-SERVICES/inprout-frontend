@@ -1077,13 +1077,9 @@ label.form-label.d-flex {
 
 /* Garante que o Modal de Ano Novo fique acima de qualquer loader (z-index > 1056) */
 #modalAnoNovo {
-  z-index: 11000 !important;
+  z-index: 21000 !important; /* Maior que 20005 */
 }
 
-/* Opcional: Se quiser que o fundo escuro (backdrop) também cubra o loader */
-.modal-backdrop {
-    z-index: 10999 !important; /* Apenas se não houver outros modais abertos simultaneamente */
-}
 
 @keyframes firework {
   0% { 
@@ -1100,7 +1096,3 @@ label.form-label.d-flex {
   }
 }
 
-#modalMinhaConta {
-  /* Garante que o Minha Conta fique acima de loaders e sidebars */
-  z-index: 1060 !important;
-}

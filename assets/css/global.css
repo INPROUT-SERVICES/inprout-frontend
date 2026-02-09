@@ -360,37 +360,38 @@ tr.selected {
   }
 }
 
-/* 1. O Fundo Escuro (Backdrop) fica acima de tudo (sidebar, loaders, etc) */
+/* 1. O Fundo Escuro (Backdrop) deve cobrir a Sidebar (1045), mas ficar abaixo do Modal */
 .modal-backdrop {
-  z-index: 20000 !important; /* Valor bem alto para garantir */
+  z-index: 20000 !important; 
 }
 
-/* 2. O Modal em si fica ACIMA do Fundo Escuro */
+/* 2. O Modal deve ficar ACIMA do Backdrop */
 .modal {
-  z-index: 20001 !important; /* 20000 + 1 */
+  z-index: 20005 !important; /* Aumentei para 20005 para garantir folga */
 }
 
-/* 3. Dropdowns e Tooltips dentro de modais precisam ser ainda maiores */
-.tooltip, .popover, .dropdown-menu {
-  z-index: 20002 !important;
-}
-
-/* Garante que o Toast (notificações) fique acima até dos modais se necessário */
-.toast-container {
-    z-index: 20005 !important;
-}
-
-/* CORREÇÃO DEFINITIVA: SweetAlert sempre acima de Modais Bootstrap */
+/* 3. SweetAlert deve ficar ACIMA dos Modais Bootstrap (caso abra um alerta sobre o modal) */
 .swal2-container {
-    z-index: 20000 !important;
+  z-index: 20010 !important; /* Aumentei para 20010 */
 }
 
+/* 4. Dropdowns, Tooltips e Popovers devem ficar acima de tudo */
+.tooltip, .popover, .dropdown-menu {
+  z-index: 20015 !important;
+}
+
+/* 5. Toasts (Notificações) no topo absoluto */
+.toast-container {
+  z-index: 20020 !important;
+}
+
+/* Ajuste opcional do SweetAlert */
 .swal2-popup {
-    font-size: 0.9rem !important; /* Ajuste opcional para ficar harmônico */
+  font-size: 0.9rem !important;
 }
 
 /* Garante que o dropdown do Choices.js dentro do SweetAlert apareça corretamente */
 .choices__list--dropdown, 
 .choices__list[aria-expanded] {
-    z-index: 20001 !important;
+  z-index: 20015 !important; /* Igual ou maior que o container onde está */
 }
