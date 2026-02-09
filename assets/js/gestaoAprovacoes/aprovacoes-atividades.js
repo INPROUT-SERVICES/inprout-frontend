@@ -2,10 +2,6 @@
 // 2. LÓGICA DE ATIVIDADES E HISTÓRICO (aprovacoes-atividades.js)
 // ==========================================================
 
-// ==========================================================
-// 2. LÓGICA DE ATIVIDADES E HISTÓRICO (aprovacoes-atividades.js)
-// ==========================================================
-
 async function carregarDadosAtividades() {
     toggleLoader(true, '#atividades-pane');
     try {
@@ -26,7 +22,7 @@ async function carregarDadosAtividades() {
         renderizarTabelaHistorico(historicoParaExibir);
         renderizarAcordeonPendencias(window.todasPendenciasAtividades);
 
-        // Atualiza Título da Tabela conforme Role (do backup)
+        // Atualiza Título da Tabela conforme Role
         const tituloEl = document.getElementById('titulo-tabela');
         if (tituloEl) {
             if (userRole === 'COORDINATOR') {
@@ -108,7 +104,7 @@ function renderizarAcordeonPendencias(dados) {
         return;
     }
 
-    // Agrupa por OS
+    // Agrupa por OS e captura os valores calculados pelo Backend
     const agrupadoPorOS = dados.reduce((acc, lancamento) => {
         const osId = lancamento.os.id;
         if (!acc[osId]) {
@@ -116,8 +112,11 @@ function renderizarAcordeonPendencias(dados) {
                 id: osId,
                 os: lancamento.os.os,
                 projeto: lancamento.os.projeto,
-                totalOs: lancamento.totalOs, // Será recalculado abaixo
-                valorCps: lancamento.valorCps,
+                // --- CORREÇÃO: Captura valores diretos do DTO ---
+                totalOs: lancamento.totalOs || 0, 
+                valorEmAnalise: lancamento.valorEmAnalise || 0, // Agora vem do Backend!
+                valorCps: lancamento.valorCps || 0,
+                // ------------------------------------------------
                 valorPendente: lancamento.valorPendente,
                 custoTotalMateriais: lancamento.os.custoTotalMateriais,
                 linhas: []
@@ -199,42 +198,9 @@ function renderizarAcordeonPendencias(dados) {
 
         const buttonClass = isVencido ? 'accordion-button collapsed accordion-button-vencido' : 'accordion-button collapsed';
 
-        // --- CÁLCULOS DE KPI CORRIGIDOS ---
-        let valorTotalOSCalculado = 0;
-        let valorEmAnalise = 0;
-
-        // Tenta pegar os detalhes da pendência atual
-        let detalhes = get(dadosOS, 'detalhes', []);
-
-        // CORREÇÃO: Fallback - Se não tiver detalhes (API pendentes incompleta), busca no global
-        if ((!detalhes || detalhes.length === 0) && window.todosOsLancamentosGlobais) {
-            const lancamentoGlobal = window.todosOsLancamentosGlobais.find(l => l.os && l.os.id === grupo.id);
-            if (lancamentoGlobal && lancamentoGlobal.os && lancamentoGlobal.os.detalhes) {
-                detalhes = lancamentoGlobal.os.detalhes;
-                // Atualiza a referência de dadosOS para usar os dados completos se precisar de outras infos
-                dadosOS = lancamentoGlobal.os; 
-            }
-        }
-
-        detalhes.forEach(det => {
-            // Se INATIVO, pula
-            if (det.statusRegistro === 'INATIVO') return;
-
-            const val = parseFloat(det.valorTotal || 0);
-
-            // Verifica BOQ (Lógica idêntica ao RegistrosRender)
-            let boq = det.boq ? String(det.boq).trim() : '';
-            if (boq === '') boq = '-';
-
-            if (boq === '-') {
-                valorEmAnalise += val;
-            } else {
-                valorTotalOSCalculado += val;
-            }
-        });
-
-        // Substitui o valor estático pelo calculado
-        const valorTotalOS = valorTotalOSCalculado;
+        // --- CÁLCULOS DE KPI SIMPLIFICADOS (USANDO BACKEND) ---
+        const valorTotalOS = grupo.totalOs || 0;
+        const valorEmAnalise = grupo.valorEmAnalise || 0;
         const valorTotalCPS = grupo.valorCps || 0;
         const custoTotalMateriais = grupo.custoTotalMateriais || 0;
         const valorCpsLegado = dadosOS.valorCpsLegado || 0;
@@ -395,9 +361,8 @@ function verDetalheDiario(id) {
     // Atualiza o corpo do modal
     const modalBody = document.getElementById('conteudoDetalheDiario');
     if (modalBody) {
-        // Converte quebras de linha em <br> se necessário, ou usa white-space: pre-wrap no CSS
         modalBody.innerText = texto;
-        modalBody.style.whiteSpace = 'pre-wrap'; // Mantém formatação
+        modalBody.style.whiteSpace = 'pre-wrap';
     }
 
     // Abre o modal
@@ -410,11 +375,9 @@ function renderizarTabelaHistorico(dados) {
     const theadHistorico = document.getElementById('thead-historico');
     if (!tbodyHistorico) return;
 
-    // Filtro em memória
     const statusFiltrado = document.getElementById('filtro-historico-status')?.value || 'todos';
     let dadosFiltrados = statusFiltrado === 'todos' ? dados : dados.filter(l => l.situacaoAprovacao === statusFiltrado);
 
-    // Ordenação
     dadosFiltrados.sort((a, b) => {
         const dateA = a.dataAtividade ? new Date(a.dataAtividade.split('/').reverse().join('-')) : new Date(0);
         const dateB = b.dataAtividade ? new Date(b.dataAtividade.split('/').reverse().join('-')) : new Date(0);
@@ -467,13 +430,11 @@ function atualizarEstadoAcoesLote() {
     container.classList.toggle('d-none', checkboxes.length === 0);
 
     if (checkboxes.length > 0) {
-        // Atualiza contadores
         const total = checkboxes.length;
         document.getElementById('contador-aprovacao').textContent = total;
         document.getElementById('contador-recusa').textContent = total;
         document.getElementById('contador-prazo').textContent = total;
 
-        // Verifica consistência dos status
         const ids = Array.from(checkboxes).map(c => c.dataset.id);
         const lancs = window.todosOsLancamentosGlobais.filter(l => ids.includes(String(l.id)));
         const status = lancs[0]?.situacaoAprovacao;
@@ -486,19 +447,15 @@ function atualizarEstadoAcoesLote() {
         [btnAprovar, btnRecusar, btnPrazo].forEach(btn => btn.style.display = 'none');
 
         if (allSame) {
-            // Regra de Coordenador/Manager
             if (['COORDINATOR', 'MANAGER', 'ADMIN'].includes(userRole) && status === 'PENDENTE_COORDENADOR') {
                 [btnAprovar, btnRecusar, btnPrazo].forEach(btn => btn.style.display = 'inline-block');
             }
-            // Regra de Controller/Admin
             else if (['CONTROLLER', 'ADMIN'].includes(userRole)) {
                 if (status === 'PENDENTE_CONTROLLER') {
                     [btnAprovar, btnRecusar].forEach(btn => btn.style.display = 'inline-block');
                 } else if (status === 'AGUARDANDO_EXTENSAO_PRAZO' || status === 'PRAZO_VENCIDO') {
-                    // Para prazo, botões especiais
                     btnAprovar.style.display = 'inline-block';
                     btnAprovar.innerHTML = `<i class="bi bi-calendar-check"></i> Aprovar Prazo (${total})`;
-
                     btnRecusar.style.display = 'inline-block';
                     btnRecusar.innerHTML = `<i class="bi bi-calendar-x"></i> Recusar Prazo (${total})`;
                 }
