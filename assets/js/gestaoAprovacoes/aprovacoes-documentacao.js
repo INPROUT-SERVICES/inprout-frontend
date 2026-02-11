@@ -1,5 +1,5 @@
 // ==========================================================
-// LÓGICA DA ABA: DOCUMENTAÇÃO (Corrigido - Fix Finalizar OS)
+// LÓGICA DA ABA: DOCUMENTAÇÃO (Visualização Geral / Ações Restritas)
 // ==========================================================
 
 let filtroDocAtual = 'TODOS';
@@ -75,6 +75,10 @@ function renderizarTabelaDocsAgrupada(listaDeOsAgrupada, contextoFiltro) {
     const tbody = document.getElementById('tbody-minhas-docs');
     const msgVazio = document.getElementById('msg-sem-docs');
 
+    // Identifica o papel do usuário para controlar as ações
+    const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
+    const podeExecutarAcao = userRole === 'DOCUMENTIST' || userRole === 'ADMIN';
+
     // Atualiza KPIs
     if (window.minhasDocsPendentes && window.minhasDocsHistorico) {
         const totalPendente = window.minhasDocsPendentes.reduce((acc, i) => acc + (i.valorTotalOS || 0), 0);
@@ -117,14 +121,14 @@ function renderizarTabelaDocsAgrupada(listaDeOsAgrupada, contextoFiltro) {
         const numOs = osObj.os || 'N/D';
         const assunto = item.assuntoEmail || '-';
         
-        // Badges
+        // Badges Visuais
         let htmlStatus = `<span class="badge bg-secondary">${status}</span>`;
         if (status === 'PENDENTE_RECEBIMENTO') htmlStatus = `<span class="badge bg-warning text-dark">Aguardando Envio</span>`;
         else if (status === 'EM_ANALISE') htmlStatus = `<span class="badge bg-primary">Em Análise</span>`;
         else if (status.includes('FINALIZADO')) htmlStatus = `<span class="badge bg-success">Finalizado</span>`;
         else if (status === 'DEVOLVIDO' || status === 'REPROVADO') htmlStatus = `<span class="badge bg-danger">Devolvido</span>`;
 
-        // Prazo
+        // Cálculo de Prazo
         let htmlPrazo = '-';
         if (prazo && !status.includes('FINALIZADO')) {
             const d = new Date(prazo); const h = new Date(); h.setHours(0,0,0,0); d.setHours(0,0,0,0);
@@ -136,19 +140,20 @@ function renderizarTabelaDocsAgrupada(listaDeOsAgrupada, contextoFiltro) {
             htmlPrazo = `<small class="text-muted">${formatarData(prazo)}</small>`;
         }
 
-        // Ações
+        // =====================================================================
+        // LÓGICA DE BOTÕES (PERMISSÕES)
+        // =====================================================================
         let botoes = '';
         
-        // IMPORTANTE: Aqui garantimos que o data-id seja o ID DA OS.
-        // O idReal gerado no main.js já garante isso.
-        
-        if (contextoFiltro === 'HISTORICO' || status.includes('FINALIZADO') || status === 'DEVOLVIDO') {
+        // Se for histórico, ou finalizado, ou se o usuário NÃO tiver permissão de ação, mostra apenas "Ver"
+        if (contextoFiltro === 'HISTORICO' || status.includes('FINALIZADO') || status === 'DEVOLVIDO' || !podeExecutarAcao) {
              botoes = `
-                <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico">
+                <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico/Detalhes">
                     <i class="bi bi-eye"></i>
                 </button>
              `;
         } else {
+            // Se tem permissão (ADMIN ou DOCUMENTIST) e o status permite ação:
             if (status === 'EM_ANALISE') {
                 botoes = `
                     <div class="btn-group" role="group">
@@ -168,17 +173,14 @@ function renderizarTabelaDocsAgrupada(listaDeOsAgrupada, contextoFiltro) {
                     </div>
                 `;
             } else if (status === 'PENDENTE_RECEBIMENTO') {
-                 // Documentista não tem botão aqui, aguarda envio
-                 // Mas se necessário (ex: admin), mantemos a lógica
-                 if (localStorage.getItem('role') === 'ADMIN') {
-                     botoes = `
-                        <button class="btn btn-sm btn-outline-primary" 
-                                onclick="receberDocumentacao('${item.id}')" 
-                                title="Forçar recebimento">
-                            <i class="bi bi-box-arrow-in-down"></i>
-                        </button>
-                    `;
-                 }
+                 // Botão de receber (geralmente ADMIN ou se o fluxo permitir)
+                 botoes = `
+                    <button class="btn btn-sm btn-outline-primary" 
+                            onclick="receberDocumentacao('${item.id}')" 
+                            title="Confirmar Recebimento">
+                        <i class="bi bi-box-arrow-in-down"></i>
+                    </button>
+                `;
             }
         }
 
@@ -315,7 +317,7 @@ document.addEventListener('click', async function(e) {
         const modalFinalizar = new bootstrap.Modal(document.getElementById('modalFinalizarDoc'));
         const inputId = document.getElementById('finalizarDocId');
         if(inputId) {
-            inputId.value = id; // Define o ID da OS no input hidden
+            inputId.value = id; 
         }
         document.getElementById('assuntoEmailDoc').value = '';
         modalFinalizar.show();
@@ -329,7 +331,6 @@ if(btnConfirmarFinalizar) {
     btnConfirmarFinalizar.parentNode.replaceChild(novoBtn, btnConfirmarFinalizar);
 
     novoBtn.addEventListener('click', async function() {
-        // CORREÇÃO: Pegamos apenas o ID único da OS, ignorando lotes antigos
         const idOs = document.getElementById('finalizarDocId').value;
         const assunto = document.getElementById('assuntoEmailDoc').value;
 
@@ -346,7 +347,6 @@ if(btnConfirmarFinalizar) {
         toggleLoader(true, '#minhas-docs-pane');
         
         try {
-            // Chamada única para o endpoint de OS
             const response = await fetchComAuth(`${API_BASE_URL}/lancamentos/${idOs}/documentacao/finalizar`, {
                 method: 'POST',
                 body: JSON.stringify({ assuntoEmail: assunto })

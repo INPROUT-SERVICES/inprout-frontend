@@ -114,25 +114,31 @@ const RegistrosApi = {
         const role = RegistrosState.userRole;
 
         listaDeOs.forEach(os => {
+            // Filtro de Permissão por Segmento (Mantido)
             if (['MANAGER', 'COORDINATOR'].includes(role)) {
                 if (!os.segmento || !userSegmentos.includes(os.segmento.id)) return;
             }
 
-            // AGORA CARREGAMOS TODOS, INCLUSIVE INATIVOS (para mostrar riscado)
-            // Se preferir esconder totalmente os inativos, descomente o filtro abaixo.
-            // const detalhesParaMostrar = os.detalhes.filter(d => d.statusRegistro !== 'INATIVO'); 
             const detalhesParaMostrar = os.detalhes || [];
 
             if (detalhesParaMostrar.length > 0) {
                 detalhesParaMostrar.forEach(detalhe => {
-                    let lancamentoParaExibir = detalhe.ultimoLancamento;
+                    
+                    let lancamentoParaExibir = null;
 
-                    if (!lancamentoParaExibir && detalhe.lancamentos && detalhe.lancamentos.length > 0) {
-                        const operacionais = detalhe.lancamentos.filter(l => l.situacaoAprovacao !== 'APROVADO_LEGADO');
-                        if (operacionais.length > 0) {
-                            lancamentoParaExibir = operacionais.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
-                        } else {
-                            lancamentoParaExibir = detalhe.lancamentos.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
+                    if (detalhe.lancamentos && detalhe.lancamentos.length > 0) {
+                        
+                        // 1. Filtra APENAS os lançamentos com status APROVADO (ou legado)
+                        const historicoAprovado = detalhe.lancamentos.filter(l => 
+                            l.situacaoAprovacao === 'APROVADO' || 
+                            l.situacaoAprovacao === 'APROVADO_LEGADO'
+                        );
+
+                        // 2. Se houver algum aprovado no histórico, pegamos o mais recente (Maior ID)
+                        if (historicoAprovado.length > 0) {
+                            lancamentoParaExibir = historicoAprovado.reduce((prev, curr) => 
+                                (prev.id > curr.id) ? prev : curr
+                            );
                         }
                     }
 
