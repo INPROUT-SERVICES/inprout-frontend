@@ -14,7 +14,7 @@ body {
     border-bottom: 1px solid #dee2e6;
 }
 
-.nav-tabs .nav-link {
+.nav-tabs{
     border: none;
     border-bottom: 3px solid transparent;
     color: #6c757d;
@@ -30,7 +30,7 @@ body {
 }
 
 .nav-tabs .nav-link.active,
-.nav-tabs .nav-item.show .nav-link {
+.nav-tabs .nav-item.show {
     border-bottom: 3px solid var(--inprout-green-dark, #2a8a65);
     background-color: transparent;
     color: var(--inprout-green-dark, #2a8a65);
@@ -519,4 +519,34 @@ body {
 #modalAnaliseCoordenador .table-responsive::-webkit-scrollbar-thumb {
     background-color: #cbd5e1;
     border-radius: 4px;
+}
+
+/* --- CORREÇÃO DA BOLINHA (BADGE) --- */
+.nav-link {
+    /* Permite que a bolinha saia dos limites do botão sem ser cortada */
+    overflow: visible !important; 
+    /* Dá espaço na direita para a bolinha não ficar em cima do texto ou do próximo botão */
+    margin-right: 10px !important; 
+}
+
+.badge-flutuante {
+    position: absolute;
+    top: -8px;    /* Sobe a bolinha para fora do botão */
+    right: -8px;  /* Joga para a direita, fora do texto */
+    z-index: 100; /* Garante que fique em cima de tudo */
+    font-size: 0.65rem; 
+    padding: 0.35em 0.6em;
+    border: 2px solid white; /* Borda branca para destacar do fundo */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* --- ESTILO DO SCROLL DAS ABAS --- */
+#tabsScrollContainer {
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    scroll-behavior: smooth; /* Animação suave ao clicar */
+}
+#tabsScrollContainer::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
 }

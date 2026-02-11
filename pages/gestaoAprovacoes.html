@@ -84,64 +84,98 @@
                 <i class="bi bi-chevron-left"></i>
             </button>
 
-            <div class="tabs-scroll-container flex-grow-1 overflow-hidden">
-                <ul class="nav nav-tabs border-bottom-0 flex-nowrap" id="aprovacoesTab" role="tablist"
-                    style="overflow-x: auto; scrollbar-width: none;">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="atividades-tab" data-bs-toggle="tab"
-                            data-bs-target="#atividades-pane" type="button" role="tab">
-                            <i class="bi bi-card-checklist me-1"></i> Aprovações de atividades
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="historico-atividades-tab" data-bs-toggle="tab"
-                            data-bs-target="#historico-atividades-pane" type="button" role="tab">
-                            <i class="bi bi-calendar-check me-1"></i> Histórico de atividades
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="cps-pendencias-tab" data-bs-toggle="tab"
-                            data-bs-target="#cps-pendencias-pane" type="button" role="tab">
-                            <i class="bi bi-currency-dollar me-1"></i> Aprovações CPS
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="cps-historico-tab" data-bs-toggle="tab"
-                            data-bs-target="#cps-historico-pane" type="button" role="tab">
-                            <i class="bi bi-receipt me-1"></i> Histórico CPS
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link position-relative" id="complementares-tab" data-bs-toggle="tab"
-                            data-bs-target="#complementares-pane" type="button" role="tab">
-                            <i class="bi bi-plus-circle-dotted me-1"></i> Ativ. Complementares
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="historico-complementares-tab" data-bs-toggle="tab"
-                            data-bs-target="#historico-complementares-pane" type="button" role="tab">
-                            <i class="bi bi-hourglass-split me-1"></i> Hist. Complementares
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link position-relative" id="materiais-tab" data-bs-toggle="tab"
-                            data-bs-target="#materiais-pane" type="button" role="tab">
-                            <i class="bi bi-box-seam me-1"></i> Aprovações Materiais
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="historico-materiais-tab" data-bs-toggle="tab"
-                            data-bs-target="#historico-materiais-pane" type="button" role="tab">
-                            <i class="bi bi-archive me-1"></i> Histórico Materiais
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" id="minhas-docs-tab" data-bs-toggle="tab"
-                            data-bs-target="#minhas-docs-pane">
-                            Documentações
-                        </button>
-                    </li>
-                </ul>
+            <div class="d-flex align-items-center bg-white border-bottom mb-3 position-relative">
+
+                <button class="btn btn-link text-secondary border-0 p-2" id="btnScrollLeft"
+                    style="display: none; z-index: 10;">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+
+                <div class="flex-grow-1 overflow-hidden" id="tabsScrollContainer">
+                    <ul class="nav nav-tabs flex-nowrap border-bottom-0" id="aprovacoesTab" role="tablist"
+                        style="padding-top: 12px;">
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active position-relative" id="atividades-tab" data-bs-toggle="tab"
+                                data-bs-target="#atividades-pane" type="button" role="tab">
+                                <i class="bi bi-card-checklist me-1 text-warning"></i> Aprovações de atividades
+                                <span id="badge-atividades"
+                                    class="badge rounded-pill bg-danger badge-flutuante d-none">0</span>
+                            </button>
+                        </li>
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link position-relative" id="historico-atividades-tab"
+                                data-bs-toggle="tab" data-bs-target="#historico-atividades-pane" type="button"
+                                role="tab">
+                                <i class="bi bi-calendar-check me-1 text-muted"></i> Histórico de atividades
+                            </button>
+                        </li>
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link position-relative" id="cps-pendencias-tab" data-bs-toggle="tab"
+                                data-bs-target="#cps-pendencias-pane" type="button" role="tab">
+                                <i class="bi bi-currency-dollar me-1 text-success"></i> Aprovações CPS
+                                <span id="badge-cps"
+                                    class="badge rounded-pill bg-danger badge-flutuante d-none">0</span>
+                            </button>
+                        </li>
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link position-relative" id="cps-historico-tab" data-bs-toggle="tab"
+                                data-bs-target="#cps-historico-pane" type="button" role="tab">
+                                <i class="bi bi-receipt me-1 text-secondary"></i> Histórico CPS
+                            </button>
+                        </li>
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link position-relative" id="complementares-tab" data-bs-toggle="tab"
+                                data-bs-target="#complementares-pane" type="button" role="tab">
+                                <i class="bi bi-plus-circle-dotted me-1 text-primary"></i> Ativ. Complementares
+                                <span id="badge-complementar"
+                                    class="badge rounded-pill bg-danger badge-flutuante d-none">0</span>
+                            </button>
+                        </li>
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link position-relative" id="historico-complementares-tab"
+                                data-bs-toggle="tab" data-bs-target="#historico-complementares-pane" type="button"
+                                role="tab">
+                                <i class="bi bi-hourglass-split me-1 text-muted"></i> Hist. Complementares
+                            </button>
+                        </li>
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link position-relative" id="materiais-tab" data-bs-toggle="tab"
+                                data-bs-target="#materiais-pane" type="button" role="tab">
+                                <i class="bi bi-box-seam me-1 text-info"></i> Aprovações Materiais
+                                <span id="badge-materiais"
+                                    class="badge rounded-pill bg-danger badge-flutuante d-none">0</span>
+                            </button>
+                        </li>
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link position-relative" id="historico-materiais-tab" data-bs-toggle="tab"
+                                data-bs-target="#historico-materiais-pane" type="button" role="tab">
+                                <i class="bi bi-archive me-1 text-muted"></i> Histórico Materiais
+                            </button>
+                        </li>
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link position-relative" id="minhas-docs-tab" data-bs-toggle="tab"
+                                data-bs-target="#minhas-docs-pane" type="button" role="tab">
+                                <i class="bi bi-file-earmark-text me-1 text-dark"></i> Documentações
+                                <span id="badge-documentacao"
+                                    class="badge rounded-pill bg-danger badge-flutuante d-none">0</span>
+                            </button>
+                        </li>
+
+                    </ul>
+                </div>
+
+                <button class="btn btn-link text-secondary border-0 p-2" id="btnScrollRight" style="z-index: 10;">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
             </div>
 
             <button class="btn btn-light btn-scroll-tab right" id="btnScrollRight">

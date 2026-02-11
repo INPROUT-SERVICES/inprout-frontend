@@ -210,6 +210,40 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
+    const container = document.getElementById('tabsScrollContainer');
+    const btnLeft = document.getElementById('btnScrollLeft');
+    const btnRight = document.getElementById('btnScrollRight');
+
+    if (container && btnLeft && btnRight) {
+
+        // Função para atualizar visibilidade das setas
+        const atualizarSetas = () => {
+            // Esconde esquerda se estiver no início (scroll <= 0)
+            btnLeft.style.display = container.scrollLeft > 0 ? 'block' : 'none';
+
+            // Lógica opcional para esconder a direita se chegar no fim (requer cálculo preciso)
+            // btnRight.style.display = (container.scrollLeft + container.clientWidth >= container.scrollWidth - 1) ? 'none' : 'block';
+        };
+
+        // Scroll para Esquerda
+        btnLeft.addEventListener('click', () => {
+            container.scrollBy({ left: -200, behavior: 'smooth' });
+            setTimeout(atualizarSetas, 300); // Atualiza após a animação
+        });
+
+        // Scroll para Direita
+        btnRight.addEventListener('click', () => {
+            container.scrollBy({ left: 200, behavior: 'smooth' });
+            setTimeout(atualizarSetas, 300);
+        });
+
+        // Detecta scroll manual (trackpad/touch) para atualizar setas
+        container.addEventListener('scroll', atualizarSetas);
+
+        // Inicializa estado
+        atualizarSetas();
+    }
+
     // 6. Lógica de Checkbox (Complementares)
     const painelComplementar = document.getElementById('complementares-pane');
     if (painelComplementar) {
@@ -722,7 +756,7 @@ async function carregarDashboardEBadges() {
                 const resHistorico = await fetchComAuth(`${API_BASE_URL}/lancamentos/documentacao/historico-lista?usuarioId=${userId}`);
                 if (resHistorico.ok) {
                     const dadosCarteira = await resHistorico.json();
-                    
+
                     // 3. LÓGICA DE FUSÃO E FILTRAGEM (CORREÇÃO PEDIDA)
                     dadosCarteira.forEach(itemCarteira => {
                         const itemFormatado = mapearParaFrontDoc(itemCarteira);
@@ -735,7 +769,7 @@ async function carregarDashboardEBadges() {
                             if (!jaExiste) {
                                 listaPendentes.push(itemFormatado);
                             }
-                        } 
+                        }
                         // Se for status FINALIZADO/REJEITADO, vai para o histórico
                         else if (status.includes('FINALIZADO') || status === 'DEVOLVIDO' || status === 'REPROVADO') {
                             listaHistorico.push(itemFormatado);
@@ -749,7 +783,7 @@ async function carregarDashboardEBadges() {
             // Atribui às variáveis globais
             window.minhasDocsPendentes = listaPendentes;
             window.minhasDocsHistorico = listaHistorico;
-            
+
             // Ordenação
             window.minhasDocsHistorico.sort((a, b) => b.id - a.id);
 
@@ -769,14 +803,14 @@ async function carregarDashboardEBadges() {
 
                 const statusOS = l.os.statusDocumentacao;
                 if (!statusOS || statusOS === 'NAO_APLICAVEL') return;
-                if (statusOS === 'FINALIZADO') return; 
+                if (statusOS === 'FINALIZADO') return;
                 if (osComDocumentacaoFinalizada.has(osId)) return;
 
                 if (!mapaOsDoc.has(osId)) {
                     mapaOsDoc.set(osId, mapearParaFrontDoc(l));
                 }
                 const entradaOS = mapaOsDoc.get(osId);
-                if(!entradaOS.itensRelacionados.includes(l.id)) {
+                if (!entradaOS.itensRelacionados.includes(l.id)) {
                     entradaOS.itensRelacionados.push(l.id);
                 }
             });
@@ -811,7 +845,7 @@ function mapearParaFrontDoc(l) {
     const idReal = (l.os && l.os.id) ? l.os.id : l.id;
 
     let statusParaExibir = l.statusDocumentacao;
-    
+
     if (!statusParaExibir || statusParaExibir === 'NAO_APLICAVEL') {
         if (l.os && l.os.statusDocumentacao) {
             statusParaExibir = l.os.statusDocumentacao;
@@ -821,12 +855,12 @@ function mapearParaFrontDoc(l) {
     }
 
     return {
-        id: idReal, 
+        id: idReal,
         isAgrupado: true,
         os: l.os || {},
         // Aqui usamos a variável calculada acima, que agora será 'FINALIZADO'
-        statusDocumentacao: statusParaExibir, 
-        
+        statusDocumentacao: statusParaExibir,
+
         tipoDocumentacaoNome: l.tipoDocumentacaoNome || (l.os && l.os.tipoDocumentacao ? l.os.tipoDocumentacao.nome : 'Padrão'),
         documentistaNome: l.documentistaNome || (l.os && l.os.documentista ? l.os.documentista.nome : '-'),
         dataPrazoDoc: l.dataPrazoDoc || (l.os ? l.os.dataPrazoDoc : null),
