@@ -809,12 +809,24 @@ async function carregarDashboardEBadges() {
 
 function mapearParaFrontDoc(l) {
     const idReal = (l.os && l.os.id) ? l.os.id : l.id;
+
+    let statusParaExibir = l.statusDocumentacao;
     
+    if (!statusParaExibir || statusParaExibir === 'NAO_APLICAVEL') {
+        if (l.os && l.os.statusDocumentacao) {
+            statusParaExibir = l.os.statusDocumentacao;
+        } else {
+            statusParaExibir = 'PENDENTE';
+        }
+    }
+
     return {
         id: idReal, 
         isAgrupado: true,
         os: l.os || {},
-        statusDocumentacao: l.statusDocumentacao || (l.os ? l.os.statusDocumentacao : 'PENDENTE'),
+        // Aqui usamos a variável calculada acima, que agora será 'FINALIZADO'
+        statusDocumentacao: statusParaExibir, 
+        
         tipoDocumentacaoNome: l.tipoDocumentacaoNome || (l.os && l.os.tipoDocumentacao ? l.os.tipoDocumentacao.nome : 'Padrão'),
         documentistaNome: l.documentistaNome || (l.os && l.os.documentista ? l.os.documentista.nome : '-'),
         dataPrazoDoc: l.dataPrazoDoc || (l.os ? l.os.dataPrazoDoc : null),
