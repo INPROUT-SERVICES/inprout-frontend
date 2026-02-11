@@ -45,18 +45,18 @@ const RegistrosRender = {
             const etapa = RegistrosUtils.get(linha, 'ultimoLancamento.etapa', null);
             return etapa ? `${etapa.indiceDetalhado} - ${etapa.nomeDetalhado}` : '-';
         },
-        "STATUS": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.status'), 
+        "STATUS": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.status'),
         "DETALHE DIÁRIO": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.detalheDiario'),
         "CÓD. PRESTADOR": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.prestador.codigo'), "PRESTADOR": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.prestador.nome'),
         "VALOR": (linha) => RegistrosUtils.formatarMoeda(RegistrosUtils.get(linha, 'ultimoLancamento.valor')), "GESTOR": (linha) => RegistrosUtils.get(linha, 'ultimoLancamento.manager.nome'),
-        
+
         "SITUAÇÃO": (linha) => {
             if (RegistrosUtils.get(linha, 'detalhe.statusRegistro') === 'INATIVO') {
                 return 'CANCELADO';
             }
             return RegistrosUtils.get(linha, 'ultimoLancamento.situacao');
         },
-        
+
         "DATA ATIVIDADE": (linha) => RegistrosUtils.formatarData(RegistrosUtils.get(linha, 'ultimoLancamento.dataAtividade')),
         "FATURAMENTO": (linha) => RegistrosUtils.get(linha, 'detalhe.faturamento'), "SOLICIT ID FAT": (linha) => RegistrosUtils.get(linha, 'detalhe.solitIdFat'),
         "RECEB ID FAT": (linha) => RegistrosUtils.get(linha, 'detalhe.recebIdFat'), "ID FATURAMENTO": (linha) => RegistrosUtils.get(linha, 'detalhe.idFaturamento'),
@@ -98,7 +98,7 @@ const RegistrosRender = {
             // Garante que é string, remove espaços e verifica se é vazio ou hifen
             let boq = d.boq ? String(d.boq).trim() : '';
             if (boq === '') boq = '-';
-            
+
             const valorItem = d.valorTotal || 0;
 
             if (boq === '-') {
@@ -112,17 +112,17 @@ const RegistrosRender = {
 
         // CORREÇÃO AQUI: Removemos o filtro de INATIVO para o cálculo de CPS
         const valorTotalCPS = grupo.linhas.flatMap(linha => {
-             // Se o registro for INATIVO, ainda assim contabilizamos os custos realizados (CPS)
-             return RegistrosUtils.get(linha, 'detalhe.lancamentos', []);
+            // Se o registro for INATIVO, ainda assim contabilizamos os custos realizados (CPS)
+            return RegistrosUtils.get(linha, 'detalhe.lancamentos', []);
         })
-        .filter(lanc => ['APROVADO', 'APROVADO_CPS_LEGADO'].includes(lanc.situacaoAprovacao))
-        .reduce((sum, lanc) => sum + (lanc.valor || 0), 0);
+            .filter(lanc => ['APROVADO', 'APROVADO_CPS_LEGADO'].includes(lanc.situacaoAprovacao))
+            .reduce((sum, lanc) => sum + (lanc.valor || 0), 0);
 
         const custoTotalMateriais = dadosOS.custoTotalMateriais || 0;
         const valorCpsLegado = dadosOS.valorCpsLegado || 0;
         const valorTransporte = dadosOS.transporte || 0;
         const totalGasto = valorTotalCPS + custoTotalMateriais + valorCpsLegado + valorTransporte;
-        
+
         const percentual = valorTotalOS > 0 ? (totalGasto / valorTotalOS) * 100 : 0;
 
         // HTML dos KPIs
@@ -145,24 +145,24 @@ const RegistrosRender = {
         // --- Verificação de Status da OS e Ícone ---
         let temFinalizado = false;
         let temPendente = false;
-        
+
         grupo.linhas.forEach(linha => {
             const situacao = RegistrosUtils.get(linha, 'ultimoLancamento.situacao');
             const isInativo = RegistrosUtils.get(linha, 'detalhe.statusRegistro') === 'INATIVO';
-            
+
             if (!isInativo) {
                 const situacaoNormalizada = situacao ? String(situacao).toUpperCase().trim() : 'PENDENTE';
                 if (situacaoNormalizada === 'FINALIZADO') {
                     temFinalizado = true;
                 } else {
-                    temPendente = true; 
+                    temPendente = true;
                 }
             }
         });
 
         const isTotalmenteFinalizada = RegistrosRender.verificarSeOsFinalizada(grupo);
         const headerStyle = isTotalmenteFinalizada ? 'style="background-color: #fff3cd !important;"' : '';
-        
+
         let btnFinalizarOsHTML = '';
         if (['ADMIN', 'COORDINATOR', 'MANAGER'].includes(role)) {
             if (temFinalizado && temPendente) {
@@ -190,31 +190,31 @@ const RegistrosRender = {
 
         const bodyRowsHTML = grupo.linhas.map(linhaData => {
             const detalheId = RegistrosUtils.get(linhaData, 'detalhe.id', '');
-            
+
             const statusRegistro = RegistrosUtils.get(linhaData, 'detalhe.statusRegistro', 'ATIVO');
             const isInativo = statusRegistro === 'INATIVO';
             const rowClass = isInativo ? 'row-inativo' : '';
-            
+
             const cellsHTML = headersVisiveis.map(header => {
                 if (header === "HISTÓRICO") {
                     const lancamentosCount = RegistrosUtils.get(linhaData, 'detalhe.lancamentos', []).length;
                     const isDisabled = !detalheId || lancamentosCount <= 1;
                     return `<td><button class="btn btn-sm btn-outline-info btn-historico" data-detalhe-id="${detalheId}" title="Ver Histórico" ${isDisabled ? 'disabled' : ''}><i class="bi bi-clock-history"></i></button></td>`;
                 }
-                
+
                 if (header === "AÇÕES") {
-                    let btnEditar = (['ADMIN', 'ASSISTANT', 'COORDINATOR', 'MANAGER'].includes(role) && detalheId) 
+                    let btnEditar = (['ADMIN', 'ASSISTANT', 'COORDINATOR', 'MANAGER'].includes(role) && detalheId)
                         ? `<button class="btn btn-sm btn-outline-primary btn-edit-detalhe" data-id="${detalheId}" title="Editar"><i class="bi bi-pencil-fill"></i></button>` : '';
-                    
-                    let btnExcluir = (['ADMIN', 'ASSISTANT'].includes(role)) 
+
+                    let btnExcluir = (['ADMIN', 'ASSISTANT'].includes(role))
                         ? `<button class="btn btn-sm btn-outline-danger btn-delete-registro" data-id="${detalheId}" title="Excluir"><i class="bi bi-trash-fill"></i></button>` : '';
-                    
+
                     let btnInativar = '';
                     if (['ADMIN', 'ASSISTANT'].includes(role) && detalheId) {
                         if (isInativo) {
-                             btnInativar = `<button class="btn btn-sm btn-success btn-toggle-status" data-id="${detalheId}" data-status="INATIVO" title="Reativar Registro"><i class="bi bi-check-circle"></i></button>`;
+                            btnInativar = `<button class="btn btn-sm btn-success btn-toggle-status" data-id="${detalheId}" data-status="INATIVO" title="Reativar Registro"><i class="bi bi-check-circle"></i></button>`;
                         } else {
-                             btnInativar = `<button class="btn btn-sm btn-outline-secondary btn-toggle-status" data-id="${detalheId}" data-status="ATIVO" title="Inativar/Cancelar"><i class="bi bi-x-circle"></i></button>`;
+                            btnInativar = `<button class="btn btn-sm btn-outline-secondary btn-toggle-status" data-id="${detalheId}" data-status="ATIVO" title="Inativar/Cancelar"><i class="bi bi-x-circle"></i></button>`;
                         }
                     }
 
@@ -288,7 +288,7 @@ const RegistrosRender = {
                 const bFinalizada = RegistrosRender.verificarSeOsFinalizada(b);
                 if (aFinalizada && !bFinalizada) return -1;
                 if (!aFinalizada && bFinalizada) return 1;
-                return 0; 
+                return 0;
             });
         }
 
@@ -333,7 +333,7 @@ const RegistrosRender = {
             : listaBase;
 
         let grupos = RegistrosRender.transformarEmGrupos(linhasFiltradas);
-        
+
         if (['ADMIN', 'ASSISTANT'].includes(RegistrosState.userRole)) {
             grupos.sort((a, b) => {
                 const aFinalizada = RegistrosRender.verificarSeOsFinalizada(a);
@@ -392,39 +392,99 @@ const RegistrosRender = {
     },
 
     renderizarDashboardAnalise: () => {
+        RegistrosApi.carregarDashboard();
+    },
+
+    renderizarCardsDoBackend: (dadosAgrupados) => {
         const container = document.getElementById('dashboard-analise-container');
         const loader = document.getElementById('dashboard-loader');
         
         if (!container) return;
-
-        // Mostra loader rápido
-        if(loader) loader.classList.remove('d-none');
+        if (loader) loader.classList.add('d-none');
         container.innerHTML = '';
 
-        // Pequeno timeout para permitir que o loader apareça antes do cálculo pesado
-        setTimeout(() => {
-            const dados = RegistrosState.todasAsLinhas || [];
+        if (!dadosAgrupados || Object.keys(dadosAgrupados).length === 0) {
+            container.innerHTML = '<div class="col-12 text-center text-muted p-5">Nenhum dado encontrado para o Gate atual.</div>';
+            return;
+        }
 
-            if (dados.length === 0) {
-                container.innerHTML = '<div class="col-12 text-center text-muted p-5">Nenhum registro carregado para análise.</div>';
-                if(loader) loader.classList.add('d-none');
-                return;
+        const html = Object.keys(dadosAgrupados).sort().map(segmentoNome => {
+            const dto = dadosAgrupados[segmentoNome];
+            if (!dto) return '';
+
+            // --- ADAPTADOR ROBUSTO ---
+            // Cria objetos para todas as variações possíveis de nomes que o criarCardSegmento possa usar
+            
+            const objNaoIniciado = { 
+                total: dto.valorNaoIniciado || 0, 
+                comPo: 0, 
+                semPo: 0 
+            };
+
+            const objParalisado = { 
+                total: dto.valorParalisado || 0, 
+                comPo: 0, 
+                semPo: 0 
+            };
+
+            const objAguardando = {
+                total: dto.valorAguardandoDoc || 0,
+                comPo: 0,
+                semPo: 0
+            };
+
+            const objCancelado = {
+                total: 0,
+                comPo: 0,
+                semPo: 0
+            };
+
+            const statsAdaptado = {
+                // 1. Apto a Faturar (Finalizado)
+                aptoFaturar: { 
+                    total: dto.finalizado ? (dto.finalizado.valorTotal || 0) : 0, 
+                    comPo: dto.finalizado ? (dto.finalizado.valorComPo || 0) : 0, 
+                    semPo: dto.finalizado ? (dto.finalizado.valorSemPo || 0) : 0 
+                },
+
+                // 2. Em Andamento
+                emAndamento: { 
+                    total: dto.emAndamento ? (dto.emAndamento.valorTotal || 0) : 0, 
+                    comPo: dto.emAndamento ? (dto.emAndamento.valorComPo || 0) : 0, 
+                    semPo: dto.emAndamento ? (dto.emAndamento.valorSemPo || 0) : 0 
+                },
+
+                // 3. Paralisado
+                paralisado: objParalisado,
+
+                // 4. Não Iniciado (Várias possibilidades de nome)
+                naoIniciado: objNaoIniciado,
+                nao_iniciado: objNaoIniciado, // Alias caso use snake_case
+
+                // 5. Aguardando Documentação (Várias possibilidades de nome)
+                aguardandoDoc: objAguardando,
+                aguardandoDocumentacao: objAguardando, // Alias comum
+                aguardando_documentacao: objAguardando, // Alias snake_case
+
+                // 6. Cancelado
+                cancelado: objCancelado
+            };
+
+            return RegistrosRender.criarCardSegmento(segmentoNome, statsAdaptado);
+        }).join('');
+
+        container.innerHTML = html;
+        
+        // Atualiza título do Gate se houver
+        const keys = Object.keys(dadosAgrupados);
+        for(let key of keys) {
+            const d = dadosAgrupados[key];
+            if(d && d.gateAtual && d.gateAtual.nomeGate) {
+                 const labelGate = document.getElementById('label-gate-atual');
+                 if(labelGate) labelGate.innerText = d.gateAtual.nomeGate;
+                 break;
             }
-
-            // 1. Cálculo
-            const analise = RegistrosRender.calcularMetricasPorSegmento(dados);
-
-            // 2. Renderização
-            if (Object.keys(analise).length === 0) {
-                container.innerHTML = '<div class="col-12 text-center text-muted p-5">Não foi possível agrupar os dados por segmento.</div>';
-            } else {
-                container.innerHTML = Object.keys(analise).sort().map(segmento => {
-                    return RegistrosRender.criarCardSegmento(segmento, analise[segmento]);
-                }).join('');
-            }
-
-            if(loader) loader.classList.add('d-none');
-        }, 50);
+        }
     },
 
     calcularMetricasPorSegmento: (dados) => {
@@ -432,12 +492,12 @@ const RegistrosRender = {
 
         dados.forEach(linha => {
             // Definições de acesso seguro aos dados
-            const detalhe = linha.detalhe || {}; 
+            const detalhe = linha.detalhe || {};
             const os = linha.os || {};
             // Tenta pegar o nome do segmento de vários lugares possíveis
-            const segmentoNome = (os.segmento && os.segmento.nome) 
-                                 ? os.segmento.nome 
-                                 : (detalhe.segmentoNome || 'Sem Segmento');
+            const segmentoNome = (os.segmento && os.segmento.nome)
+                ? os.segmento.nome
+                : (detalhe.segmentoNome || 'Sem Segmento');
 
             // Inicializa estrutura do segmento
             if (!resultado[segmentoNome]) {
@@ -452,10 +512,10 @@ const RegistrosRender = {
             // Valores e Status
             const valor = parseFloat(detalhe.valorTotal || 0);
             // Pega situação do último lançamento OU 'NAO_INICIADO' se não houver lançamento
-            let situacao = (linha.ultimoLancamento && linha.ultimoLancamento.situacao) 
-                           ? String(linha.ultimoLancamento.situacao).toUpperCase().trim() 
-                           : 'NAO_INICIADO';
-            
+            let situacao = (linha.ultimoLancamento && linha.ultimoLancamento.situacao)
+                ? String(linha.ultimoLancamento.situacao).toUpperCase().trim()
+                : 'NAO_INICIADO';
+
             // Regra: Se statusRegistro for INATIVO, ignoramos no dashboard financeiro?
             // Assumindo que sim, para não sujar a análise.
             if (detalhe.statusRegistro === 'INATIVO') return;

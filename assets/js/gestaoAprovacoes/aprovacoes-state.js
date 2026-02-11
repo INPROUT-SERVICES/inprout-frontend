@@ -61,16 +61,16 @@ function toggleLoader(ativo = true, containerSelector = '.content-loader-contain
 function mostrarToast(mensagem, tipo = 'success') {
     const toastElement = document.getElementById('toastMensagem');
     const toastBody = document.getElementById('toastTexto');
-    
+
     // Se os elementos não existirem no HTML, não faz nada
     if (!toastElement || !toastBody) return;
 
     // Cria a instância do Bootstrap apenas quando chamar (garante que o DOM carregou)
     const toast = new bootstrap.Toast(toastElement);
-    
+
     // Remove classes anteriores
     toastElement.classList.remove('text-bg-success', 'text-bg-danger', 'text-bg-warning');
-    
+
     // Adiciona a classe correta
     if (tipo === 'success') {
         toastElement.classList.add('text-bg-success');
@@ -107,9 +107,9 @@ function aprovarLancamento(id) {
     if (!modalAprovar) return;
     document.getElementById('aprovarLancamentoId').value = id;
     if (modalAprovar._element) delete modalAprovar._element.dataset.acaoEmLote;
-    
+
     const bodyP = modalAprovar._element.querySelector('.modal-body p');
-    if(bodyP) bodyP.textContent = "Você tem certeza que deseja aprovar este lançamento?";
+    if (bodyP) bodyP.textContent = "Você tem certeza que deseja aprovar este lançamento?";
     modalAprovar.show();
 }
 
@@ -126,12 +126,12 @@ function comentarLancamento(id) {
     document.getElementById('comentarLancamentoId').value = id;
     document.getElementById('formComentarPrazo').reset();
     if (modalComentar._element) delete modalComentar._element.dataset.acaoEmLote;
-    
+
     const modalTitle = modalComentar._element.querySelector('.modal-title');
-    if(modalTitle) modalTitle.innerHTML = '<i class="bi bi-chat-left-text-fill text-warning me-2"></i>Comentar ou Solicitar Prazo';
+    if (modalTitle) modalTitle.innerHTML = '<i class="bi bi-chat-left-text-fill text-warning me-2"></i>Comentar ou Solicitar Prazo';
     const labelData = modalComentar._element.querySelector('label[for="novaDataProposta"]');
-    if(labelData) labelData.textContent = 'Sugerir Novo Prazo';
-    
+    if (labelData) labelData.textContent = 'Sugerir Novo Prazo';
+
     modalComentar.show();
 }
 
@@ -140,25 +140,25 @@ function aprovarLancamentoController(id) {
     if (!modalAprovar) return;
     document.getElementById('aprovarLancamentoId').value = id;
     if (modalAprovar._element) delete modalAprovar._element.dataset.acaoEmLote;
-    
+
     const bodyP = modalAprovar._element.querySelector('.modal-body p');
-    if(bodyP) bodyP.innerHTML = `Você tem certeza que deseja aprovar este lançamento?<br><span class="text-danger small"><b>Atenção:</b> Esta ação é final.</span>`;
-    
+    if (bodyP) bodyP.innerHTML = `Você tem certeza que deseja aprovar este lançamento?<br><span class="text-danger small"><b>Atenção:</b> Esta ação é final.</span>`;
+
     modalAprovar.show();
 }
 
 function recusarLancamentoController(id) {
-    recusarLancamento(id); 
+    recusarLancamento(id);
 }
 
 function aprovarPrazoController(id) {
     if (!modalAprovar) return;
     document.getElementById('aprovarLancamentoId').value = id;
     if (modalAprovar._element) delete modalAprovar._element.dataset.acaoEmLote;
-    
+
     const bodyP = modalAprovar._element.querySelector('.modal-body p');
-    if(bodyP) bodyP.textContent = "Aprovar a solicitação de novo prazo feita pelo coordenador?";
-    
+    if (bodyP) bodyP.textContent = "Aprovar a solicitação de novo prazo feita pelo coordenador?";
+
     modalAprovar.show();
 }
 
@@ -168,14 +168,14 @@ function recusarPrazoController(id) {
     if (modalComentar._element) delete modalComentar._element.dataset.acaoEmLote;
 
     const modalTitle = modalComentar._element.querySelector('.modal-title');
-    if(modalTitle) modalTitle.innerHTML = '<i class="bi bi-calendar-x-fill text-danger me-2"></i>Recusar/Estabelecer Novo Prazo';
-    
+    if (modalTitle) modalTitle.innerHTML = '<i class="bi bi-calendar-x-fill text-danger me-2"></i>Recusar/Estabelecer Novo Prazo';
+
     const comentarioLabel = modalComentar._element.querySelector('label[for="comentarioCoordenador"]');
-    if(comentarioLabel) comentarioLabel.textContent = 'Motivo da Recusa / Comentário (Obrigatório)';
-    
+    if (comentarioLabel) comentarioLabel.textContent = 'Motivo da Recusa / Comentário (Obrigatório)';
+
     const dataLabel = modalComentar._element.querySelector('label[for="novaDataProposta"]');
-    if(dataLabel) dataLabel.textContent = 'Definir Novo Prazo (Obrigatório)';
-    
+    if (dataLabel) dataLabel.textContent = 'Definir Novo Prazo (Obrigatório)';
+
     modalComentar.show();
 }
 
@@ -183,14 +183,14 @@ function recusarPrazoController(id) {
 function aprovarMaterial(id) {
     if (!modalAprovarMaterial) return;
     const btn = document.getElementById('btnConfirmarAprovacaoMaterial');
-    if(btn) btn.dataset.id = id;
+    if (btn) btn.dataset.id = id;
     modalAprovarMaterial.show();
 }
 
 function recusarMaterial(id) {
     if (!modalRecusarMaterial) return;
     const form = document.getElementById('formRecusarMaterial');
-    if(form) {
+    if (form) {
         form.dataset.id = id;
         form.reset();
     }
@@ -201,24 +201,167 @@ function recusarMaterial(id) {
 function aprovarComplementar(id) {
     if (!modalAprovarComplementar) return;
     const btn = document.getElementById('btnConfirmarAprovacaoComplementar');
-    if(btn) btn.dataset.id = id;
+    if (btn) btn.dataset.id = id;
     modalAprovarComplementar.show();
 }
 
 function recusarComplementar(id) {
     if (!modalRecusarComplementar) return;
     const form = document.getElementById('formRecusarComplementar');
-    if(form) {
+    if (form) {
         form.dataset.id = id;
         form.reset();
     }
     modalRecusarComplementar.show();
 }
 
+window.verComentarios = function (id) {
+    if (!modalComentarios) return;
+
+    // Busca o lançamento em todas as listas possíveis, incluindo a de Documentação
+    let lancamento = window.todosOsLancamentosGlobais.find(l => l.id == id) ||
+        (window.todosHistoricoAtividades && window.todosHistoricoAtividades.find(l => l.id == id)) ||
+        (window.todasPendenciasAtividades && window.todasPendenciasAtividades.find(l => l.id == id)) ||
+        (window.dadosCpsGlobais && window.dadosCpsGlobais.find(l => l.id == id)) ||
+        (window.minhasDocsPendentes && window.minhasDocsPendentes.find(l => l.id == id));
+
+    const modalBody = document.getElementById('modalComentariosBody');
+    modalBody.innerHTML = '';
+
+    if (!lancamento) {
+        modalBody.innerHTML = '<p class="text-center text-muted">Lançamento não encontrado em memória. Tente recarregar a página.</p>';
+        modalComentarios.show();
+        return;
+    }
+
+    // 1. Exibir Observação Técnica (caso exista, muitas vezes o Manager escreve aqui)
+    if (lancamento.detalhe && lancamento.detalhe.observacoes) {
+        const obsAlert = document.createElement('div');
+        obsAlert.className = 'alert alert-info small mb-3';
+        obsAlert.innerHTML = `<strong><i class="bi bi-info-circle"></i> Observação do Item:</strong> ${lancamento.detalhe.observacoes}`;
+        modalBody.appendChild(obsAlert);
+    }
+
+    // 2. Área de Inserção de Novo Comentário
+    const divInput = document.createElement('div');
+    divInput.className = 'mb-4 border-bottom pb-3 bg-light p-3 rounded';
+    divInput.innerHTML = `
+        <label class="form-label fw-bold small text-secondary">Adicionar Comentário</label>
+        <div class="input-group">
+            <textarea class="form-control" id="novoComentarioTexto" rows="2" placeholder="Digite uma mensagem..."></textarea>
+            <button class="btn btn-primary" type="button" id="btnEnviarComentarioModal" title="Enviar">
+                <i class="bi bi-send-fill"></i>
+            </button>
+        </div>
+    `;
+    modalBody.appendChild(divInput);
+
+    // Vincula o evento de clique (usando timeout para garantir que o elemento existe)
+    setTimeout(() => {
+        const btnSend = document.getElementById('btnEnviarComentarioModal');
+        if (btnSend) btnSend.onclick = () => enviarComentarioPeloModal(id);
+    }, 50);
+
+    // 3. Listagem de Comentários
+    const divLista = document.createElement('div');
+    divLista.id = 'listaComentariosContainer';
+
+    if (!lancamento.comentarios || lancamento.comentarios.length === 0) {
+        divLista.innerHTML = '<p class="text-center text-muted py-2">Nenhum comentário registrado.</p>';
+    } else {
+        renderizarListaComentarios(divLista, lancamento.comentarios);
+    }
+    modalBody.appendChild(divLista);
+
+    modalComentarios.show();
+}
+
+// Função auxiliar para renderizar a lista
+function renderizarListaComentarios(container, comentarios) {
+    // Ordena do mais recente para o mais antigo
+    const ordenados = [...comentarios].sort((a, b) => {
+        const dataA = a.dataHora ? parseDataBrasileira(a.dataHora) : new Date(0);
+        const dataB = b.dataHora ? parseDataBrasileira(b.dataHora) : new Date(0);
+        return dataB - dataA;
+    });
+
+    container.innerHTML = ordenados.map(comentario => `
+        <div class="d-flex flex-column mb-3 border-start border-4 ps-3 ${isUsuarioLogado(comentario) ? 'border-primary' : 'border-secondary'}">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-bold small ${isUsuarioLogado(comentario) ? 'text-primary' : 'text-dark'}">
+                    <i class="bi bi-person-circle me-1"></i>${comentario.autor ? comentario.autor.nome : 'Sistema'}
+                </span>
+                <span class="text-muted" style="font-size: 0.75rem;">
+                    ${comentario.dataHora ? new Date(parseDataBrasileira(comentario.dataHora)).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                </span>
+            </div>
+            <div class="bg-light p-2 rounded text-dark text-break" style="font-size: 0.9rem;">
+                ${comentario.texto}
+            </div>
+        </div>
+    `).join('');
+}
+
+function isUsuarioLogado(comentario) {
+    if (!comentario.autor) return false;
+    // Compara IDs de forma segura (string vs number)
+    return String(comentario.autor.id) === String(localStorage.getItem('usuarioId'));
+}
+
+// Função para enviar o comentário via API
+async function enviarComentarioPeloModal(id, texto, tipo) {
+    if (!texto.trim()) return;
+
+    // Define endpoint baseado no tipo
+    let endpoint = `${API_BASE_URL}/lancamentos/${id}/comentarios`; // Default (Item)
+
+    try {
+        const userId = localStorage.getItem('usuarioId');
+        const response = await fetchComAuth(endpoint, {
+            method: 'POST',
+            body: JSON.stringify({
+                texto: texto,
+                autorId: userId
+            })
+        });
+
+        if (!response.ok) throw new Error("Erro ao salvar comentário");
+
+        // --- CORREÇÃO AQUI: Trata resposta vazia ---
+        const textResponse = await response.text();
+        const data = textResponse ? JSON.parse(textResponse) : {}; 
+        // -------------------------------------------
+
+        // Atualiza a UI
+        const lista = document.getElementById('lista-comentarios-modal');
+        if (lista) {
+            const dataHora = new Date().toLocaleString('pt-BR');
+            const nomeUser = localStorage.getItem('nomeUsuario') || 'Eu';
+            
+            const novoLi = document.createElement('li');
+            novoLi.className = "list-group-item bg-light";
+            novoLi.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <span class="fw-bold small">${nomeUser}</span>
+                    <span class="text-muted" style="font-size: 0.75rem;">${dataHora}</span>
+                </div>
+                <p class="mb-0 mt-1 small text-secondary">${texto}</p>
+            `;
+            lista.prepend(novoLi);
+        }
+
+        document.getElementById('novoComentarioInput').value = '';
+
+    } catch (error) {
+        console.error("Erro ao comentar:", error);
+        mostrarToast("Erro ao enviar comentário.", "error");
+    }
+}
+
 // Detalhes/Comentários
 function verComentarios(id) {
     if (!modalComentarios) return;
-    
+
     let lancamento = window.todosOsLancamentosGlobais.find(l => l.id == id);
     if (!lancamento && window.todosHistoricoAtividades) {
         lancamento = window.todosHistoricoAtividades.find(l => l.id == id);
@@ -231,7 +374,7 @@ function verComentarios(id) {
     if (!lancamento && window.dadosCpsGlobais) {
         lancamento = window.dadosCpsGlobais.find(l => l.id == id);
     }
-    
+
     const modalBody = document.getElementById('modalComentariosBody');
     modalBody.innerHTML = '';
 

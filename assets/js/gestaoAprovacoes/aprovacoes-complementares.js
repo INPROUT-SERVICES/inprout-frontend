@@ -101,11 +101,22 @@ const AprovacoesComplementares = {
     fetchDetalhesOsESalvar: async (osId) => {
         if (AprovacoesComplementares.mapaDetalhesOs[osId]) return AprovacoesComplementares.mapaDetalhesOs[osId];
         try {
-            // Tenta buscar no cache global primeiro se existir para evitar chamadas ao monólito
+            // Tenta buscar no cache global primeiro
             if (window.todosOsLancamentosGlobais) {
                 const global = window.todosOsLancamentosGlobais.find(l => l.osId == osId || l.os?.id == osId);
                 if (global && global.os) {
-                    const info = { osCodigo: global.os.os || global.os.numero || `OS #${osId}`, projeto: global.os.projeto || '-', site: '-', loaded: true };
+
+                    const segmentoCache = (global.os.segmento && global.os.segmento.nome) ? global.os.segmento.nome : '-';
+                    const siteCache = global.os.site || '-';
+                    
+                    const info = { 
+                        osCodigo: global.os.os || global.os.numero || `OS #${osId}`, 
+                        projeto: global.os.projeto || '-', 
+                        site: siteCache, 
+                        segmento: segmentoCache, // Adicionado
+                        loaded: true 
+                    };
+                    
                     AprovacoesComplementares.mapaDetalhesOs[osId] = info;
                     AprovacoesComplementares.atualizarLinhasTabela(osId, info);
                     return info;
@@ -119,7 +130,6 @@ const AprovacoesComplementares = {
                 const dados = await res.json();
                 let site = dados.site || '-';
                 let projeto = dados.projeto || '-';
-                // --- NOVO: Captura o segmento vindo do DTO da OS ---
                 let segmento = (dados.segmento && dados.segmento.nome) ? dados.segmento.nome : '-';
 
                 if ((site === '-' || projeto === '-') && dados.detalhes && dados.detalhes.length > 0) {
@@ -128,14 +138,14 @@ const AprovacoesComplementares = {
                     if (projeto === '-') projeto = det.regional || '-';
                 }
 
-                // Adicionei a propriedade 'segmento' no objeto info
                 const info = { osCodigo: dados.os, projeto: projeto, site: site, segmento: segmento, loaded: true };
                 AprovacoesComplementares.mapaDetalhesOs[osId] = info;
                 AprovacoesComplementares.atualizarLinhasTabela(osId, info);
                 return info;
             }
         } catch (e) { console.error("Erro fetch OS:", e); }
-        return { osCodigo: 'OS #' + osId, projeto: '-', site: '-', loaded: false };
+        
+        return { osCodigo: 'OS #' + osId, projeto: '-', site: '-', segmento: '-', loaded: false };
     },
 
     atualizarLinhasTabela: (osId, info) => {

@@ -7,7 +7,6 @@
                         <div class="card-body">
                             <h6 class="text-muted text-uppercase small fw-bold">A Receber (Previsto)</h6>
                             <h3 class="text-warning fw-bold mb-0" id="doc-carteira-previsto">R$ 0,00</h3>
-                            <small class="text-muted"><i class="bi bi-hourglass-split"></i> Pendente/Em Análise</small>
                         </div>
                     </div>
                 </div>
@@ -16,16 +15,14 @@
                         <div class="card-body">
                             <h6 class="text-muted text-uppercase small fw-bold">Finalizado (Histórico)</h6>
                             <h3 class="text-success fw-bold mb-0" id="doc-carteira-finalizado">R$ 0,00</h3>
-                            <small class="text-muted"><i class="bi bi-check-all"></i> Total Acumulado</small>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card shadow-sm border-0 border-start border-4 border-primary h-100">
                         <div class="card-body">
-                            <h6 class="text-muted text-uppercase small fw-bold">Valor Total Carteira</h6>
+                            <h6 class="text-muted text-uppercase small fw-bold">Total Carteira</h6>
                             <h3 class="text-primary fw-bold mb-0" id="doc-carteira-total">R$ 0,00</h3>
-                            <small class="text-muted"><i class="bi bi-wallet2"></i> Previsto + Realizado</small>
                         </div>
                     </div>
                 </div>
@@ -34,7 +31,7 @@
         <div class="col-lg-4">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body p-2">
-                    <h6 class="card-title text-center small text-muted mb-2">Evolução da Carteira (6 Meses)</h6>
+                    <h6 class="card-title text-center small text-muted mb-2">Evolução</h6>
                     <div style="height: 100px; width: 100%;"><canvas id="graficoCarteiraDoc"></canvas></div>
                 </div>
             </div>
@@ -45,33 +42,20 @@
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 class="mb-0 card-title-modern"><i class="bi bi-folder2-open me-2"></i> Minha fila de documentação</h5>
             <div class="d-flex gap-2">
-                <div class="btn-group" role="group" aria-label="Filtro Status Documentação">
-                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocTodos" value="TODOS"
-                        checked>
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocTodos" value="TODOS" checked>
                     <label class="btn btn-outline-primary btn-sm" for="filtroDocTodos">Todos</label>
 
-                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocAnalise"
-                        value="EM_ANALISE">
+                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocAnalise" value="EM_ANALISE">
                     <label class="btn btn-outline-primary btn-sm" for="filtroDocAnalise">Em Análise</label>
 
-                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocPendente"
-                        value="PENDENTE_RECEBIMENTO">
+                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocPendente" value="PENDENTE_RECEBIMENTO">
                     <label class="btn btn-outline-primary btn-sm" for="filtroDocPendente">Aguardando Envio</label>
 
-                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocHistorico"
-                        value="HISTORICO">
-                    <label class="btn btn-outline-secondary btn-sm" for="filtroDocHistorico">Histórico (2 Meses)</label>
+                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocHistorico" value="HISTORICO">
+                    <label class="btn btn-outline-secondary btn-sm" for="filtroDocHistorico">Histórico</label>
                 </div>
-                <button class="btn btn-light btn-sm border" id="btn-atualizar-docs"><i
-                        class="bi bi-arrow-clockwise"></i></button>
-                <div id="container-filtro-documentista" class="d-none">
-                    <select class="form-select form-select-sm" id="filtro-documentista-carteira" style="width: 200px;">
-                        <option value="">Minha Carteira</option>
-                    </select>
-                </div>
-
-                <div class="btn-group" role="group">
-                </div>
+                <button class="btn btn-light btn-sm border" id="btn-atualizar-docs"><i class="bi bi-arrow-clockwise"></i></button>
             </div>
         </div>
         <div class="card-body p-0">
@@ -82,27 +66,22 @@
                             <th style="width: 100px;" class="text-center">Ação</th>
                             <th style="width: 120px;" class="text-center">Status</th>
                             <th>Solicitante</th>
-                            <th id="th-segmento-doc" class="d-none">Segmento</th>
-
-                            <th id="th-lpu-doc">Item (LPU)</th>
-
                             <th>Tipo Documento</th>
                             <th style="width: 110px;" class="text-center">Prazo</th>
-                            <th style="width: 110px;" class="text-end">Valor documentação</th>
+                            <th style="width: 110px;" class="text-end">Valor</th>
                             <th>Responsável</th>
-                            <th>Assunto Email</th>
+                            <th id="th-assunto-email" class="d-none">Assunto Email</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-minhas-docs"></tbody>
                 </table>
             </div>
-
             <div id="msg-sem-docs" class="alert alert-light text-center text-muted shadow-sm m-3 d-none">
-                <i class="bi bi-folder-x me-2"></i>Nenhuma documentação pendente encontrada.
+                <i class="bi bi-folder-x me-2"></i><span>Nenhuma documentação encontrada.</span>
             </div>
         </div>
         <div class="overlay-loader d-none">
-            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"><span
-                    class="visually-hidden">Carregando...</span></div>
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
         </div>
     </div>
+</div>

@@ -68,36 +68,35 @@ async function carregarLpusNoSelect(selectId, filtroAtivo, textoPlaceholder) {
     if (!selectElement) return;
 
     selectElement.innerHTML = `<option value="" selected disabled>Carregando...</option>`;
-    // 1. MUDANÇA PRINCIPAL: Buscar na rota de CONTRATOS
-    const url = `http://localhost:8080/contrato`;
+    
+    // MUDANÇA: Buscar direto em /lpu em vez de /contrato para pegar TUDO
+    const url = `http://localhost:8080/lpu`;
 
     try {
         const response = await fetchComAuth(url);
-        if (!response.ok) throw new Error('Falha ao buscar Contratos');
-        const contratos = await response.json();
+        if (!response.ok) throw new Error('Falha ao buscar LPUs');
+        const todasLpus = await response.json();
 
         selectElement.innerHTML = `<option value="" selected disabled>${textoPlaceholder}</option>`;
 
-        // 2. Iterar sobre cada contrato retornado
-        contratos.forEach(contrato => {
-            // Verifica se o contrato possui a lista de LPUs
-            if (contrato.lpus && contrato.lpus.length > 0) {
+        // Filtra localmente pelo status desejado (true ou false)
+        const lpusFiltradas = todasLpus.filter(lpu => lpu.ativo === filtroAtivo);
 
-                // 3. Iterar sobre as LPUs DENTRO de cada contrato
-                contrato.lpus.forEach(lpu => {
+        if (lpusFiltradas.length === 0) {
+            const txtStatus = filtroAtivo ? 'ativas' : 'inativas';
+            selectElement.innerHTML = `<option value="" selected disabled>Nenhuma LPU ${txtStatus} encontrada</option>`;
+            return;
+        }
 
-                    // 4. Filtrar as LPUs pelo status desejado (ativo/inativo)
-                    if (lpu.ativo === filtroAtivo) {
-                        const option = document.createElement('option');
-                        option.value = lpu.id;
+        lpusFiltradas.forEach(lpu => {
+            const option = document.createElement('option');
+            option.value = lpu.id;
 
-                        // 5. Agora sim, podemos montar o texto com o nome do contrato!
-                        option.textContent = `${lpu.codigoLpu} - ${lpu.nomeLpu} (Contrato: ${contrato.nome})`;
-
-                        selectElement.appendChild(option);
-                    }
-                });
-            }
+            // Tenta obter o nome do contrato (se o backend mandar o objeto contrato dentro da LPU)
+            const nomeContrato = lpu.contrato ? lpu.contrato.nome : 'Sem Contrato';
+            
+            option.textContent = `${lpu.codigoLpu} - ${lpu.nomeLpu} (Contrato: ${nomeContrato})`;
+            selectElement.appendChild(option);
         });
 
     } catch (error) {

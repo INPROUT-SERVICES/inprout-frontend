@@ -557,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderizarTodasAsTabelas() {
         const dadosParaExibir = getDadosFiltrados();
 
-        // 1. Definição do Comparer (Deve vir antes de qualquer .sort(comparer))
+        // 1. Definição do Comparer
         const comparer = (a, b) => {
             let valA = getNestedValue(a, sortConfig.key);
             let valB = getNestedValue(b, sortConfig.key);
@@ -572,15 +572,43 @@ document.addEventListener('DOMContentLoaded', () => {
         const statusPendentes = ['PENDENTE_COORDENADOR', 'AGUARDANDO_EXTENSAO_PRAZO', 'PENDENTE_CONTROLLER'];
         const statusRejeitados = ['RECUSADO_COORDENADOR', 'RECUSADO_CONTROLLER'];
 
-        // 2. Filtragem e Ordenação
+        // 2. Filtragem e Ordenação Normal
         const rascunhos = dadosParaExibir.filter(l => l.situacaoAprovacao === 'RASCUNHO').sort(comparer);
         const pendentesAprovacao = dadosParaExibir.filter(l => statusPendentes.includes(l.situacaoAprovacao)).sort(comparer);
         const minhasPendencias = dadosParaExibir.filter(l => statusRejeitados.includes(l.situacaoAprovacao)).sort(comparer);
         const historico = dadosParaExibir.filter(l => !['RASCUNHO', ...statusPendentes, ...statusRejeitados].includes(l.situacaoAprovacao)).sort(comparer);
         const paralisados = getProjetosParalisados().sort(comparer);
 
-        // --- CORREÇÃO: Nova linha inserida AQUI, após o 'comparer' existir ---
-        const pendentesDoc = dadosParaExibir.filter(l => l.statusDocumentacao === 'PENDENTE_RECEBIMENTO').sort(comparer);
+        // === CORREÇÃO: AGRUPAMENTO POR OS PARA A ABA "PENDENTE DOC" ===
+        // Filtra todos os itens que têm uma OS com status pendente (mesmo que o item seja N/A)
+        const itensComDocPendente = dadosParaExibir.filter(l => l.os && l.os.statusDocumentacao === 'PENDENTE_RECEBIMENTO');
+
+        // Agrupa por ID da OS
+        const agrupamentoMap = new Map();
+        
+        itensComDocPendente.forEach(item => {
+            const osId = item.os.id;
+            if (!agrupamentoMap.has(osId)) {
+                // Cria um objeto "Representante" da OS
+                agrupamentoMap.set(osId, {
+                    ...item, // Copia dados do primeiro item para exibir Site, Regional, etc.
+                    id: item.os.id, // IMPORTANTE: O ID da linha passa a ser o da OS para a ação funcionar
+                    isAgrupado: true,
+                    valor: 0, // Vamos somar o valor total
+                    // Garante que os campos de doc venham da OS
+                    statusDocumentacao: item.os.statusDocumentacao,
+                    tipoDocumentacaoNome: item.os.tipoDocumentacaoNome, 
+                    documentistaNome: item.os.documentistaNome
+                });
+            }
+            // Soma o valor
+            const grupo = agrupamentoMap.get(osId);
+            grupo.valor += (item.valor || 0);
+        });
+
+        // Converte o mapa de volta para array e ordena
+        const pendentesDoc = Array.from(agrupamentoMap.values()).sort(comparer);
+        // ==============================================================
 
         // 3. Atualização de KPIs
         const kpiValorEl = document.getElementById('kpi-valor-pendente');
@@ -590,14 +618,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 4. Renderização das Tabelas
-        inicializarCabecalhos();
+        if (typeof inicializarCabecalhos === 'function') inicializarCabecalhos();
+        
         renderizarTabela(rascunhos, tbodyLancamentos, colunasLancamentos);
         renderizarTabela(pendentesAprovacao, tbodyPendentes, colunasPrincipais);
         renderizarTabela(minhasPendencias, tbodyMinhasPendencias, colunasMinhasPendencias);
         renderizarTabela(historico, tbodyHistorico, colunasHistorico);
         renderizarTabela(paralisados, tbodyParalisados, colunasMinhasPendencias);
 
-        // --- Renderiza a nova tabela de Documentação ---
+        // --- Renderiza a nova tabela de Documentação (AGORA AGRUPADA) ---
         renderizarTabela(pendentesDoc, document.getElementById('tbody-pendente-doc'), colunasPendenteDoc);
 
         // 5. Atualização de Notificações e Badges

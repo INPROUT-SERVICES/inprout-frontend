@@ -376,13 +376,14 @@ const RegistrosIO = {
                         const detalhesHeaders = [...RegistrosRender.getHeaders(), "VALOR CPS LEGADO"];
                         const detalhesRows = linhasParaExportar.map(linha => {
                             return detalhesHeaders.map(h => {
-                                // CORREÇÃO: Tratamento especial para Situação de itens cancelados
+                                // CORREÇÃO 1: Força a SITUAÇÃO para CANCELADO se estiver inativo
                                 if (h === 'SITUAÇÃO' && linha.detalhe && linha.detalhe.statusRegistro === 'INATIVO') {
                                     return 'CANCELADO';
                                 }
 
-                                // CORREÇÃO: Tratamento especial para Status
-                                if (h === 'STATUS' && linha.detalhe && linha.detalhe.statusRegistro === 'INATIVO') {
+                                // CORREÇÃO 2: Força o STATUS REGISTRO para INATIVO
+                                // (Antes o código verificava apenas "STATUS", mas o nome da coluna é composto)
+                                if (h === 'STATUS REGISTRO' && linha.detalhe && linha.detalhe.statusRegistro === 'INATIVO') {
                                     return 'INATIVO';
                                 }
 

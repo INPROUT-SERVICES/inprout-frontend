@@ -1,609 +1,384 @@
 // ==========================================================
-// LÓGICA ESPECÍFICA DA ABA DE DOCUMENTAÇÃO (CORRIGIDO v3.0)
+// LÓGICA DA ABA: DOCUMENTAÇÃO (Corrigido - Fix Finalizar OS)
 // ==========================================================
 
-let chartCarteiraInstance = null;
+let filtroDocAtual = 'TODOS';
 
-async function initDocumentacaoTab() {
-    // 1. Carrega o combo de documentistas (apenas se for ADMIN/CONTROLLER)
-    // Precisamos definir essa função antes de chamar ou garantir que ela exista no arquivo.
-    if (typeof carregarComboDocumentistas === 'function') {
-        await carregarComboDocumentistas();
-    }
-
-    // Listener dos filtros de status (Radio Buttons)
-    document.querySelectorAll('input[name="filtroDocStatus"]').forEach(radio => {
+function initDocumentacaoTab() {
+    console.log("Iniciando aba de documentação...");
+    
+    // Listeners dos Filtros
+    const radiosFiltro = document.querySelectorAll('input[name="filtroDocStatus"]');
+    radiosFiltro.forEach(radio => {
         radio.addEventListener('change', (e) => {
-            handleFiltroChange(e.target.value);
+            filtroDocAtual = e.target.value;
+            aplicarFiltroDocumentacao(filtroDocAtual);
         });
     });
 
-    // Botão Atualizar
-    document.getElementById('btn-atualizar-docs')?.addEventListener('click', async () => {
-        // Usa o loader global
-        toggleLoader(true, '#minhas-docs-pane');
-        try {
-            // Verifica qual usuário está selecionado no filtro (ou o logado)
-            const selectDoc = document.getElementById('filtro-documentista-carteira');
-            const userId = (selectDoc && selectDoc.value) ? selectDoc.value : localStorage.getItem('usuarioId');
-
-            // Atualiza Dashboard Global (se a função existir no main.js)
-            if (typeof carregarDashboardEBadges === 'function') {
-                await carregarDashboardEBadges();
-            }
-
-            // Atualiza Carteira (Gráfico e Valores)
-            await carregarCarteiraDoc();
-
-            // Recarrega a lista de lançamentos
-            // Nota: O endpoint de carteira as vezes traz apenas totais. 
-            // Se você precisar da LISTA de itens, garanta que está buscando a lista correta.
-            // Aqui assumimos que o 'carregarDashboardEBadges' ou lógica similar popula 'window.minhasDocsPendentes'
-            // Se não, você pode forçar uma busca aqui:
-            // const res = await fetchComAuth(`${API_BASE_URL}/lancamentos/documentacao/carteira?usuarioId=${userId}`);
-
-            // Reseta para o filtro 'TODOS' ao atualizar visualmente
-            const filtroTodos = document.getElementById('filtroDocTodos');
-            if (filtroTodos) filtroTodos.checked = true;
-
-            filtrarERenderizarDocs();
-
-        } catch (error) {
-            console.error(error);
-        } finally {
+    // Listener do Refresh
+    const btnAtualizar = document.getElementById('btn-atualizar-docs');
+    if (btnAtualizar) {
+        btnAtualizar.onclick = async () => {
+            toggleLoader(true, '#minhas-docs-pane');
+            await carregarDashboardEBadges(); 
+            aplicarFiltroDocumentacao(filtroDocAtual); 
             toggleLoader(false, '#minhas-docs-pane');
-        }
-    });
+            mostrarToast("Lista atualizada.");
+        };
+    }
 
-    // Carregamento inicial
-    carregarCarteiraDoc();
-    filtrarERenderizarDocs();
+    // Filtro inicial
+    const filtroMarcado = document.querySelector('input[name="filtroDocStatus"]:checked');
+    if (filtroMarcado) filtroDocAtual = filtroMarcado.value;
+    aplicarFiltroDocumentacao(filtroDocAtual);
 }
 
-/**
- * Carrega a lista de usuários 'DOCUMENTIST' no select para o ADMIN filtrar
- */
-async function carregarComboDocumentistas() {
-    // --- CORREÇÃO AQUI: Mudamos de 'userRole' para 'role' ---
-    const role = localStorage.getItem('role');
-
-    const container = document.getElementById('container-filtro-documentista');
-    const select = document.getElementById('filtro-documentista-carteira');
-
-    // Só exibe para ADMIN, CONTROLLER ou MANAGER
-    if (!role || !['ADMIN', 'CONTROLLER', 'MANAGER'].includes(role.toUpperCase())) {
-        return;
+function aplicarFiltroDocumentacao(tipoFiltro) {
+    const dadosPendentes = window.minhasDocsPendentes || [];
+    const dadosHistorico = window.minhasDocsHistorico || [];
+    
+    let dadosFiltrados = [];
+    
+    // Controle da Coluna Assunto (Só aparece no Histórico)
+    const thAssunto = document.getElementById('th-assunto-email');
+    if(thAssunto) {
+        if(tipoFiltro === 'HISTORICO') thAssunto.classList.remove('d-none');
+        else thAssunto.classList.add('d-none');
     }
 
-    if (!container || !select) return;
-
-    container.classList.remove('d-none'); // Mostra o filtro
-
-    try {
-        // Busca usuários
-        const response = await fetchComAuth(`${API_BASE_URL}/usuarios`);
-        const usuarios = await response.json();
-
-        // Filtra Documentistas
-        const documentistas = usuarios.filter(u => u.role === 'DOCUMENTIST');
-
-        // Limpa e popula o select
-        select.innerHTML = '<option value="">Minha Carteira (Padrão)</option>';
-        documentistas.forEach(doc => {
-            const option = document.createElement('option');
-            option.value = doc.id;
-            option.textContent = doc.nome || doc.email;
-            select.appendChild(option);
-        });
-
-        // Listener: Ao trocar o documentista, simula o clique no botão Atualizar
-        select.addEventListener('change', () => {
-            const btnAtualizar = document.getElementById('btn-atualizar-docs');
-            if (btnAtualizar) btnAtualizar.click();
-        });
-
-    } catch (e) {
-        console.error("Erro ao carregar combo de documentistas", e);
+    switch (tipoFiltro) {
+        case 'HISTORICO':
+            // Filtra histórico para exibir apenas itens realmente finalizados/processados
+            dadosFiltrados = dadosHistorico.filter(item => 
+                item.statusDocumentacao.includes('FINALIZADO') || 
+                item.statusDocumentacao === 'DEVOLVIDO' || 
+                item.statusDocumentacao === 'REPROVADO'
+            );
+            break;
+        case 'PENDENTE_RECEBIMENTO':
+            dadosFiltrados = dadosPendentes.filter(item => item.statusDocumentacao === 'PENDENTE_RECEBIMENTO');
+            break;
+        case 'EM_ANALISE':
+            dadosFiltrados = dadosPendentes.filter(item => item.statusDocumentacao === 'EM_ANALISE');
+            break;
+        case 'TODOS':
+        default:
+            dadosFiltrados = dadosPendentes;
+            break;
     }
+
+    renderizarTabelaDocsAgrupada(dadosFiltrados, tipoFiltro);
 }
 
-/**
- * Controla a mudança de filtros de STATUS (Pendente, Em Análise, Histórico)
- */
-async function handleFiltroChange(filtro) {
-    toggleLoader(true, '#minhas-docs-pane');
-
-    try {
-        if (filtro === 'HISTORICO') {
-            await carregarHistoricoDocs();
-        } else {
-            // Usa a lista que já está em memória (Pendentes e Em Análise)
-            filtrarERenderizarDocs();
-        }
-    } catch (e) {
-        console.error("Erro ao filtrar", e);
-    } finally {
-        toggleLoader(false, '#minhas-docs-pane');
-    }
-}
-
-/**
- * Busca o histórico dos últimos 2 meses
- */
-async function carregarHistoricoDocs() {
-    // Verifica filtro de documentista
-    const selectDoc = document.getElementById('filtro-documentista-carteira');
-    const userId = (selectDoc && selectDoc.value) ? selectDoc.value : localStorage.getItem('usuarioId');
-
-    // Datas: Hoje e 2 meses atrás
-    const fim = new Date().toISOString().split('T')[0];
-    const inicioDate = new Date();
-    inicioDate.setMonth(inicioDate.getMonth() - 2);
-    const inicio = inicioDate.toISOString().split('T')[0];
-
-    try {
-        const url = `${API_BASE_URL}/lancamentos/documentacao/historico-lista?usuarioId=${userId}&inicio=${inicio}&fim=${fim}`;
-
-        const response = await fetchComAuth(url);
-        const historico = await response.json();
-
-        // Filtra apenas os finalizados para exibir na tabela de histórico
-        const historicoDoc = historico.filter(l =>
-            l.statusDocumentacao === 'FINALIZADO' ||
-            l.statusDocumentacao === 'FINALIZADO_COM_RESSALVA'
-        );
-
-        renderizarTabelaDocsVisual(historicoDoc);
-
-    } catch (error) {
-        console.error("Erro ao carregar histórico", error);
-        mostrarToast("Erro ao buscar histórico.", "error");
-    }
-}
-
-/**
- * Carrega os valores da carteira (Dashboard Financeiro da Aba)
- */
-async function carregarCarteiraDoc() {
-    let userId = localStorage.getItem('usuarioId');
-
-    // SELETOR DE DOCUMENTISTA (Para Admin/Controller)
-    const selectDoc = document.getElementById('filtro-documentista-carteira');
-    if (selectDoc && selectDoc.value) {
-        userId = selectDoc.value;
-    }
-
-    if (!userId) return;
-
-    try {
-        const response = await fetchComAuth(`${API_BASE_URL}/lancamentos/documentacao/carteira?usuarioId=${userId}`);
-        const carteira = await response.json();
-
-        // Atualiza Cards de Valores
-        if (document.getElementById('doc-carteira-previsto')) document.getElementById('doc-carteira-previsto').innerText = formatarMoeda(carteira.totalPrevisto);
-        if (document.getElementById('doc-carteira-finalizado')) document.getElementById('doc-carteira-finalizado').innerText = formatarMoeda(carteira.totalFinalizado);
-        if (document.getElementById('doc-carteira-total')) document.getElementById('doc-carteira-total').innerText = formatarMoeda(carteira.totalGeral);
-
-        renderizarGraficoCarteira(carteira.historicoMensal);
-    } catch (error) { console.error(error); }
-}
-
-/**
- * Filtra a lista global `window.minhasDocsPendentes` e renderiza
- */
-function filtrarERenderizarDocs() {
-    let listaCompleta = window.minhasDocsPendentes || [];
-
-    // 1. Filtra pelo Documentista Selecionado (se houver filtro ativo e a lista tiver essa info)
-    const selectDoc = document.getElementById('filtro-documentista-carteira');
-    if (selectDoc && selectDoc.value) {
-        const idAlvo = selectDoc.value;
-        // Filtra itens onde item.documentista.id == idAlvo (ou item.documentistaId)
-        listaCompleta = listaCompleta.filter(l => {
-            // Verifica estrutura do objeto (pode vir como objeto ou id direto)
-            const docId = l.documentista ? l.documentista.id : l.documentistaId;
-            return String(docId) === String(idAlvo);
-        });
-    } else {
-        // Se NÃO tem filtro selecionado e sou ADMIN, talvez eu queira ver MINHA carteira ou TUDO?
-        // Se a lógica padrão for "Minha Carteira", mantemos.
-        // Se o Admin não tiver carteira, a lista pode vir vazia, o que é correto.
-        // Se quiser ver TUDO quando vazio, não fazemos filtro extra aqui.
-    }
-
-    // 2. Filtra pelo Status (Radio Buttons)
-    const filtroEl = document.querySelector('input[name="filtroDocStatus"]:checked');
-    const filtro = filtroEl ? filtroEl.value : 'TODOS';
-
-    // Se for histórico, a função handleFiltroChange já cuidou disso.
-    if (filtro === 'HISTORICO') return;
-
-    let listaFiltrada = listaCompleta;
-
-    if (filtro === 'EM_ANALISE') {
-        listaFiltrada = listaCompleta.filter(l => l.statusDocumentacao === 'EM_ANALISE');
-    } else if (filtro === 'PENDENTE_RECEBIMENTO') {
-        listaFiltrada = listaCompleta.filter(l => l.statusDocumentacao === 'PENDENTE_RECEBIMENTO');
-    }
-
-    renderizarTabelaDocsVisual(listaFiltrada);
-}
-
-function renderizarTabelaDocsVisual(lista) {
+function renderizarTabelaDocsAgrupada(listaDeOsAgrupada, contextoFiltro) {
     const tbody = document.getElementById('tbody-minhas-docs');
     const msgVazio = document.getElementById('msg-sem-docs');
 
-    // === VERIFICAÇÃO DE PERMISSÕES ===
-    const role = (localStorage.getItem('role') || '').toUpperCase();
-    const isDocumentista = (role === 'DOCUMENTIST');
-    const isAdmin = (role === 'ADMIN'); // Apenas ADMIN vê o segmento
+    // Atualiza KPIs
+    if (window.minhasDocsPendentes && window.minhasDocsHistorico) {
+        const totalPendente = window.minhasDocsPendentes.reduce((acc, i) => acc + (i.valorTotalOS || 0), 0);
+        const totalHistorico = window.minhasDocsHistorico
+            .filter(i => i.statusDocumentacao.includes('FINALIZADO'))
+            .reduce((acc, i) => acc + (i.valorTotalOS || 0), 0);
+        
+        const elSaldo = document.getElementById('doc-carteira-previsto');
+        const elFinalizado = document.getElementById('doc-carteira-finalizado');
+        const elTotal = document.getElementById('doc-carteira-total');
 
-    // 1. Controle de Visibilidade dos Cabeçalhos (TH)
-
-    // Coluna Item (LPU) - Esconde para Documentista (Regra antiga)
-    const thLpu = document.getElementById('th-lpu-doc');
-    if (thLpu) {
-        isDocumentista ? thLpu.classList.add('d-none') : thLpu.classList.remove('d-none');
-    }
-
-    // Coluna Segmento - Mostra apenas para ADMIN (Nova Regra)
-    const thSegmento = document.getElementById('th-segmento-doc');
-    if (thSegmento) {
-        isAdmin ? thSegmento.classList.remove('d-none') : thSegmento.classList.add('d-none');
+        if(elSaldo) elSaldo.innerText = formatarMoeda(totalPendente);
+        if(elFinalizado) elFinalizado.innerText = formatarMoeda(totalHistorico);
+        if(elTotal) elTotal.innerText = formatarMoeda(totalPendente + totalHistorico);
     }
 
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    if (!lista || lista.length === 0) {
-        if (msgVazio) msgVazio.classList.remove('d-none');
-        if (msgVazio) msgVazio.classList.add('d-block');
+    if (!listaDeOsAgrupada || listaDeOsAgrupada.length === 0) {
+        if (msgVazio) {
+            msgVazio.classList.remove('d-none');
+            const span = msgVazio.querySelector('span');
+            if(span) span.textContent = contextoFiltro === 'HISTORICO' ? "Nenhum histórico encontrado." : "Nenhuma pendência encontrada.";
+        }
         return;
     } else {
         if (msgVazio) msgVazio.classList.add('d-none');
-        if (msgVazio) msgVazio.classList.remove('d-block');
     }
 
-    lista.forEach(l => {
-        const slaInfo = calcularSlaVisual(l.dataPrazoDoc);
+    listaDeOsAgrupada.forEach(item => {
+        const osObj = item.os || {}; 
+        const status = item.statusDocumentacao || 'PENDENTE';
+        
+        const solicitanteNome = item.manager ? item.manager.nome : 'N/D';
+        const responsavelNome = item.documentistaNome || '-';
+        const tipoDoc = item.tipoDocumentacaoNome || '-';
+        const prazo = item.dataPrazoDoc;
+        const valor = item.valorTotalOS || 0;
+        const numOs = osObj.os || 'N/D';
+        const assunto = item.assuntoEmail || '-';
+        
+        // Badges
+        let htmlStatus = `<span class="badge bg-secondary">${status}</span>`;
+        if (status === 'PENDENTE_RECEBIMENTO') htmlStatus = `<span class="badge bg-warning text-dark">Aguardando Envio</span>`;
+        else if (status === 'EM_ANALISE') htmlStatus = `<span class="badge bg-primary">Em Análise</span>`;
+        else if (status.includes('FINALIZADO')) htmlStatus = `<span class="badge bg-success">Finalizado</span>`;
+        else if (status === 'DEVOLVIDO' || status === 'REPROVADO') htmlStatus = `<span class="badge bg-danger">Devolvido</span>`;
 
-        // --- 1. Dados do Item (LPU ou OS) ---
-        let itemLpuContent = '-';
-        let segmentoNome = '-';
-
-        if (l.detalhe) {
-            const lpuObj = l.detalhe.lpu || {};
-            const lpuCodigo = lpuObj.codigoLpu || lpuObj.nomeLpu || '';
-            const objeto = l.detalhe.objetoContratado || '';
-            const textoFinal = lpuCodigo ? `${lpuCodigo} - ${objeto}` : objeto;
-            itemLpuContent = `<span class="fw-bold text-dark" title="${objeto}">${textoFinal}</span>`;
-
-            // Pega segmento via Detalhe -> OS
-            if (l.detalhe.os && l.detalhe.os.segmento) {
-                segmentoNome = l.detalhe.os.segmento.nome;
-            }
-        } else if (l.os) {
-            itemLpuContent = `<span class="fw-bold">${l.os.os}</span>`;
-            // Pega segmento via OS direta
-            if (l.os.segmento) {
-                segmentoNome = l.os.segmento.nome;
-            }
+        // Prazo
+        let htmlPrazo = '-';
+        if (prazo && !status.includes('FINALIZADO')) {
+            const d = new Date(prazo); const h = new Date(); h.setHours(0,0,0,0); d.setHours(0,0,0,0);
+            let cls = 'bg-success';
+            if (d < h) cls = 'bg-danger';
+            else if (d.getTime() === h.getTime()) cls = 'bg-warning text-dark';
+            htmlPrazo = `<span class="badge ${cls}">${formatarData(prazo)}</span>`;
+        } else if (prazo) {
+            htmlPrazo = `<small class="text-muted">${formatarData(prazo)}</small>`;
         }
 
-        // --- 2. Dados de Pessoas ---
-        const valorDoc = l.valorDocumentista != null ? l.valorDocumentista : 0;
-
-        // Responsável (Quem executa/documentista)
-        const responsavelNome = l.documentistaNome || (l.documentista ? l.documentista.nome : '-') || (l.manager ? l.manager.nome : '-');
-
-        // Solicitante (Manager que pediu)
-        const solicitanteNome = l.manager ? l.manager.nome : '-';
-
-        // --- 3. Status Badge ---
-        let statusBadge = '';
-        if (l.statusDocumentacao === 'PENDENTE_RECEBIMENTO') {
-            statusBadge = `<span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Aguardando Envio</span>`;
-        } else if (l.statusDocumentacao === 'EM_ANALISE') {
-            statusBadge = `<span class="badge bg-primary"><i class="bi bi-search"></i> Em Análise</span>`;
-        } else if (l.statusDocumentacao === 'FINALIZADO') {
-            statusBadge = `<span class="badge bg-success"><i class="bi bi-check-all"></i> Finalizado</span>`;
-        } else {
-            statusBadge = `<span class="badge bg-secondary">${l.statusDocumentacao}</span>`;
-        }
-
-        // --- 4. Botões ---
+        // Ações
         let botoes = '';
-        if (l.statusDocumentacao === 'EM_ANALISE') {
-            botoes = `
-                <div class="btn-group btn-group-sm">
-                    <button type="button" class="btn btn-outline-success btn-finalizar-doc" data-id="${l.id}" title="Aprovar Documentação">
-                        <i class="bi bi-check-lg"></i>
-                    </button>
-                    <button type="button" class="btn btn-outline-danger btn-devolver-doc" data-id="${l.id}" title="Devolver ao Gestor">
-                        <i class="bi bi-arrow-return-left"></i>
-                    </button>
-                </div>
-            `;
+        
+        // IMPORTANTE: Aqui garantimos que o data-id seja o ID DA OS.
+        // O idReal gerado no main.js já garante isso.
+        
+        if (contextoFiltro === 'HISTORICO' || status.includes('FINALIZADO') || status === 'DEVOLVIDO') {
+             botoes = `
+                <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico">
+                    <i class="bi bi-eye"></i>
+                </button>
+             `;
         } else {
-            botoes = `<span class="text-muted small">-</span>`;
+            if (status === 'EM_ANALISE') {
+                botoes = `
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-success btn-finalizar-doc" 
+                                data-id="${item.id}" 
+                                title="Aprovar">
+                            <i class="bi bi-check-lg"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="iniciarRecusa('${item.id}')" title="Devolver">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" 
+                                onclick="abrirModalComentarios('${item.id}', false)" title="Comentários">
+                            <i class="bi bi-chat-left-text"></i>
+                        </button>
+                    </div>
+                `;
+            } else if (status === 'PENDENTE_RECEBIMENTO') {
+                 // Documentista não tem botão aqui, aguarda envio
+                 // Mas se necessário (ex: admin), mantemos a lógica
+                 if (localStorage.getItem('role') === 'ADMIN') {
+                     botoes = `
+                        <button class="btn btn-sm btn-outline-primary" 
+                                onclick="receberDocumentacao('${item.id}')" 
+                                title="Forçar recebimento">
+                            <i class="bi bi-box-arrow-in-down"></i>
+                        </button>
+                    `;
+                 }
+            }
         }
 
-        // Classes de controle de exibição nas CÉLULAS (TD)
-        const classDisplayLpu = isDocumentista ? 'd-none' : '';
-        const classDisplaySegmento = isAdmin ? '' : 'd-none';
+        const displayAssunto = contextoFiltro === 'HISTORICO' ? '' : 'd-none';
 
         const tr = `
             <tr>
-                <td class="text-center align-middle">${botoes}</td>
-                <td class="text-center align-middle">${statusBadge}</td>
-                
-                <td class="align-middle"><i class="bi bi-person me-1 text-muted"></i>${solicitanteNome}</td>
-
-                <td class="align-middle ${classDisplaySegmento}"><span class="badge bg-light text-secondary border">${segmentoNome}</span></td>
-
-                <td class="align-middle text-truncate ${classDisplayLpu}" style="max-width: 350px;">${itemLpuContent}</td>
-                
-                <td class="align-middle"><span class="badge bg-light text-dark border">${l.tipoDocumentacaoNome || 'Não Def.'}</span></td>
-                <td class="text-center align-middle">${slaInfo.html}</td>
-                <td class="fw-bold text-end text-secondary align-middle">${formatarMoeda(valorDoc)}</td>
-                <td class="align-middle text-center"><div class="d-flex align-items-center justify-content-center"><i class="bi bi-person-circle text-secondary me-2"></i><span class="small">${responsavelNome}</span></div></td>
-                <td class="align-middle text-start"><span class="small text-muted">${l.assuntoEmail || '-'}</span></td>
+                <td class="align-middle text-center">${botoes}</td>
+                <td class="align-middle text-center">${htmlStatus}</td>
+                <td class="align-middle text-truncate" style="max-width:150px;" title="${solicitanteNome}">
+                    ${solicitanteNome}
+                </td>
+                <td class="align-middle">
+                    <span class="fw-medium">${tipoDoc}</span>
+                    <div class="small text-muted" style="font-size: 0.75rem;">OS: ${numOs}</div>
+                </td>
+                <td class="align-middle text-center">${htmlPrazo}</td>
+                <td class="align-middle text-end fw-bold text-secondary">
+                    ${formatarMoeda(valor)}
+                </td>
+                <td class="align-middle text-center small">
+                    ${responsavelNome}
+                </td>
+                <td class="align-middle small ${displayAssunto}">
+                    ${assunto}
+                </td>
             </tr>
         `;
-
         tbody.innerHTML += tr;
     });
-
-    attachDocButtonListeners();
 }
 
-function calcularSlaVisual(dataPrazo) {
-    if (!dataPrazo) return { html: '<span class="text-muted">-</span>' };
-    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    const prazo = new Date(dataPrazo); prazo.setHours(0, 0, 0, 0);
-    if (isNaN(prazo.getTime())) return { html: `<span class="text-muted">${dataPrazo}</span>` };
-
-    const diffTime = prazo - hoje;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    let classe = 'bg-success';
-    let icone = 'bi-calendar-check';
-    let texto = typeof formatarData === 'function' ? formatarData(dataPrazo) : prazo.toLocaleDateString('pt-BR');
-
-    if (diffDays < 0) { classe = 'bg-danger'; icone = 'bi-exclamation-triangle'; }
-    else if (diffDays === 0) { classe = 'bg-warning text-dark'; icone = 'bi-alarm'; texto = 'Hoje'; }
-    else if (diffDays <= 2) { classe = 'bg-info text-dark'; }
-
-    return { html: `<span class="badge ${classe}" title="Prazo: ${texto}"><i class="bi ${icone}"></i> ${texto}</span>` };
-}
-
-// Listeners dos botões da tabela
-function attachDocButtonListeners() {
-    // Devolver (Abre Modal)
-    document.querySelectorAll('.btn-devolver-doc').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const id = e.currentTarget.dataset.id;
-            abrirModalDevolverDoc(id);
-        });
-    });
-    // O botão de finalizar (.btn-finalizar-doc) é tratado globalmente no main.js
-}
-
-// Modal de Devolução
-function abrirModalDevolverDoc(id) {
-    const modalEl = document.getElementById('modalRecusarLancamento');
-    const form = document.getElementById('formRecusarLancamento');
-    const inputId = document.getElementById('recusarLancamentoId');
-    const txtMotivo = document.getElementById('motivoRecusa');
-    const modalTitle = document.getElementById('modalRecusarLabel');
-
-    if (modalEl) {
-        if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
-
-        inputId.value = id;
-        if (txtMotivo) txtMotivo.value = '';
-        if (modalTitle) modalTitle.innerHTML = '<i class="bi bi-arrow-return-left text-danger me-2"></i>Devolver Documentação';
-        if (txtMotivo) txtMotivo.placeholder = "Motivo da devolução...";
-
-        form.dataset.tipoRecusa = 'DOCUMENTACAO';
-
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-    }
-}
-
-// Handler do Formulário de Recusa
-document.getElementById('formRecusarLancamento')?.addEventListener('submit', async function (e) {
-    if (this.dataset.tipoRecusa !== 'DOCUMENTACAO') return;
-
-    e.preventDefault();
-    const id = document.getElementById('recusarLancamentoId').value;
-    const motivo = document.getElementById('motivoRecusa').value;
-    const userId = localStorage.getItem('usuarioId');
-
-    const modalEl = document.getElementById('modalRecusarLancamento');
-    const modal = bootstrap.Modal.getInstance(modalEl);
-    modal.hide();
-
+// 1. RECEBER
+async function receberDocumentacao(osId) {
+    if (!confirm('Confirmar o recebimento?')) return;
+    
+    const btn = document.activeElement;
+    if(btn) btn.disabled = true;
     toggleLoader(true, '#minhas-docs-pane');
 
     try {
-        const response = await fetchComAuth(`${API_BASE_URL}/lancamentos/${id}/documentacao/devolver`, {
+        const userId = localStorage.getItem('usuarioId');
+        await fetchComAuth(`${API_BASE_URL}/lancamentos/${osId}/documentacao/receber`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usuarioId: userId, motivo: motivo })
+            body: JSON.stringify({ usuarioId: userId, comentario: 'Recebido via painel web' })
         });
+        
+        mostrarToast("Documentos recebidos!", "success");
+        await carregarDashboardEBadges();
+        aplicarFiltroDocumentacao(filtroDocAtual);
 
-        if (response.ok) {
-            mostrarToast("Documentação devolvida ao gestor.", "success");
-            const btnAtualizar = document.getElementById('btn-atualizar-docs');
-            if (btnAtualizar) btnAtualizar.click();
-        } else {
-            throw new Error("Erro ao devolver.");
-        }
-    } catch (error) {
-        mostrarToast(error.message || "Erro na comunicação.", "error");
+    } catch (e) {
+        mostrarToast(e.message, 'error');
     } finally {
         toggleLoader(false, '#minhas-docs-pane');
     }
-});
+}
 
-function renderizarGraficoCarteira(dadosMensais) {
-    const ctx = document.getElementById('graficoCarteiraDoc');
-    if (!ctx) return;
+// 2. RECUSAR
+function iniciarRecusa(id) {
+    abrirModalComentarios(id, true);
+}
 
-    // Prepara dados para o Chart.js
-    const labels = dadosMensais.map(d => d.mesAno);
-    const valoresPrevistos = dadosMensais.map(d => d.valorPrevisto);
-    const valoresFinalizados = dadosMensais.map(d => d.valorFinalizado);
+// 3. MODAL E BACKDROP FIX
+function abrirModalComentarios(id, isRecusa = false) {
+    const modalEl = document.getElementById('modalComentarios');
+    const modal = new bootstrap.Modal(modalEl);
+    
+    const lista = document.getElementById('listaComentariosContainer');
+    if(lista) lista.innerHTML = '<div class="text-center p-3"><span class="spinner-border text-primary"></span></div>';
+    
+    const btnEnviar = document.getElementById('btnEnviarComentarioModal'); 
+    const txtArea = document.getElementById('novoComentarioTexto');
+    if(txtArea) txtArea.value = '';
 
-    if (chartCarteiraInstance) {
-        chartCarteiraInstance.destroy();
+    const novoBtn = btnEnviar.cloneNode(true);
+    btnEnviar.parentNode.replaceChild(novoBtn, btnEnviar);
+
+    if (isRecusa) {
+        document.getElementById('modalComentariosLabel').innerHTML = '<i class="bi bi-x-circle text-danger"></i> Devolver Documentação';
+        novoBtn.className = 'btn btn-danger';
+        novoBtn.innerHTML = '<i class="bi bi-x-lg"></i> Confirmar Devolução';
+        txtArea.placeholder = "Motivo da devolução (obrigatório)...";
+        novoBtn.addEventListener('click', () => processarRecusa(id, txtArea.value, modal));
+    } else {
+        document.getElementById('modalComentariosLabel').innerHTML = '<i class="bi bi-chat-left-text"></i> Histórico & Comentários';
+        novoBtn.className = 'btn btn-primary';
+        novoBtn.innerHTML = '<i class="bi bi-send"></i> Enviar Comentário';
+        txtArea.placeholder = "Digite um comentário...";
+        novoBtn.addEventListener('click', () => {
+            if(window.enviarComentarioPeloModal) window.enviarComentarioPeloModal(id, txtArea.value);
+            txtArea.value = ''; 
+        });
     }
 
-    chartCarteiraInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Finalizado',
-                    data: valoresFinalizados,
-                    backgroundColor: '#198754',
-                    borderRadius: 4
-                },
-                {
-                    label: 'A Receber',
-                    data: valoresPrevistos,
-                    backgroundColor: '#ffc107',
-                    borderRadius: 4
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            return formatarMoeda(context.raw);
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: { stacked: true, grid: { display: false } },
-                y: { stacked: true, display: false }
+    modal.show();
+    if(window.verComentarios) window.verComentarios(id);
+}
+
+async function processarRecusa(id, motivo, modalInstance) {
+    if (!motivo.trim()) {
+        alert("O motivo é obrigatório.");
+        return;
+    }
+    
+    modalInstance.hide();
+    limparBackdropModal();
+    toggleLoader(true, '#minhas-docs-pane');
+    
+    try {
+        const userId = localStorage.getItem('usuarioId');
+        await fetchComAuth(`${API_BASE_URL}/lancamentos/${id}/documentacao/devolver`, {
+            method: 'POST',
+            body: JSON.stringify({ usuarioId: userId, motivo: motivo })
+        });
+        
+        mostrarToast("Documentação devolvida.", "warning");
+        await carregarDashboardEBadges();
+        aplicarFiltroDocumentacao(filtroDocAtual);
+    } catch (e) {
+        mostrarToast("Erro: " + e.message, 'error');
+    } finally {
+        toggleLoader(false, '#minhas-docs-pane');
+    }
+}
+
+// 4. APROVAR (Listener Global do Botão)
+document.addEventListener('click', async function(e) {
+    const btn = e.target.closest('.btn-finalizar-doc');
+    if(btn) {
+        e.stopPropagation();
+        const id = btn.dataset.id; // ID da OS!
+        
+        const modalFinalizar = new bootstrap.Modal(document.getElementById('modalFinalizarDoc'));
+        const inputId = document.getElementById('finalizarDocId');
+        if(inputId) {
+            inputId.value = id; // Define o ID da OS no input hidden
+        }
+        document.getElementById('assuntoEmailDoc').value = '';
+        modalFinalizar.show();
+    }
+});
+
+// Botão Confirmar no Modal de Aprovação
+const btnConfirmarFinalizar = document.getElementById('btnConfirmarFinalizarDoc');
+if(btnConfirmarFinalizar) {
+    const novoBtn = btnConfirmarFinalizar.cloneNode(true);
+    btnConfirmarFinalizar.parentNode.replaceChild(novoBtn, btnConfirmarFinalizar);
+
+    novoBtn.addEventListener('click', async function() {
+        // CORREÇÃO: Pegamos apenas o ID único da OS, ignorando lotes antigos
+        const idOs = document.getElementById('finalizarDocId').value;
+        const assunto = document.getElementById('assuntoEmailDoc').value;
+
+        if (!assunto.trim()) {
+            mostrarToast("O assunto do e-mail é obrigatório.", "warning");
+            return;
+        }
+
+        const modalEl = document.getElementById('modalFinalizarDoc');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if(modal) modal.hide();
+        
+        limparBackdropModal();
+        toggleLoader(true, '#minhas-docs-pane');
+        
+        try {
+            // Chamada única para o endpoint de OS
+            const response = await fetchComAuth(`${API_BASE_URL}/lancamentos/${idOs}/documentacao/finalizar`, {
+                method: 'POST',
+                body: JSON.stringify({ assuntoEmail: assunto })
+            });
+
+            if (!response.ok) {
+                let erroMsg = `Erro ${response.status}`;
+                try {
+                    const errJson = await response.json();
+                    erroMsg = errJson.message || errJson.error || erroMsg;
+                } catch(e) {}
+                throw new Error(erroMsg);
             }
+
+            mostrarToast("Documentação finalizada com sucesso!", "success");
+            
+            await carregarDashboardEBadges();
+            aplicarFiltroDocumentacao(filtroDocAtual);
+
+        } catch (e) {
+            console.error(e);
+            mostrarToast(e.message, 'error');
+        } finally {
+            toggleLoader(false, '#minhas-docs-pane');
         }
     });
 }
 
-// ==========================================================
-// LISTENERS DE AÇÃO (CONFIRMAÇÃO DOS MODAIS)
-// Adicione isso ao final do arquivo para os botões funcionarem
-// ==========================================================
-
-document.addEventListener('DOMContentLoaded', () => {
-
-    // 1. Lógica do Botão CONFIRMAR APROVAÇÃO (Dentro do Modal)
-    // 1. Lógica do Botão CONFIRMAR APROVAÇÃO (Corrigida)
-    const btnConfirmarAprov = document.getElementById('btnConfirmarAprovacaoComplementar');
-    if (btnConfirmarAprov) {
-        btnConfirmarAprov.addEventListener('click', async function () {
-            const id = this.dataset.id;
-            const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
-            const userId = localStorage.getItem("usuarioId");
-
-            // Determina a rota (Se for ADMIN, age como Controller para finalizar)
-            const tipoAprovador = (userRole === 'COORDINATOR') ? 'coordenador' : 'controller';
-
-            this.disabled = true;
-            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processando...';
-
-            try {
-                const response = await fetchComAuth(`${API_BASE_URL}/aprovacoes/complementares/${id}/${tipoAprovador}/aprovar`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-User-ID': userId
-                    },
-                    body: JSON.stringify({ aprovadorId: userId })
-                });
-
-                if (response.ok) {
-                    mostrarToast("Solicitação aprovada com sucesso!", "success");
-
-                    // --- CORREÇÃO DO ERRO .hide() AQUI ---
-                    const modalEl = document.getElementById('modalAprovarComplementar');
-                    // Tenta pegar a instância existente ou cria uma nova se não existir (apenas para garantir)
-                    const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-                    modalInstance.hide();
-                    // --------------------------------------
-
-                    await carregarDadosComplementares();
-                } else {
-                    const erroTxt = await response.text();
-                    throw new Error("Erro na aprovação: " + erroTxt);
-                }
-            } catch (error) {
-                console.error(error);
-                mostrarToast(error.message, "error");
-            } finally {
-                this.disabled = false;
-                this.innerHTML = 'Confirmar Aprovação';
-            }
-        });
-    }
-
-    // 2. Lógica do Formulário de RECUSA (Caso também esteja faltando)
-    const formRecusar = document.getElementById('formRecusarComplementar');
-    if (formRecusar) {
-        formRecusar.addEventListener('submit', async function (e) {
-            e.preventDefault(); // Impede o reload da página
-
-            const id = this.dataset.id;
-            const motivoInput = document.getElementById('motivoRecusaComplementar');
-            const motivo = motivoInput.value;
-            const btnSubmit = this.querySelector('button[type="submit"]');
-
-            if (!motivo.trim()) {
-                mostrarToast("Por favor, informe o motivo da recusa.", "warning");
-                return;
-            }
-
-            // Efeito de carregamento
-            const textoOriginal = btnSubmit.innerHTML;
-            btnSubmit.disabled = true;
-            btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
-
-            try {
-                const response = await fetchComAuth(`${API_BASE_URL}/aprovacoes/complementares/${id}/rejeitar`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-User-ID': userId,
-                        'X-User-Role': userRole
-                    },
-                    body: JSON.stringify({ motivo: motivo })
-                });
-
-                if (response.ok) {
-                    mostrarToast("Solicitação recusada com sucesso!", "success");
-                    if (window.modalRecusarComplementar) window.modalRecusarComplementar.hide();
-
-                    // Recarrega a tabela
-                    await carregarDadosComplementares();
-                } else {
-                    throw new Error("Erro ao recusar solicitação.");
-                }
-            } catch (error) {
-                mostrarToast(error.message, "error");
-            } finally {
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = textoOriginal;
-            }
-        });
-    }
-});
+function limparBackdropModal() {
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(b => b.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+}

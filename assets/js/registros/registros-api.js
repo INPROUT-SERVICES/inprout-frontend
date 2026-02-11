@@ -159,23 +159,25 @@ const RegistrosApi = {
 
     carregarDashboard: async () => {
         const loader = document.getElementById('dashboard-loader');
-        const content = document.getElementById('dashboard-content');
+        const container = document.getElementById('dashboard-analise-container');
 
-        loader.classList.remove('d-none');
-        content.classList.add('d-none');
+        if(loader) loader.classList.remove('d-none');
+        if(container) container.innerHTML = '';
 
         try {
             const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os/dashboard-stats`);
             if (!response.ok) throw new Error('Erro ao carregar dashboard');
-            const stats = await response.json();
-            RegistrosApi.preencherDashboard(stats);
-            content.classList.remove('d-none');
+            
+            const statsAgrupados = await response.json();
+            
+            // Chama o renderizador passando o JSON direto
+            RegistrosRender.renderizarCardsDoBackend(statsAgrupados);
+
         } catch (error) {
             console.error(error);
-            content.innerHTML = `<div class="alert alert-danger">Erro ao carregar dados do dashboard.</div>`;
-            content.classList.remove('d-none');
+            if(container) container.innerHTML = `<div class="alert alert-danger">Erro ao carregar dados do dashboard: ${error.message}</div>`;
         } finally {
-            loader.classList.add('d-none');
+            if(loader) loader.classList.add('d-none');
         }
     },
 
