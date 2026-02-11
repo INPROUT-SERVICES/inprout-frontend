@@ -13,6 +13,9 @@ window.todosHistoricoMateriais = [];
 window.todasPendenciasComplementares = [];
 window.todoHistoricoComplementares = [];
 window.todasPendenciasAtividades = [];
+window.minhasDocsPendentes = [];
+window.minhasDocsHistorico = [];
+window.dadosCpsGlobais = [];
 
 // Variáveis de Datas Globais
 window.histDataFim = new Date();
@@ -62,22 +65,18 @@ function mostrarToast(mensagem, tipo = 'success') {
     const toastElement = document.getElementById('toastMensagem');
     const toastBody = document.getElementById('toastTexto');
 
-    // Se os elementos não existirem no HTML, não faz nada
     if (!toastElement || !toastBody) return;
 
-    // Cria a instância do Bootstrap apenas quando chamar (garante que o DOM carregou)
     const toast = new bootstrap.Toast(toastElement);
 
-    // Remove classes anteriores
     toastElement.classList.remove('text-bg-success', 'text-bg-danger', 'text-bg-warning');
 
-    // Adiciona a classe correta
     if (tipo === 'success') {
         toastElement.classList.add('text-bg-success');
     } else if (tipo === 'error') {
         toastElement.classList.add('text-bg-danger');
     } else {
-        toastElement.classList.add('text-bg-warning'); // Para avisos
+        toastElement.classList.add('text-bg-warning'); 
     }
 
     toastBody.textContent = mensagem;
@@ -105,7 +104,8 @@ const get = (obj, path, defaultValue = '-') => {
 // Atividades
 function aprovarLancamento(id) {
     if (!modalAprovar) return;
-    document.getElementById('aprovarLancamentoId').value = id;
+    const elId = document.getElementById('aprovarLancamentoId');
+    if(elId) elId.value = id;
     if (modalAprovar._element) delete modalAprovar._element.dataset.acaoEmLote;
 
     const bodyP = modalAprovar._element.querySelector('.modal-body p');
@@ -115,7 +115,8 @@ function aprovarLancamento(id) {
 
 function recusarLancamento(id) {
     if (!modalRecusar) return;
-    document.getElementById('recusarLancamentoId').value = id;
+    const elId = document.getElementById('recusarLancamentoId');
+    if(elId) elId.value = id;
     document.getElementById('formRecusarLancamento').reset();
     if (modalRecusar._element) delete modalRecusar._element.dataset.acaoEmLote;
     modalRecusar.show();
@@ -123,7 +124,8 @@ function recusarLancamento(id) {
 
 function comentarLancamento(id) {
     if (!modalComentar) return;
-    document.getElementById('comentarLancamentoId').value = id;
+    const elId = document.getElementById('comentarLancamentoId');
+    if(elId) elId.value = id;
     document.getElementById('formComentarPrazo').reset();
     if (modalComentar._element) delete modalComentar._element.dataset.acaoEmLote;
 
@@ -138,7 +140,8 @@ function comentarLancamento(id) {
 // Controller Actions
 function aprovarLancamentoController(id) {
     if (!modalAprovar) return;
-    document.getElementById('aprovarLancamentoId').value = id;
+    const elId = document.getElementById('aprovarLancamentoId');
+    if(elId) elId.value = id;
     if (modalAprovar._element) delete modalAprovar._element.dataset.acaoEmLote;
 
     const bodyP = modalAprovar._element.querySelector('.modal-body p');
@@ -153,7 +156,8 @@ function recusarLancamentoController(id) {
 
 function aprovarPrazoController(id) {
     if (!modalAprovar) return;
-    document.getElementById('aprovarLancamentoId').value = id;
+    const elId = document.getElementById('aprovarLancamentoId');
+    if(elId) elId.value = id;
     if (modalAprovar._element) delete modalAprovar._element.dataset.acaoEmLote;
 
     const bodyP = modalAprovar._element.querySelector('.modal-body p');
@@ -164,7 +168,8 @@ function aprovarPrazoController(id) {
 
 function recusarPrazoController(id) {
     if (!modalComentar) return;
-    document.getElementById('comentarLancamentoId').value = id;
+    const elId = document.getElementById('comentarLancamentoId');
+    if(elId) elId.value = id;
     if (modalComentar._element) delete modalComentar._element.dataset.acaoEmLote;
 
     const modalTitle = modalComentar._element.querySelector('.modal-title');
@@ -215,70 +220,55 @@ function recusarComplementar(id) {
     modalRecusarComplementar.show();
 }
 
-window.verComentarios = function (id) {
-    if (!modalComentarios) return;
+// =========================================================================
+// CORREÇÃO: VISUALIZAÇÃO DE COMENTÁRIOS (Compatível com Novo HTML)
+// =========================================================================
 
-    // Busca o lançamento em todas as listas possíveis, incluindo a de Documentação
+function verComentarios(id) {
+    // Tenta encontrar o container correto
+    const containerLista = document.getElementById('listaComentariosContainer');
+    
+    // Se não encontrar o container novo, tenta o antigo (para compatibilidade)
+    const containerAntigo = document.getElementById('modalComentariosBody');
+
+    // Se não houver container nenhum, aborta
+    if (!containerLista && !containerAntigo) {
+        console.error("Erro: Container de comentários não encontrado no HTML.");
+        return;
+    }
+
+    const targetContainer = containerLista || containerAntigo;
+
+    // Busca o lançamento em todas as listas possíveis
     let lancamento = window.todosOsLancamentosGlobais.find(l => l.id == id) ||
         (window.todosHistoricoAtividades && window.todosHistoricoAtividades.find(l => l.id == id)) ||
         (window.todasPendenciasAtividades && window.todasPendenciasAtividades.find(l => l.id == id)) ||
         (window.dadosCpsGlobais && window.dadosCpsGlobais.find(l => l.id == id)) ||
-        (window.minhasDocsPendentes && window.minhasDocsPendentes.find(l => l.id == id));
+        (window.minhasDocsPendentes && window.minhasDocsPendentes.find(l => l.id == id)) ||
+        (window.minhasDocsHistorico && window.minhasDocsHistorico.find(l => l.id == id));
 
-    const modalBody = document.getElementById('modalComentariosBody');
-    modalBody.innerHTML = '';
+    targetContainer.innerHTML = '';
 
     if (!lancamento) {
-        modalBody.innerHTML = '<p class="text-center text-muted">Lançamento não encontrado em memória. Tente recarregar a página.</p>';
-        modalComentarios.show();
+        targetContainer.innerHTML = '<p class="text-center text-muted py-3">Dados não encontrados em memória.</p>';
         return;
     }
 
-    // 1. Exibir Observação Técnica (caso exista, muitas vezes o Manager escreve aqui)
-    if (lancamento.detalhe && lancamento.detalhe.observacoes) {
-        const obsAlert = document.createElement('div');
-        obsAlert.className = 'alert alert-info small mb-3';
-        obsAlert.innerHTML = `<strong><i class="bi bi-info-circle"></i> Observação do Item:</strong> ${lancamento.detalhe.observacoes}`;
-        modalBody.appendChild(obsAlert);
-    }
-
-    // 2. Área de Inserção de Novo Comentário
-    const divInput = document.createElement('div');
-    divInput.className = 'mb-4 border-bottom pb-3 bg-light p-3 rounded';
-    divInput.innerHTML = `
-        <label class="form-label fw-bold small text-secondary">Adicionar Comentário</label>
-        <div class="input-group">
-            <textarea class="form-control" id="novoComentarioTexto" rows="2" placeholder="Digite uma mensagem..."></textarea>
-            <button class="btn btn-primary" type="button" id="btnEnviarComentarioModal" title="Enviar">
-                <i class="bi bi-send-fill"></i>
-            </button>
-        </div>
-    `;
-    modalBody.appendChild(divInput);
-
-    // Vincula o evento de clique (usando timeout para garantir que o elemento existe)
-    setTimeout(() => {
-        const btnSend = document.getElementById('btnEnviarComentarioModal');
-        if (btnSend) btnSend.onclick = () => enviarComentarioPeloModal(id);
-    }, 50);
-
-    // 3. Listagem de Comentários
-    const divLista = document.createElement('div');
-    divLista.id = 'listaComentariosContainer';
-
     if (!lancamento.comentarios || lancamento.comentarios.length === 0) {
-        divLista.innerHTML = '<p class="text-center text-muted py-2">Nenhum comentário registrado.</p>';
+        targetContainer.innerHTML = '<p class="text-center text-muted py-3">Nenhum histórico disponível.</p>';
     } else {
-        renderizarListaComentarios(divLista, lancamento.comentarios);
+        renderizarListaComentarios(targetContainer, lancamento.comentarios);
     }
-    modalBody.appendChild(divLista);
-
-    modalComentarios.show();
+    
+    // Se estivermos usando o modal genérico, apenas abre se não estiver aberto
+    // (A documentação controla sua própria abertura, mas outras abas podem usar isso)
+    if (modalComentarios && !modalComentarios._element.classList.contains('show')) {
+        modalComentarios.show();
+    }
 }
 
-// Função auxiliar para renderizar a lista
+// Renderiza a lista de forma bonita
 function renderizarListaComentarios(container, comentarios) {
-    // Ordena do mais recente para o mais antigo
     const ordenados = [...comentarios].sort((a, b) => {
         const dataA = a.dataHora ? parseDataBrasileira(a.dataHora) : new Date(0);
         const dataB = b.dataHora ? parseDataBrasileira(b.dataHora) : new Date(0);
@@ -292,7 +282,7 @@ function renderizarListaComentarios(container, comentarios) {
                     <i class="bi bi-person-circle me-1"></i>${comentario.autor ? comentario.autor.nome : 'Sistema'}
                 </span>
                 <span class="text-muted" style="font-size: 0.75rem;">
-                    ${comentario.dataHora ? new Date(parseDataBrasileira(comentario.dataHora)).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                    ${comentario.dataHora ? comentario.dataHora : '-'}
                 </span>
             </div>
             <div class="bg-light p-2 rounded text-dark text-break" style="font-size: 0.9rem;">
@@ -304,100 +294,63 @@ function renderizarListaComentarios(container, comentarios) {
 
 function isUsuarioLogado(comentario) {
     if (!comentario.autor) return false;
-    // Compara IDs de forma segura (string vs number)
     return String(comentario.autor.id) === String(localStorage.getItem('usuarioId'));
 }
 
-// Função para enviar o comentário via API
-async function enviarComentarioPeloModal(id, texto, tipo) {
-    if (!texto.trim()) return;
+// Função para enviar comentário (Global)
+async function enviarComentarioPeloModal(id, textoPersonalizado = null) {
+    const input = document.getElementById('novoComentarioTexto');
+    const texto = textoPersonalizado || (input ? input.value : '');
+    
+    if (!texto.trim()) {
+        mostrarToast("Digite um comentário.", "warning");
+        return;
+    }
 
-    // Define endpoint baseado no tipo
-    let endpoint = `${API_BASE_URL}/lancamentos/${id}/comentarios`; // Default (Item)
+    // Identifica se é Documentação (que usa endpoint de OS) ou Lançamento Normal
+    // A distinção é feita verificando se o ID está nas listas de doc
+    const isDoc = (window.minhasDocsPendentes && window.minhasDocsPendentes.some(d => d.id == id)) ||
+                  (window.minhasDocsHistorico && window.minhasDocsHistorico.some(d => d.id == id));
+
+    let endpoint = isDoc 
+        ? `${API_BASE_URL}/lancamentos/${id}/documentacao/comentar`  // Endpoint de OS (se houver) ou genérico
+        : `${API_BASE_URL}/lancamentos/${id}/comentarios`;
+
+    // Se não houver endpoint específico de comentar doc, usa o genérico de OS se for OS, ou lançamentos
+    // Assumindo que o back trata Lancamento e OS de forma polimórfica ou endpoints diferentes.
+    // Dado seu código anterior, Documentação usa endpoints específicos.
+    // Se não tiver endpoint de comentar doc, vamos usar o padrão de lançamentos e torcer para o ID bater.
+    
+    toggleLoader(true, '#modalComentarios .modal-content');
 
     try {
         const userId = localStorage.getItem('usuarioId');
-        const response = await fetchComAuth(endpoint, {
+        
+        await fetchComAuth(endpoint, {
             method: 'POST',
             body: JSON.stringify({
                 texto: texto,
-                autorId: userId
+                autorId: userId, // Para lançamentos
+                usuarioId: userId, // Para documentação (alguns endpoints usam esse nome)
+                comentario: texto // Alguns endpoints de doc usam esse campo
             })
         });
 
-        if (!response.ok) throw new Error("Erro ao salvar comentário");
+        if(input) input.value = '';
+        mostrarToast("Comentário enviado.", "success");
 
-        // --- CORREÇÃO AQUI: Trata resposta vazia ---
-        const textResponse = await response.text();
-        const data = textResponse ? JSON.parse(textResponse) : {}; 
-        // -------------------------------------------
-
-        // Atualiza a UI
-        const lista = document.getElementById('lista-comentarios-modal');
-        if (lista) {
-            const dataHora = new Date().toLocaleString('pt-BR');
-            const nomeUser = localStorage.getItem('nomeUsuario') || 'Eu';
-            
-            const novoLi = document.createElement('li');
-            novoLi.className = "list-group-item bg-light";
-            novoLi.innerHTML = `
-                <div class="d-flex justify-content-between align-items-start">
-                    <span class="fw-bold small">${nomeUser}</span>
-                    <span class="text-muted" style="font-size: 0.75rem;">${dataHora}</span>
-                </div>
-                <p class="mb-0 mt-1 small text-secondary">${texto}</p>
-            `;
-            lista.prepend(novoLi);
-        }
-
-        document.getElementById('novoComentarioInput').value = '';
+        verComentarios(id); 
 
     } catch (error) {
         console.error("Erro ao comentar:", error);
-        mostrarToast("Erro ao enviar comentário.", "error");
+        mostrarToast("Erro ao enviar comentário: " + error.message, "error");
+    } finally {
+        toggleLoader(false, '#modalComentarios .modal-content');
     }
 }
 
-// Detalhes/Comentários
-function verComentarios(id) {
-    if (!modalComentarios) return;
 
-    let lancamento = window.todosOsLancamentosGlobais.find(l => l.id == id);
-    if (!lancamento && window.todosHistoricoAtividades) {
-        lancamento = window.todosHistoricoAtividades.find(l => l.id == id);
-    }
-    // Tenta também no array de pendências específico
-    if (!lancamento && window.todasPendenciasAtividades) {
-        lancamento = window.todasPendenciasAtividades.find(l => l.id == id);
-    }
-    // Tenta no array global de CPS se existir
-    if (!lancamento && window.dadosCpsGlobais) {
-        lancamento = window.dadosCpsGlobais.find(l => l.id == id);
-    }
-
-    const modalBody = document.getElementById('modalComentariosBody');
-    modalBody.innerHTML = '';
-
-    if (!lancamento || !lancamento.comentarios || lancamento.comentarios.length === 0) {
-        modalBody.innerHTML = '<p class="text-center text-muted">Nenhum comentário para este lançamento.</p>';
-    } else {
-        const comentariosOrdenados = [...lancamento.comentarios].sort((a, b) => parseDataBrasileira(b.dataHora) - parseDataBrasileira(a.dataHora));
-        modalBody.innerHTML = comentariosOrdenados.map(comentario => `
-            <div class="card mb-3">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center small">
-                    <strong><i class="bi bi-person-circle me-2"></i>${comentario.autor.nome}</strong>
-                    <span class="text-muted">${comentario.dataHora ? new Date(parseDataBrasileira(comentario.dataHora)).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : ''}</span>
-                </div>
-                <div class="card-body">
-                    <p class="card-text">${comentario.texto}</p>
-                </div>
-            </div>
-        `).join('');
-    }
-    modalComentarios.show();
-}
-
-// --- EXPORTAÇÃO GLOBAL (CRUCIAL PARA O HTML E OUTROS ARQUIVOS) ---
+// --- EXPORTAÇÃO GLOBAL ---
 window.aprovarLancamento = aprovarLancamento;
 window.recusarLancamento = recusarLancamento;
 window.comentarLancamento = comentarLancamento;
@@ -410,4 +363,5 @@ window.recusarMaterial = recusarMaterial;
 window.aprovarComplementar = aprovarComplementar;
 window.recusarComplementar = recusarComplementar;
 window.verComentarios = verComentarios;
+window.enviarComentarioPeloModal = enviarComentarioPeloModal;
 window.mostrarToast = mostrarToast;

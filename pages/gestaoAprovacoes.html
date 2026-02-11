@@ -531,8 +531,22 @@
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                     </div>
-                    <div class="modal-body" id="modalComentariosBody">
+
+                    <div class="modal-body">
+                        <div id="listaComentariosContainer" class="mb-3 custom-scroll"
+                            style="max-height: 300px; overflow-y: auto;">
+                        </div>
+
+                        <hr>
+
+                        <div class="form-group">
+                            <label for="novoComentarioTexto" class="form-label fw-bold">Novo Comentário /
+                                Motivo:</label>
+                            <textarea class="form-control" id="novoComentarioTexto" rows="3"
+                                placeholder="Digite aqui..."></textarea>
+                        </div>
                     </div>
+
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                             <i class="bi bi-x-circle"></i> Fechar
