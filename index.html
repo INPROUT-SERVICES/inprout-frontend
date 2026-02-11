@@ -1188,6 +1188,18 @@
 
         e.target.value = valorFormatado;
       });
+
+      const selectTipoDoc = document.getElementById('tipoDocumentacaoId');
+      const selectSituacao = document.getElementById('situacao');
+
+      if (selectTipoDoc && selectSituacao) {
+        selectTipoDoc.addEventListener('change', function () {
+
+          if (this.value && this.value !== "") {
+            selectSituacao.value = "Aguardando documentação";
+          }
+        });
+      }
     });
 
   </script>
