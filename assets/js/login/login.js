@@ -33,7 +33,7 @@ document.getElementById('formLogin').addEventListener('submit', async (event) =>
         // Trocamos fetchComAuth pelo fetch PADRÃO, pois esta é a única
         // requisição que não precisa (e não pode) enviar um token.
         // ==========================================================
-        const response = await fetch('https://www.inproutservices.com.br/api/usuarios/login', {
+        const response = await fetch('http:localhost:8080/usuarios/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: payload

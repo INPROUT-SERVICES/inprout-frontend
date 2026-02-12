@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const API_BASE_URL = 'https://www.inproutservices.com.br/api';
+    const API_BASE_URL = 'http:localhost:8080';
     verificarMensagemAnoNovo();
     const toastElement = document.getElementById('toastMensagem');
     const toastBody = document.getElementById('toastTexto');
@@ -505,11 +505,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnReceberLoteDoc = document.getElementById('btnReceberLoteDoc');
     if (btnReceberLoteDoc) {
         btnReceberLoteDoc.addEventListener('click', () => {
-            // Usa o mesmo modal, mas limpa o ID oculto para sinalizar que é LOTE
             document.getElementById('idLancamentoReceberDoc').value = "LOTE";
             document.getElementById('comentarioRecebimento').value = "";
 
-            // Atualiza o texto do modal para indicar lote
+            // NOVO: Define a data de hoje como padrão
+            document.getElementById('dataRecebimentoDoc').value = new Date().toISOString().split('T')[0];
+
             const modalEl = document.getElementById('modalReceberDoc');
             const titulo = modalEl.querySelector('.modal-title');
             const corpo = modalEl.querySelector('.modal-body p');
@@ -531,20 +532,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         toggleLoader(true);
         try {
-            const response = await fetchComAuth('https://www.inproutservices.com.br/api/lancamentos');
+            const response = await fetchComAuth('http:localhost:8080/lancamentos');
             if (!response.ok) throw new Error(`Erro na rede: ${response.statusText}`);
             const lancamentosDaApi = await response.json();
-            
+
             // Filtra e atualiza a variável global
             todosLancamentos = filtrarLancamentosParaUsuario(lancamentosDaApi);
-            
+
             // Renderiza os componentes da tela
             renderizarCardsDashboard(todosLancamentos);
-            
+
             // --- AQUI É A CHAMADA IMPORTANTE ---
-            popularFiltroOS(); 
+            popularFiltroOS();
             // -----------------------------------
-            
+
             renderizarTodasAsTabelas();
         } catch (error) {
             console.error('Falha ao buscar lançamentos:', error);
@@ -585,19 +586,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Agrupa por ID da OS
         const agrupamentoMap = new Map();
-        
+
         itensComDocPendente.forEach(item => {
             const osId = item.os.id;
             if (!agrupamentoMap.has(osId)) {
                 // Cria um objeto "Representante" da OS
                 agrupamentoMap.set(osId, {
-                    ...item, 
+                    ...item,
                     id: item.os.id, // ID visual da linha (agrupamento)
                     idsLancamentos: [item.id], // <--- NOVA PROPRIEDADE: Lista real dos lançamentos
                     isAgrupado: true,
-                    valor: 0, 
+                    valor: 0,
                     statusDocumentacao: item.os.statusDocumentacao,
-                    tipoDocumentacaoNome: item.os.tipoDocumentacaoNome, 
+                    tipoDocumentacaoNome: item.os.tipoDocumentacaoNome,
                     documentistaNome: item.os.documentistaNome
                 });
             } else {
@@ -622,7 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 4. Renderização das Tabelas
         if (typeof inicializarCabecalhos === 'function') inicializarCabecalhos();
-        
+
         renderizarTabela(rascunhos, tbodyLancamentos, colunasLancamentos);
         renderizarTabela(pendentesAprovacao, tbodyPendentes, colunasPrincipais);
         renderizarTabela(minhasPendencias, tbodyMinhasPendencias, colunasMinhasPendencias);
@@ -765,7 +766,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 osLpuDetalheId: osLpuDetalheIdCorreto
             };
 
-            const url = editingId ? `https://www.inproutservices.com.br/api/lancamentos/${editingId}` : 'https://www.inproutservices.com.br/api/lancamentos';
+            const url = editingId ? `http:localhost:8080/lancamentos/${editingId}` : 'http:localhost:8080/lancamentos';
             const method = editingId ? 'PUT' : 'POST';
 
             try {
@@ -799,15 +800,15 @@ document.addEventListener('DOMContentLoaded', () => {
             selectLPU.disabled = true;
             try {
                 selectLPU.innerHTML = '<option value="" selected disabled>Selecione a LPU...</option>';
-                
+
                 // --- ALTERAÇÃO AQUI: Usa o novo endpoint leve ---
-                const response = await fetchComAuth(`https://www.inproutservices.com.br/api/os/${osId}/itens-dropdown`);
+                const response = await fetchComAuth(`http:localhost:8080/os/${osId}/itens-dropdown`);
                 // ------------------------------------------------
-                
+
                 if (!response.ok) throw new Error('Falha ao buscar detalhes da OS.');
-                
+
                 // O retorno agora é diretamente a lista, não precisa acessar .detalhes
-                const lpusParaExibir = await response.json(); 
+                const lpusParaExibir = await response.json();
 
                 if (lpusParaExibir && lpusParaExibir.length > 0) {
                     lpusParaExibir.forEach(item => {
@@ -899,7 +900,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const usuarioId = localStorage.getItem('usuarioId');
                     if (!usuarioId) throw new Error('ID do usuário não encontrado.');
-                    const response = await fetchComAuth(`https://www.inproutservices.com.br/api/os/por-usuario/${usuarioId}`);
+                    const response = await fetchComAuth(`http:localhost:8080/os/por-usuario/${usuarioId}`);
                     if (!response.ok) throw new Error('Falha ao carregar Ordens de Serviço.');
                     todasAsOS = await response.json();
 
@@ -923,12 +924,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Carrega Prestadores (se ainda não carregou)
             if (!todosOsPrestadores || todosOsPrestadores.length === 0) {
-                todosOsPrestadores = await popularSelect(document.getElementById('prestadorId'), 'https://www.inproutservices.com.br/api/index/prestadores/ativos', 'id', item => `${item.codigoPrestador} - ${item.prestador}`);
+                todosOsPrestadores = await popularSelect(document.getElementById('prestadorId'), 'http:localhost:8080/index/prestadores/ativos', 'id', item => `${item.codigoPrestador} - ${item.prestador}`);
             }
 
             // Carrega Etapas (se ainda não carregou)
             if (todasAsEtapas.length === 0) {
-                todasAsEtapas = await popularSelect(document.getElementById('etapaGeralSelect'), 'https://www.inproutservices.com.br/api/index/etapas', 'id', item => `${item.codigo} - ${item.nome}`);
+                todasAsEtapas = await popularSelect(document.getElementById('etapaGeralSelect'), 'http:localhost:8080/index/etapas', 'id', item => `${item.codigo} - ${item.nome}`);
             }
 
             // --- CARREGAMENTO DE DOCUMENTAÇÃO (CORRIGIDO) ---
@@ -937,7 +938,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Só carrega se a lista estiver vazia
             if (tiposDocumentacaoCache.length === 0) {
                 try {
-                    const res = await fetchComAuth('https://www.inproutservices.com.br/api/tipos-documentacao');
+                    const res = await fetchComAuth('http:localhost:8080/tipos-documentacao');
                     if (res.ok) {
                         tiposDocumentacaoCache = await res.json();
                     }
@@ -972,7 +973,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!tipoId || tipoId === "") {
                 // Se "Não se aplica" ou vazio, opcional: carregar todos ou deixar vazio
                 // Aqui vamos carregar todos os documentistas como fallback
-                fetchComAuth('https://www.inproutservices.com.br/api/usuarios/documentistas')
+                fetchComAuth('http:localhost:8080/usuarios/documentistas')
                     .then(r => r.json())
                     .then(docs => {
                         docs.forEach(d => selectDocumentista.add(new Option(d.nome, d.id)));
@@ -990,7 +991,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } else {
                 // Se não houver restrição (lista vazia), busca todos
-                fetchComAuth('https://www.inproutservices.com.br/api/usuarios/documentistas')
+                fetchComAuth('http:localhost:8080/usuarios/documentistas')
                     .then(r => r.json())
                     .then(docs => {
                         docs.forEach(d => selectDocumentista.add(new Option(d.nome, d.id)));
@@ -1086,7 +1087,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 try {
                     // Busca dados completos da OS para preencher campos read-only
-                    const response = await fetchComAuth(`https://www.inproutservices.com.br/api/os/${lancamento.os.id}`);
+                    const response = await fetchComAuth(`http:localhost:8080/os/${lancamento.os.id}`);
                     if (!response.ok) throw new Error('Falha ao recarregar dados da OS para edição.');
                     const osDataCompleta = await response.json();
                     preencherCamposOS(osDataCompleta);
@@ -1126,7 +1127,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const selectPrestadorEl = document.getElementById('prestadorId');
             if (selectPrestadorEl) {
                 if (selectPrestadorEl.choices) selectPrestadorEl.choices.destroy();
-                const prestadores = await fetchComAuth('https://www.inproutservices.com.br/api/index/prestadores/ativos').then(res => res.json());
+                const prestadores = await fetchComAuth('http:localhost:8080/index/prestadores/ativos').then(res => res.json());
                 const choices = new Choices(selectPrestadorEl, { searchEnabled: true, placeholder: true, placeholderValue: 'Digite para buscar o prestador...', itemSelectText: '', noResultsText: 'Nenhum resultado', });
                 const choicesData = prestadores.map(item => ({ value: item.id, label: `${item.codigoPrestador} - ${item.prestador}` }));
                 choices.setChoices(choicesData, 'value', 'label', false);
@@ -1151,30 +1152,46 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnConfirmarRecebimentoDoc) {
             btnConfirmarRecebimentoDoc.addEventListener('click', async function () {
                 const btn = this;
-                const idValue = document.getElementById('idLancamentoReceberDoc').value; // Pode ser um ID ou "LOTE"
+                const idValue = document.getElementById('idLancamentoReceberDoc').value; // Pode ser ID ou "LOTE"
                 const comentario = document.getElementById('comentarioRecebimento').value;
+                const dataInput = document.getElementById('dataRecebimentoDoc').value; // Vem YYYY-MM-DD do input
+
+                // 1. VALIDAÇÃO E CONVERSÃO DA DATA (A CORREÇÃO PRINCIPAL)
+                if (!dataInput) {
+                    mostrarToast("Por favor, selecione a data do recebimento.", "warning");
+                    return;
+                }
+
+                // Função utilitária que já existe no seu arquivo para virar DD/MM/YYYY
+                // Se ela não estiver no escopo, use: dataInput.split('-').reverse().join('/')
+                const dataFormatada = converterDataParaDDMMYYYY(dataInput);
+
                 const usuarioId = localStorage.getItem('usuarioId');
                 const modalEl = document.getElementById('modalReceberDoc');
                 const modalInstance = bootstrap.Modal.getInstance(modalEl);
 
                 const isLote = idValue === "LOTE";
-
                 let url, body;
 
+                // Objeto de dados (Payload)
+                const dadosEnvio = {
+                    usuarioId: usuarioId,
+                    comentario: comentario,
+                    dataRecebimento: dataFormatada // <--- AGORA VAI COMO 12/02/2026
+                };
+
                 if (isLote) {
-                    // Coleta os IDs selecionados
                     const checkboxes = document.querySelectorAll('.check-doc-item:checked');
                     const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
 
                     if (ids.length === 0) return;
 
                     url = `${API_BASE_URL}/lancamentos/lote/documentacao/receber`;
-                    body = JSON.stringify({ ids: ids, usuarioId: usuarioId, comentario: comentario });
+                    body = JSON.stringify({ ids: ids, ...dadosEnvio });
                 } else {
-                    // Processo individual (Legado)
                     if (!idValue) return;
                     url = `${API_BASE_URL}/lancamentos/${idValue}/documentacao/receber`;
-                    body = JSON.stringify({ usuarioId: usuarioId, comentario: comentario });
+                    body = JSON.stringify(dadosEnvio);
                 }
 
                 try {
@@ -1187,15 +1204,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         body: body
                     });
 
-                    if (!response.ok) throw new Error("Erro ao processar recebimento.");
+                    if (!response.ok) {
+                        // Tenta pegar a mensagem específica do erro (ex: "Status inválido")
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.message || "Erro ao processar recebimento.");
+                    }
 
                     mostrarToast(isLote ? "Lote processado com sucesso!" : "Documentação recebida!", "success");
 
                     if (modalInstance) modalInstance.hide();
 
-                    // Reseta a barra de lote
-                    document.getElementById('acoes-lote-doc').classList.add('d-none');
-                    document.getElementById('acoes-lote-doc').classList.remove('d-flex');
+                    // Esconde barra de lote se estiver visível
+                    const barraLote = document.getElementById('acoes-lote-doc');
+                    if (barraLote) {
+                        barraLote.classList.add('d-none');
+                        barraLote.classList.remove('d-flex');
+                    }
 
                     await carregarLancamentos();
 
@@ -1206,11 +1230,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="bi bi-check-lg"></i> Confirmar';
 
-                    // Restaura textos originais do modal (caso tenha mudado para lote)
-                    const titulo = modalEl.querySelector('.modal-title');
-                    const corpo = modalEl.querySelector('.modal-body p');
-                    titulo.innerHTML = `<i class="bi bi-file-earmark-check me-2"></i>Confirmar Recebimento`;
-                    corpo.textContent = `Deseja confirmar o recebimento da documentação física/digital para este lançamento?`;
+                    // Restaura textos do modal para o padrão
+                    if (modalEl) {
+                        modalEl.querySelector('.modal-title').innerHTML = `<i class="bi bi-file-earmark-check me-2"></i>Confirmar Recebimento`;
+                        modalEl.querySelector('.modal-body p').textContent = `Deseja confirmar o recebimento da documentação para este lançamento?`;
+                    }
                 }
             });
         }
@@ -1280,7 +1304,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (btnReceberDoc) {
                 const id = btnReceberDoc.dataset.id;
                 document.getElementById('idLancamentoReceberDoc').value = id;
-                document.getElementById('comentarioRecebimento').value = ''; // Limpa comentário anterior
+                document.getElementById('comentarioRecebimento').value = '';
+
+                document.getElementById('dataRecebimentoDoc').value = new Date().toISOString().split('T')[0];
+
                 new bootstrap.Modal(document.getElementById('modalReceberDoc')).show();
             } else if (e.target.closest('.btn-excluir-lancamento')) {
                 const lancamentoId = e.target.closest('.btn-excluir-lancamento').dataset.id;
@@ -1338,7 +1365,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 confirmButton.disabled = true;
                 confirmButton.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Enviando...`;
-                const resposta = await fetchComAuth(`https://www.inproutservices.com.br/api/lancamentos/${id}/submeter`, { method: 'POST' });
+                const resposta = await fetchComAuth(`http:localhost:8080/lancamentos/${id}/submeter`, { method: 'POST' });
                 if (!resposta.ok) throw new Error('Erro ao submeter.');
                 mostrarToast('Lançamento submetido com sucesso!', 'success');
                 await carregarLancamentos();
@@ -1521,7 +1548,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Cria um Map para garantir OS únicas
         const osMap = new Map();
-        
+
         todosLancamentos.forEach(l => {
             if (l.os && l.os.id && l.os.os) {
                 // Usa o ID como chave para unicidade
@@ -1597,7 +1624,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function popularSelectMateriais(selectElement) {
             if (todosOsMateriais.length === 0) {
                 selectElement.innerHTML = '<option value="" selected disabled>Carregando materiais...</option>';
-                fetchComAuth('https://www.inproutservices.com.br/api/materiais')
+                fetchComAuth('http:localhost:8080/materiais')
                     .then(res => res.json())
                     .then(data => {
                         todosOsMateriais = data;
@@ -1744,10 +1771,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 let urlOS = '';
-                if (isAdminOrController) urlOS = `https://www.inproutservices.com.br/api/os?completo=true`;
+                if (isAdminOrController) urlOS = `http:localhost:8080/os?completo=true`;
                 else {
                     const usuarioId = localStorage.getItem('usuarioId');
-                    urlOS = `https://www.inproutservices.com.br/api/os/por-usuario/${usuarioId}`;
+                    urlOS = `http:localhost:8080/os/por-usuario/${usuarioId}`;
                 }
 
                 const response = await fetchComAuth(urlOS);
@@ -1803,7 +1830,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             try {
-                const response = await fetchComAuth(`https://www.inproutservices.com.br/api/os/${osId}/lpus`);
+                const response = await fetchComAuth(`http:localhost:8080/os/${osId}/lpus`);
                 if (!response.ok) throw new Error('Falha ao buscar LPUs.');
                 const lpus = await response.json();
                 selectLPU.innerHTML = '<option value="" selected disabled>Selecione a LPU...</option>';
@@ -1877,7 +1904,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                const response = await fetchComAuth('https://www.inproutservices.com.br/api/solicitacoes', {
+                const response = await fetchComAuth('http:localhost:8080/solicitacoes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)

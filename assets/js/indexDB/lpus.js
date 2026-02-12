@@ -37,7 +37,7 @@ async function carregarContratos(selectId, selectedId = null) {
 
     selectElement.innerHTML = '<option value="" selected disabled>Carregando...</option>';
     try {
-        const response = await fetchComAuth('https://www.inproutservices.com.br/api/contrato');
+        const response = await fetchComAuth('http:localhost:8080/contrato');
         if (!response.ok) throw new Error('Falha ao buscar contratos');
         const contratos = await response.json();
 
@@ -70,7 +70,7 @@ async function carregarLpusNoSelect(selectId, filtroAtivo, textoPlaceholder) {
     selectElement.innerHTML = `<option value="" selected disabled>Carregando...</option>`;
     
     // MUDANÇA: Buscar direto em /lpu em vez de /contrato para pegar TUDO
-    const url = `https://www.inproutservices.com.br/api/lpu`;
+    const url = `http:localhost:8080/lpu`;
 
     try {
         const response = await fetchComAuth(url);
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
             };
 
             try {
-                const response = await fetchComAuth('https://www.inproutservices.com.br/api/lpu', {
+                const response = await fetchComAuth('http:localhost:8080/lpu', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(dadosLPU)
@@ -249,14 +249,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
             try {
                 // 1. Busca os detalhes da LPU selecionada
-                const lpuResponse = await fetchComAuth(`https://www.inproutservices.com.br/api/lpu/${lpuId}`);
+                const lpuResponse = await fetchComAuth(`http:localhost:8080/lpu/${lpuId}`);
                 if (!lpuResponse.ok) throw new Error('LPU não encontrada');
                 const lpu = await lpuResponse.json();
 
                 // LÓGICA CORRIGIDA PARA ENCONTRAR O CONTRATO DA LPU
                 let contratoIdDaLpu = null;
                 // 2. Busca TODOS os contratos para descobrir a qual deles a LPU pertence
-                const contratosResponse = await fetchComAuth('https://www.inproutservices.com.br/api/contrato');
+                const contratosResponse = await fetchComAuth('http:localhost:8080/contrato');
                 const todosContratos = await contratosResponse.json();
 
                 // 3. Encontra o contrato que contém a LPU com o ID selecionado
@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             try {
                 // Envia os dados para a API usando o método PATCH
-                const response = await fetchComAuth(`https://www.inproutservices.com.br/api/lpu/${lpuId}`, {
+                const response = await fetchComAuth(`http:localhost:8080/lpu/${lpuId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(dadosUpdate)
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function () {
             this.disabled = true;
 
             try {
-                const response = await fetchComAuth(`https://www.inproutservices.com.br/api/lpu/${lpuId}`, {
+                const response = await fetchComAuth(`http:localhost:8080/lpu/${lpuId}`, {
                     method: 'DELETE'
                 });
 
@@ -495,7 +495,7 @@ document.addEventListener('DOMContentLoaded', function () {
             this.disabled = true;
 
             try {
-                const url = `https://www.inproutservices.com.br/api/lpu/${lpuId}`;
+                const url = `http:localhost:8080/lpu/${lpuId}`;
                 const response = await fetchComAuth(url, {
                     method: 'PATCH',
                     headers: {
@@ -573,7 +573,7 @@ async function carregarTabelaLPU() {
     tbody.innerHTML = "<tr><td colspan='100%'>Carregando contratos...</td></tr>";
 
     try {
-        const response = await fetchComAuth("https://www.inproutservices.com.br/api/contrato");
+        const response = await fetchComAuth("http:localhost:8080/contrato");
         if (!response.ok) throw new Error("Falha ao carregar os dados dos contratos.");
 
         const dadosContratos = await response.json();
@@ -695,12 +695,12 @@ async function preencherCamposConfirmacao(lpuId, modo) {
 
     try {
         // 2. Busca os detalhes da LPU específica
-        const lpuResponse = await fetchComAuth(`https://www.inproutservices.com.br/api/lpu/${lpuId}`);
+        const lpuResponse = await fetchComAuth(`http:localhost:8080/lpu/${lpuId}`);
         if (!lpuResponse.ok) throw new Error('Falha ao buscar detalhes da LPU.');
         const lpu = await lpuResponse.json();
 
         // 3. Busca todos os contratos para encontrar o contrato pai da LPU
-        const contratosResponse = await fetchComAuth('https://www.inproutservices.com.br/api/contrato');
+        const contratosResponse = await fetchComAuth('http:localhost:8080/contrato');
         if (!contratosResponse.ok) throw new Error('Falha ao buscar contratos.');
         const todosContratos = await contratosResponse.json();
         const contratoPai = todosContratos.find(c => c.lpus && c.lpus.some(l => l.id == lpuId));
