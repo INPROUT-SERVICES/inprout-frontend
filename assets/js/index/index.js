@@ -1152,19 +1152,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnConfirmarRecebimentoDoc) {
             btnConfirmarRecebimentoDoc.addEventListener('click', async function () {
                 const btn = this;
-                const idValue = document.getElementById('idLancamentoReceberDoc').value; // Pode ser ID ou "LOTE"
+                const idValue = document.getElementById('idLancamentoReceberDoc').value;
                 const comentario = document.getElementById('comentarioRecebimento').value;
-                const dataInput = document.getElementById('dataRecebimentoDoc').value; // Vem YYYY-MM-DD do input
 
-                // 1. VALIDAÇÃO E CONVERSÃO DA DATA (A CORREÇÃO PRINCIPAL)
+                // 1. PEGA O VALOR CRU (YYYY-MM-DD)
+                // O input type="date" sempre entrega neste formato via .value
+                const dataInput = document.getElementById('dataRecebimentoDoc').value;
+
                 if (!dataInput) {
                     mostrarToast("Por favor, selecione a data do recebimento.", "warning");
                     return;
                 }
 
-                // Função utilitária que já existe no seu arquivo para virar DD/MM/YYYY
-                // Se ela não estiver no escopo, use: dataInput.split('-').reverse().join('/')
-                const dataFormatada = converterDataParaDDMMYYYY(dataInput);
+                // 2. SE VOCÊ QUISER EXIBIR NA MENSAGEM DE SUCESSO (OPCIONAL)
+                // Aqui você cria uma variável APENAS para mostrar pro usuário, se precisar
+                // const dataVisual = dataInput.split('-').reverse().join('/'); 
 
                 const usuarioId = localStorage.getItem('usuarioId');
                 const modalEl = document.getElementById('modalReceberDoc');
@@ -1173,11 +1175,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isLote = idValue === "LOTE";
                 let url, body;
 
-                // Objeto de dados (Payload)
+                // 3. MONTA O PAYLOAD COM A DATA "CRUA" (ISO)
+                // O Java espera YYYY-MM-DD para fazer o LocalDate.parse() sem erros
                 const dadosEnvio = {
                     usuarioId: usuarioId,
                     comentario: comentario,
-                    dataRecebimento: dataFormatada // <--- AGORA VAI COMO 12/02/2026
+                    dataRecebimento: dataInput // <--- MANTER formato YYYY-MM-DD aqui!
                 };
 
                 if (isLote) {
