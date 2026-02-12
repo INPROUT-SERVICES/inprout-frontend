@@ -2,7 +2,7 @@
 // 1. ESTADO GLOBAL E UTILITÁRIOS (aprovacoes-state.js)
 // ==========================================================
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://www.inproutservices.com.br/api';
 const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
 const userId = localStorage.getItem('usuarioId');
 
