@@ -611,26 +611,22 @@ async function confirmarPagamentoComData(ids, tipo) {
             });
 
             if (res.ok) {
-                // 1. Fecha o Modal de Loading imediatamente
                 Swal.close();
 
-                // 2. ATUALIZAÇÃO OTIMISTA (Remove visualmente AGORA)
-                // Isso faz os itens sumirem instantaneamente da tela sem esperar o servidor devolver a lista nova
                 if (window.dadosCpsGlobais) {
                     window.dadosCpsGlobais = window.dadosCpsGlobais.filter(item => !ids.includes(item.id));
                     renderizarAcordeonCPS(window.dadosCpsGlobais, 'accordionPendenciasCPS', 'msg-sem-pendencias-cps', true);
                 }
 
-                // 3. Feedback discreto
-                mostrarToast('Pagamento registrado com sucesso!', 'success');
+                mostrarToast('Adiantamento registrado com sucesso!', 'success');
 
-                // 4. Limpa seleção
                 document.querySelectorAll('.cps-check').forEach(c => c.checked = false);
                 atualizarBotoesLoteCPS();
 
-                // 5. Atualiza dados reais do servidor em segundo plano (O usuário já viu a tela atualizar)
-                carregarPendenciasCPS();
-                atualizarDashboardFixo();
+                setTimeout(() => {
+                    carregarPendenciasCPS();   
+                    atualizarDashboardFixo(); 
+                }, 300);
 
             } else {
                 throw new Error(await res.text());

@@ -557,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderizarTodasAsTabelas() {
         const dadosParaExibir = getDadosFiltrados();
 
-        // 1. Definição do Comparer
+        // 1. Definição do Comparer (Mantido)
         const comparer = (a, b) => {
             let valA = getNestedValue(a, sortConfig.key);
             let valB = getNestedValue(b, sortConfig.key);
@@ -580,7 +580,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const paralisados = getProjetosParalisados().sort(comparer);
 
         // === CORREÇÃO: AGRUPAMENTO POR OS PARA A ABA "PENDENTE DOC" ===
-        // Filtra todos os itens que têm uma OS com status pendente (mesmo que o item seja N/A)
+        // Filtra todos os itens que têm uma OS com status pendente
         const itensComDocPendente = dadosParaExibir.filter(l => l.os && l.os.statusDocumentacao === 'PENDENTE_RECEBIMENTO');
 
         // Agrupa por ID da OS
@@ -591,26 +591,29 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!agrupamentoMap.has(osId)) {
                 // Cria um objeto "Representante" da OS
                 agrupamentoMap.set(osId, {
-                    ...item, // Copia dados do primeiro item para exibir Site, Regional, etc.
-                    id: item.os.id, // IMPORTANTE: O ID da linha passa a ser o da OS para a ação funcionar
+                    ...item, 
+                    id: item.os.id, // ID visual da linha (agrupamento)
+                    idsLancamentos: [item.id], // <--- NOVA PROPRIEDADE: Lista real dos lançamentos
                     isAgrupado: true,
-                    valor: 0, // Vamos somar o valor total
-                    // Garante que os campos de doc venham da OS
+                    valor: 0, 
                     statusDocumentacao: item.os.statusDocumentacao,
                     tipoDocumentacaoNome: item.os.tipoDocumentacaoNome, 
                     documentistaNome: item.os.documentistaNome
                 });
+            } else {
+                // Se já existe, apenas adiciona o ID do lançamento na lista
+                const grupo = agrupamentoMap.get(osId);
+                grupo.idsLancamentos.push(item.id);
             }
             // Soma o valor
             const grupo = agrupamentoMap.get(osId);
             grupo.valor += (item.valor || 0);
         });
 
-        // Converte o mapa de volta para array e ordena
         const pendentesDoc = Array.from(agrupamentoMap.values()).sort(comparer);
         // ==============================================================
 
-        // 3. Atualização de KPIs
+        // 3. Atualização de KPIs (Mantido)
         const kpiValorEl = document.getElementById('kpi-valor-pendente');
         if (kpiValorEl) {
             const totalPendente = pendentesAprovacao.reduce((acc, curr) => acc + (curr.valor || 0), 0);
@@ -625,11 +628,9 @@ document.addEventListener('DOMContentLoaded', () => {
         renderizarTabela(minhasPendencias, tbodyMinhasPendencias, colunasMinhasPendencias);
         renderizarTabela(historico, tbodyHistorico, colunasHistorico);
         renderizarTabela(paralisados, tbodyParalisados, colunasMinhasPendencias);
-
-        // --- Renderiza a nova tabela de Documentação (AGORA AGRUPADA) ---
         renderizarTabela(pendentesDoc, document.getElementById('tbody-pendente-doc'), colunasPendenteDoc);
 
-        // 5. Atualização de Notificações e Badges
+        // 5. Atualização de Notificações e Badges (Mantido)
         if (notificacaoPendencias) {
             notificacaoPendencias.textContent = minhasPendencias.length;
             notificacaoPendencias.style.display = minhasPendencias.length > 0 ? '' : 'none';
