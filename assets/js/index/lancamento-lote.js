@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const formulariosContainerLote = document.getElementById('formulariosContainerLote');
 
     // Botões do rodapé do modal
-    const btnSubmitAdicionarLote = document.getElementById('btnSubmitAdicionarLote');
     const btnSalvarRascunhoLote = document.getElementById('btnSalvarRascunhoLote');
     const btnSalvarEEnviarLote = document.getElementById('btnSalvarEEnviarLote');
 
@@ -23,8 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let todasAsEtapasLote = [];
     let todosOsPrestadoresLote = [];
     let todasAsOSLote = [];
-    let todosTiposDocumentacaoLote = [];
-    let todosDocumentistasLote = [];
 
 
     function inicializarFlatpickrComFormato(selector) {
@@ -161,15 +158,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h6 class="section-title">Controle de Documentação</h6>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label for="tipoDocumentacaoId-lpu-${idSufixo}" class="form-label">Tipo de Documentação</label>
-                            <select class="form-select tipo-doc-select" id="tipoDocumentacaoId-lpu-${idSufixo}">
+                            <label for="documentoId-lpu-${idSufixo}" class="form-label">Documento</label>
+                            <select class="form-select documento-select-lote" id="documentoId-lpu-${idSufixo}">
                                 <option value="" selected>Não se aplica</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label for="documentistaId-lpu-${idSufixo}" class="form-label">Documentista Responsável</label>
-                            <select class="form-select documentista-select" id="documentistaId-lpu-${idSufixo}">
-                                <option value="" selected disabled>Selecione...</option>
+                            <select class="form-select documentista-select-lote" id="documentistaId-lpu-${idSufixo}" disabled>
+                                <option value="" selected disabled>Selecione um documento primeiro...</option>
                             </select>
                         </div>
                     </div>
@@ -191,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <select class="form-select" id="instalacao-lpu-${idSufixo}"><option>OK</option><option>NOK</option><option selected>N/A</option></select>
                             <input type="text" class="form-control flatpickr-date-lote mt-2" id="planoInstalacao-lpu-${idSufixo}" placeholder="Plano (Data)">
                         </div>
-                         <div class="card etapa-card">
+                        <div class="card etapa-card">
                             <h6>Ativação</h6>
                             <select class="form-select" id="ativacao-lpu-${idSufixo}"><option>OK</option><option>NOK</option><option selected>N/A</option></select>
                             <input type="text" class="form-control flatpickr-date-lote mt-2" id="planoAtivacao-lpu-${idSufixo}" placeholder="Plano (Data)">
@@ -217,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <select class="form-select status-select" id="status-lpu-${idSufixo}" required disabled></select>
                         </div>
                     </div>
-                     <div class="mb-3">
+                    <div class="mb-3">
                         <label for="situacao-lpu-${idSufixo}" class="form-label">Situação</label>
                         <select class="form-select" id="situacao-lpu-${idSufixo}">
                             <option value="" selected disabled>Selecione...</option>
@@ -228,13 +225,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             <option>Finalizado</option>
                         </select>
                     </div>
-                     <div class="mb-3">
+                    <div class="mb-3">
                         <label for="detalheDiario-lpu-${idSufixo}" class="form-label">Detalhe Diário</label>
                         <textarea class="form-control" id="detalheDiario-lpu-${idSufixo}" rows="2" required></textarea>
                     </div>
                     <h6 class="section-title">Financeiro</h6>
                     <div class="row g-3 mb-3">
-                         <div class="col-md-8">
+                        <div class="col-md-8">
                             <label for="prestadorId-lpu-${idSufixo}" class="form-label">Prestador</label>
                             <select class="form-select" id="prestadorId-lpu-${idSufixo}" required></select>
                         </div>
@@ -280,31 +277,18 @@ document.addEventListener('DOMContentLoaded', () => {
             selectEtapaGeral.innerHTML = '<option value="" selected disabled>Selecione...</option>';
             todasAsEtapasLote.forEach(e => selectEtapaGeral.add(new Option(`${e.codigo} - ${e.nome}`, e.id)));
         }
-
-        const selectTipoDoc = document.getElementById(`tipoDocumentacaoId-lpu-${idSufixo}`);
-        if (selectTipoDoc && todosTiposDocumentacaoLote.length > 0) {
-            todosTiposDocumentacaoLote.forEach(td => selectTipoDoc.add(new Option(td.nome, td.id)));
-        }
-
-        const selectDocumentista = document.getElementById(`documentistaId-lpu-${idSufixo}`);
-        if (selectDocumentista && todosDocumentistasLote.length > 0) {
-            todosDocumentistasLote.forEach(d => selectDocumentista.add(new Option(d.nome, d.id)));
-        }
     }
 
     /**
     * Lê todos os valores de um formulário específico e retorna um objeto.
     */
     function lerDadosDeFormulario(idSufixo) {
-        // 1. É necessário declarar as variáveis ANTES do return
-        // O ?.value evita erro se o campo não existir por algum motivo
-        const campoTipoDoc = document.getElementById(`tipoDocumentacaoId-lpu-${idSufixo}`);
+        const campoDocumento = document.getElementById(`documentoId-lpu-${idSufixo}`);
         const campoDocumentista = document.getElementById(`documentistaId-lpu-${idSufixo}`);
 
-        const tipoDocVal = campoTipoDoc ? campoTipoDoc.value : "";
+        const documentoVal = campoDocumento ? campoDocumento.value : "";
         const documentistaVal = campoDocumentista ? campoDocumentista.value : "";
 
-        // Captura os outros valores do formulário
         const vistoria = document.getElementById(`vistoria-lpu-${idSufixo}`).value;
         const planoVistoria = formatarDataParaAPI(document.getElementById(`planoVistoria-lpu-${idSufixo}`).value);
         const desmobilizacao = document.getElementById(`desmobilizacao-lpu-${idSufixo}`).value;
@@ -322,31 +306,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const detalheDiario = document.getElementById(`detalheDiario-lpu-${idSufixo}`).value;
         const prestadorId = document.getElementById(`prestadorId-lpu-${idSufixo}`).value;
 
-        // Tratamento do valor monetário
         const valorInput = document.getElementById(`valor-lpu-${idSufixo}`).value;
         const valor = parseFloat(valorInput.replace(/\./g, '').replace(',', '.')) || 0;
 
         return {
-            vistoria: vistoria,
-            planoVistoria: planoVistoria,
-            desmobilizacao: desmobilizacao,
-            planoDesmobilizacao: planoDesmobilizacao,
-            instalacao: instalacao,
-            planoInstalacao: planoInstalacao,
-            ativacao: ativacao,
-            planoAtivacao: planoAtivacao,
-            documentacao: documentacao,
-            planoDocumentacao: planoDocumentacao,
+            // Dados do lançamento
+            vistoria, planoVistoria, desmobilizacao, planoDesmobilizacao,
+            instalacao, planoInstalacao, ativacao, planoAtivacao,
+            documentacao, planoDocumentacao, etapaDetalhadaId,
+            status, situacao, detalheDiario, prestadorId, valor,
 
-            tipoDocumentacaoId: tipoDocVal && tipoDocVal !== "" ? parseInt(tipoDocVal) : null,
-            documentistaId: documentistaVal && documentistaVal !== "" ? parseInt(documentistaVal) : null,
-
-            etapaDetalhadaId: etapaDetalhadaId,
-            status: status,
-            situacao: situacao,
-            detalheDiario: detalheDiario,
-            prestadorId: prestadorId,
-            valor: valor
+            // Dados de doc separados para usarmos no momento de chamar a API de doc
+            _documentoInfo: {
+                documentoId: documentoVal ? parseInt(documentoVal) : null,
+                documentistaId: documentistaVal ? parseInt(documentistaVal) : null
+            }
         };
     }
 
@@ -470,12 +444,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (todosOsPrestadoresLote.length === 0) {
                 todosOsPrestadoresLote = await fetchComAuth('/api/index/prestadores/ativos').then(res => res.json());
             }
-            if (todosTiposDocumentacaoLote.length === 0) {
-                todosTiposDocumentacaoLote = await fetchComAuth('/api/tipos-documentacao').then(res => res.json());
-            }
-            if (todosDocumentistasLote.length === 0) {
-                todosDocumentistasLote = await fetchComAuth('/api/usuarios/documentistas').then(res => res.json());
-            }
 
             const replicarDados = document.getElementById('replicarDadosSwitchLote').checked;
 
@@ -542,28 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectStatus.disabled = false;
             }
         }
-        if (target.classList.contains('tipo-doc-select')) {
-            const tipoId = target.value;
-            const sufixoId = target.id.replace('tipoDocumentacaoId-', '');
-            const selectDocumentista = document.getElementById(`documentistaId-${sufixoId}`);
 
-            if (selectDocumentista) {
-                selectDocumentista.innerHTML = '<option value="" selected disabled>Selecione...</option>';
-
-                const tipoSelecionado = todosTiposDocumentacaoLote.find(t => t.id == tipoId);
-
-                if (tipoSelecionado && tipoSelecionado.documentistas && tipoSelecionado.documentistas.length > 0) {
-                    tipoSelecionado.documentistas.forEach(doc => {
-                        selectDocumentista.add(new Option(doc.nome, doc.id));
-                    });
-                } else {
-                    // Fallback: mostra todos se não houver restrição
-                    todosDocumentistasLote.forEach(doc => {
-                        selectDocumentista.add(new Option(doc.nome, doc.id));
-                    });
-                }
-            }
-        }
     });
 
     function formatarDataParaAPI(dataString) {
@@ -589,6 +536,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (lpusSelecionadas.length === 0) throw new Error("Nenhuma LPU foi selecionada para o lançamento.");
 
             const lancamentosEmLote = [];
+            const infoDocsPorLpu = []; // Para guardarmos o que vai pra API de Documentos
+
             const osId = selectOSLote.value;
             const dataAtividade = document.getElementById('dataAtividadeLote').value;
             const replicarDados = document.getElementById('replicarDadosSwitchLote').checked;
@@ -597,7 +546,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let dadosReplicados = {};
             if (replicarDados) {
-                // Se for replicar, lê os dados do formulário único UMA VEZ
                 dadosReplicados = lerDadosDeFormulario('unico');
             }
 
@@ -605,33 +553,75 @@ document.addEventListener('DOMContentLoaded', () => {
                 const lpuId = checkbox.value;
                 const osLpuDetalheId = checkbox.dataset.osLpuDetalheId;
 
-                // Se não estiver replicando, lê os dados do formulário específico desta LPU
                 const dadosFormulario = replicarDados ? dadosReplicados : lerDadosDeFormulario(lpuId);
 
+                // Separamos o que é de Doc do que é de Lançamento
+                const { _documentoInfo, ...dadosLancamento } = dadosFormulario;
+
                 const dadosLpu = {
-                    ...dadosFormulario, // Usa os dados lidos (sejam eles únicos ou replicados)
+                    ...dadosLancamento,
                     managerId: localStorage.getItem('usuarioId'),
                     osId: osId,
                     lpuId: lpuId,
-                    osLpuDetalheId: osLpuDetalheId, // Sempre usa o osLpuDetalheId
+                    osLpuDetalheId: osLpuDetalheId,
                     dataAtividade: formatarDataParaAPI(dataAtividade),
-                    atividadeComplementar: false, // Hardcoded para false
-                    quantidade: null, // Hardcoded para null
+                    atividadeComplementar: false,
+                    quantidade: null,
                     situacaoAprovacao: acao === 'enviar' ? 'PENDENTE_COORDENADOR' : 'RASCUNHO'
                 };
 
+                // Guarda esse array pareado: A LPU selecionada e sua config de doc
+                infoDocsPorLpu.push({ lpuId, docInfo: _documentoInfo });
                 lancamentosEmLote.push(dadosLpu);
             }
 
-            const response = await fetchComAuth('/api/lancamentos/lote', {
+            // 1. SALVAR LANÇAMENTOS
+            const responseLancamento = await fetchComAuth('/api/lancamentos/lote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(lancamentosEmLote)
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
+            if (!responseLancamento.ok) {
+                const errorData = await responseLancamento.json();
                 throw new Error(errorData.message || 'Erro ao salvar lançamentos em lote.');
+            }
+
+            // O backend normalmente retorna a lista de lançamentos salvos com os IDs gerados
+            const lancamentosSalvos = await responseLancamento.json();
+
+            // 2. DISPARAR CRIAÇÃO DE DOCUMENTAÇÃO (NOVA API)
+            if (typeof DocumentacaoModule !== 'undefined') {
+                // Se "Replicar Dados" estiver ativo e houver documento, 
+                // mandamos um POST só agrupando os IDs de lançamento.
+                if (replicarDados && dadosReplicados._documentoInfo.documentoId) {
+                    const lancamentosIdsGerados = lancamentosSalvos.map(l => l.id);
+
+                    await DocumentacaoModule.criarSolicitacao({
+                        osId: osId,
+                        documentoId: dadosReplicados._documentoInfo.documentoId,
+                        documentistaId: dadosReplicados._documentoInfo.documentistaId,
+                        lancamentoIds: lancamentosIdsGerados,
+                        acao: acao
+                    });
+                }
+                // Se for Individual, itera sobre cada lançamento salvo
+                else if (!replicarDados) {
+                    for (const lancamentoSalvo of lancamentosSalvos) {
+                        const lpuIdDoLanc = lancamentoSalvo.detalhe.lpu.id; // Verifica como sua API retorna
+                        const infoDoc = infoDocsPorLpu.find(i => i.lpuId == lpuIdDoLanc)?.docInfo;
+
+                        if (infoDoc && infoDoc.documentoId) {
+                            await DocumentacaoModule.criarSolicitacao({
+                                osId: osId,
+                                documentoId: infoDoc.documentoId,
+                                documentistaId: infoDoc.documentistaId,
+                                lancamentoIds: [lancamentoSalvo.id], // Manda array com 1 ID
+                                acao: acao
+                            });
+                        }
+                    }
+                }
             }
 
             if (typeof mostrarToast === 'function') mostrarToast('Lançamento(s) salvo(s) com sucesso!', 'success');

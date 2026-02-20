@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let indexDataFim = new Date();
     let indexDataInicio = new Date();
     indexDataInicio.setDate(indexDataFim.getDate() - 30);
-    let tiposDocumentacaoCache = [];
 
     let sortConfig = {
         key: 'dataAtividade',
@@ -48,9 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
         "PRESTADOR": (lancamento) => getNestedValue(lancamento, 'prestador.nome'),
         "VALOR": (lancamento) => formatarMoeda(lancamento.valor),
         "GESTOR": (lancamento) => getNestedValue(lancamento, 'manager.nome'),
-        "TIPO DOC.": (lancamento) => lancamento.tipoDocumentacaoNome || '-',
-        "DOCUMENTISTA": (lancamento) => lancamento.documentistaNome || '-',
-        "STATUS DOC.": (lancamento) => lancamento.statusDocumentacao ? lancamento.statusDocumentacao.replace(/_/g, ' ') : '-',
         "AÇÃO": () => ''
     };
 
@@ -461,30 +457,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return dadosFiltrados;
     }
 
-    function atualizarBarraAcoesDoc() {
-        const checkboxes = document.querySelectorAll('.check-doc-item:checked');
-        const count = checkboxes.length;
-        const barra = document.getElementById('acoes-lote-doc');
-        const contador = document.getElementById('contador-selecao-doc');
-
-        if (barra && contador) {
-            contador.textContent = count;
-            if (count > 0) {
-                barra.classList.remove('d-none');
-                barra.classList.add('d-flex');
-            } else {
-                barra.classList.add('d-none');
-                barra.classList.remove('d-flex');
-            }
-        }
-    }
-
-    function toggleSelecionarTodosDoc(checked) {
-        const checkboxes = document.querySelectorAll('#tbody-pendente-doc .check-doc-item');
-        checkboxes.forEach(cb => cb.checked = checked);
-        atualizarBarraAcoesDoc();
-    }
-
     // Listener para checkboxes individuais (Delegation)
     document.getElementById('tbody-pendente-doc')?.addEventListener('change', (e) => {
         if (e.target.classList.contains('check-doc-item')) {
@@ -500,28 +472,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-
-    // Botão de Abrir Modal para Lote
-    const btnReceberLoteDoc = document.getElementById('btnReceberLoteDoc');
-    if (btnReceberLoteDoc) {
-        btnReceberLoteDoc.addEventListener('click', () => {
-            document.getElementById('idLancamentoReceberDoc').value = "LOTE";
-            document.getElementById('comentarioRecebimento').value = "";
-
-            // NOVO: Define a data de hoje como padrão
-            document.getElementById('dataRecebimentoDoc').value = new Date().toISOString().split('T')[0];
-
-            const modalEl = document.getElementById('modalReceberDoc');
-            const titulo = modalEl.querySelector('.modal-title');
-            const corpo = modalEl.querySelector('.modal-body p');
-
-            titulo.innerHTML = `<i class="bi bi-collection me-2"></i>Recebimento em Lote`;
-            const qtd = document.getElementById('contador-selecao-doc').textContent;
-            corpo.textContent = `Deseja confirmar o recebimento de documentação para os ${qtd} itens selecionados?`;
-
-            new bootstrap.Modal(modalEl).show();
-        });
-    }
 
     async function carregarLancamentos(append = false) {
         if (!append) {
@@ -580,40 +530,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const historico = dadosParaExibir.filter(l => !['RASCUNHO', ...statusPendentes, ...statusRejeitados].includes(l.situacaoAprovacao)).sort(comparer);
         const paralisados = getProjetosParalisados().sort(comparer);
 
-        // === CORREÇÃO: AGRUPAMENTO POR OS PARA A ABA "PENDENTE DOC" ===
-        // Filtra todos os itens que têm uma OS com status pendente
-        const itensComDocPendente = dadosParaExibir.filter(l => l.os && l.os.statusDocumentacao === 'PENDENTE_RECEBIMENTO');
-
-        // Agrupa por ID da OS
-        const agrupamentoMap = new Map();
-
-        itensComDocPendente.forEach(item => {
-            const osId = item.os.id;
-            if (!agrupamentoMap.has(osId)) {
-                // Cria um objeto "Representante" da OS
-                agrupamentoMap.set(osId, {
-                    ...item,
-                    id: item.os.id, // ID visual da linha (agrupamento)
-                    idsLancamentos: [item.id], // <--- NOVA PROPRIEDADE: Lista real dos lançamentos
-                    isAgrupado: true,
-                    valor: 0,
-                    statusDocumentacao: item.os.statusDocumentacao,
-                    tipoDocumentacaoNome: item.os.tipoDocumentacaoNome,
-                    documentistaNome: item.os.documentistaNome
-                });
-            } else {
-                // Se já existe, apenas adiciona o ID do lançamento na lista
-                const grupo = agrupamentoMap.get(osId);
-                grupo.idsLancamentos.push(item.id);
-            }
-            // Soma o valor
-            const grupo = agrupamentoMap.get(osId);
-            grupo.valor += (item.valor || 0);
-        });
-
-        const pendentesDoc = Array.from(agrupamentoMap.values()).sort(comparer);
-        // ==============================================================
-
         // 3. Atualização de KPIs (Mantido)
         const kpiValorEl = document.getElementById('kpi-valor-pendente');
         if (kpiValorEl) {
@@ -629,18 +545,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderizarTabela(minhasPendencias, tbodyMinhasPendencias, colunasMinhasPendencias);
         renderizarTabela(historico, tbodyHistorico, colunasHistorico);
         renderizarTabela(paralisados, tbodyParalisados, colunasMinhasPendencias);
-        renderizarTabela(pendentesDoc, document.getElementById('tbody-pendente-doc'), colunasPendenteDoc);
 
         // 5. Atualização de Notificações e Badges (Mantido)
         if (notificacaoPendencias) {
             notificacaoPendencias.textContent = minhasPendencias.length;
             notificacaoPendencias.style.display = minhasPendencias.length > 0 ? '' : 'none';
-        }
-
-        const badgeDoc = document.getElementById('badge-pendente-doc');
-        if (badgeDoc) {
-            badgeDoc.textContent = pendentesDoc.length;
-            badgeDoc.style.display = pendentesDoc.length > 0 ? '' : 'none';
         }
 
         atualizarContadorKpi();
@@ -737,14 +646,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const acao = submitter.dataset.acao;
             const editingId = formAdicionar.dataset.editingId;
             const osLpuDetalheIdCorreto = formAdicionar.dataset.osLpuDetalheId || document.getElementById('lpuId').value;
-            const tipoDocValue = document.getElementById('tipoDocumentacaoId').value;
-            const documentistaValue = document.getElementById('documentistaId').value;
 
             const payload = {
                 managerId: localStorage.getItem('usuarioId'),
                 osId: selectOS.value,
-                tipoDocumentacaoId: tipoDocValue ? parseInt(tipoDocValue) : null,
-                documentistaId: documentistaValue ? parseInt(documentistaValue) : null,
                 prestadorId: document.getElementById('prestadorId').value,
                 etapaDetalhadaId: selectEtapaDetalhada.value,
                 dataAtividade: converterDataParaDDMMYYYY(document.getElementById('dataAtividade').value),
@@ -772,11 +677,14 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 toggleModalLoader(true);
                 const response = await fetchComAuth(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) {
-                    let errorMsg = 'Erro desconhecido no servidor.';
-                    try { const errorData = await response.json(); errorMsg = errorData.message || JSON.stringify(errorData); }
-                    catch (e) { errorMsg = await response.text(); }
-                    throw new Error(errorMsg);
+                if (document.getElementById('documentoId').value) {
+                    await DocumentacaoModule.criarSolicitacao({
+                        osId: selectOS.value,
+                        documentoId: document.getElementById('documentoId').value,
+                        documentistaId: document.getElementById('documentistaId').value,
+                        lancamentoIds: [lancamentoSalvo.id],
+                        acao: acao
+                    });
                 }
                 mostrarToast('Lançamento salvo com sucesso!', 'success');
                 modalAdicionar.hide();
@@ -932,9 +840,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 todasAsEtapas = await popularSelect(document.getElementById('etapaGeralSelect'), '/api/index/etapas', 'id', item => `${item.codigo} - ${item.nome}`);
             }
 
-            // --- CARREGAMENTO DE DOCUMENTAÇÃO (CORRIGIDO) ---
-            const selectTipoDoc = document.getElementById('tipoDocumentacaoId');
-
             // Só carrega se a lista estiver vazia
             if (tiposDocumentacaoCache.length === 0) {
                 try {
@@ -961,50 +866,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (valorAtual) selectTipoDoc.value = valorAtual;
             }
             // ------------------------------------------------
-        }
-
-        function filtrarDocumentistasPorTipo(tipoId) {
-            const selectDocumentista = document.getElementById('documentistaId');
-            if (!selectDocumentista) return;
-
-            // Limpa e adiciona placeholder
-            selectDocumentista.innerHTML = '<option value="" selected disabled>Selecione...</option>';
-
-            if (!tipoId || tipoId === "") {
-                // Se "Não se aplica" ou vazio, opcional: carregar todos ou deixar vazio
-                // Aqui vamos carregar todos os documentistas como fallback
-                fetchComAuth('/api/usuarios/documentistas')
-                    .then(r => r.json())
-                    .then(docs => {
-                        docs.forEach(d => selectDocumentista.add(new Option(d.nome, d.id)));
-                    });
-                return;
-            }
-
-            // Encontra o tipo selecionado no cache
-            const tipoSelecionado = tiposDocumentacaoCache.find(t => t.id == tipoId);
-
-            if (tipoSelecionado && tipoSelecionado.documentistas && tipoSelecionado.documentistas.length > 0) {
-                // Se houver restrição, mostra apenas os permitidos
-                tipoSelecionado.documentistas.forEach(doc => {
-                    selectDocumentista.add(new Option(doc.nome, doc.id));
-                });
-            } else {
-                // Se não houver restrição (lista vazia), busca todos
-                fetchComAuth('/api/usuarios/documentistas')
-                    .then(r => r.json())
-                    .then(docs => {
-                        docs.forEach(d => selectDocumentista.add(new Option(d.nome, d.id)));
-                    });
-            }
-        }
-
-        // Adiciona o listener ao select
-        const selectTipoDocEl = document.getElementById('tipoDocumentacaoId');
-        if (selectTipoDocEl) {
-            selectTipoDocEl.addEventListener('change', (e) => {
-                filtrarDocumentistasPorTipo(e.target.value);
-            });
         }
 
         async function abrirModalParaEdicao(lancamento, editingId) {
@@ -1050,25 +911,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     btnSubmitPadrao.innerHTML = `<i class="bi bi-check-circle"></i> Criar Lançamento`;
                 }
                 if (dataAtividadeInput) dataAtividadeInput.value = new Date().toISOString().split('T')[0];
-            }
-
-            // 4. QUARTO: Preencher os campos de Documentação (AGORA NA ORDEM CERTA)
-            const elTipoDoc = document.getElementById('tipoDocumentacaoId');
-            const elDocumentista = document.getElementById('documentistaId');
-
-            if (elTipoDoc) {
-                // Seleciona o Tipo de Documentação
-                elTipoDoc.value = lancamento.tipoDocumentacaoId || "";
-
-                // IMPORTANTE: Dispara o filtro para carregar o select de documentistas corretamente
-                if (typeof filtrarDocumentistasPorTipo === 'function') {
-                    filtrarDocumentistasPorTipo(elTipoDoc.value);
-                }
-            }
-
-            if (elDocumentista) {
-                // Agora que o filtro rodou e populou o select, selecionamos o valor
-                elDocumentista.value = lancamento.documentistaId || "";
             }
 
             // 5. QUINTO: Preenchimento dos demais dados (OS, Valores, etc.)
@@ -1146,100 +988,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 await popularDropdownsDependentes('', null, null);
             }
             modalAdicionar.show();
-        }
-
-        const btnConfirmarRecebimentoDoc = document.getElementById('btnConfirmarRecebimentoDoc');
-        if (btnConfirmarRecebimentoDoc) {
-            btnConfirmarRecebimentoDoc.addEventListener('click', async function () {
-                const btn = this;
-                const idValue = document.getElementById('idLancamentoReceberDoc').value;
-                const comentario = document.getElementById('comentarioRecebimento').value;
-
-                // 1. PEGA O VALOR CRU (YYYY-MM-DD)
-                // O input type="date" sempre entrega neste formato via .value
-                const dataInput = document.getElementById('dataRecebimentoDoc').value;
-
-                if (!dataInput) {
-                    mostrarToast("Por favor, selecione a data do recebimento.", "warning");
-                    return;
-                }
-
-                // 2. SE VOCÊ QUISER EXIBIR NA MENSAGEM DE SUCESSO (OPCIONAL)
-                // Aqui você cria uma variável APENAS para mostrar pro usuário, se precisar
-                // const dataVisual = dataInput.split('-').reverse().join('/'); 
-
-                const usuarioId = localStorage.getItem('usuarioId');
-                const modalEl = document.getElementById('modalReceberDoc');
-                const modalInstance = bootstrap.Modal.getInstance(modalEl);
-
-                const isLote = idValue === "LOTE";
-                let url, body;
-
-                // 3. MONTA O PAYLOAD COM A DATA "CRUA" (ISO)
-                // O Java espera YYYY-MM-DD para fazer o LocalDate.parse() sem erros
-                const dadosEnvio = {
-                    usuarioId: usuarioId,
-                    comentario: comentario,
-                    dataRecebimento: dataInput // <--- MANTER formato YYYY-MM-DD aqui!
-                };
-
-                if (isLote) {
-                    const checkboxes = document.querySelectorAll('.check-doc-item:checked');
-                    const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
-
-                    if (ids.length === 0) return;
-
-                    url = `${API_BASE_URL}/lancamentos/lote/documentacao/receber`;
-                    body = JSON.stringify({ ids: ids, ...dadosEnvio });
-                } else {
-                    if (!idValue) return;
-                    url = `${API_BASE_URL}/lancamentos/${idValue}/documentacao/receber`;
-                    body = JSON.stringify(dadosEnvio);
-                }
-
-                try {
-                    btn.disabled = true;
-                    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processando...';
-
-                    const response = await fetchComAuth(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: body
-                    });
-
-                    if (!response.ok) {
-                        // Tenta pegar a mensagem específica do erro (ex: "Status inválido")
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.message || "Erro ao processar recebimento.");
-                    }
-
-                    mostrarToast(isLote ? "Lote processado com sucesso!" : "Documentação recebida!", "success");
-
-                    if (modalInstance) modalInstance.hide();
-
-                    // Esconde barra de lote se estiver visível
-                    const barraLote = document.getElementById('acoes-lote-doc');
-                    if (barraLote) {
-                        barraLote.classList.add('d-none');
-                        barraLote.classList.remove('d-flex');
-                    }
-
-                    await carregarLancamentos();
-
-                } catch (error) {
-                    console.error(error);
-                    mostrarToast(error.message, "error");
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="bi bi-check-lg"></i> Confirmar';
-
-                    // Restaura textos do modal para o padrão
-                    if (modalEl) {
-                        modalEl.querySelector('.modal-title').innerHTML = `<i class="bi bi-file-earmark-check me-2"></i>Confirmar Recebimento`;
-                        modalEl.querySelector('.modal-body p').textContent = `Deseja confirmar o recebimento da documentação para este lançamento?`;
-                    }
-                }
-            });
         }
 
         modalAdicionarEl.addEventListener('show.bs.modal', async () => {
