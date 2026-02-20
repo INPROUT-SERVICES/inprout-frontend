@@ -106,7 +106,7 @@ async function inicializarPrestadores() {
             toggleLoader(true);
 
             try {
-                const response = await fetchComAuth("http://localhost:8080/index/prestadores", {
+                const response = await fetchComAuth("/api/index/prestadores", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(prestador)
@@ -167,7 +167,7 @@ async function carregarTabelaPrestadores(camposOriginais) {
     };
 
     try {
-        const response = await fetchComAuth("http://localhost:8080/index/prestadores");
+        const response = await fetchComAuth("/api/index/prestadores");
         if (!response.ok) throw new Error("Erro ao buscar prestadores.");
 
         const todosOsPrestadores = await response.json();
@@ -206,7 +206,7 @@ async function carregarTabelaPrestadores(camposOriginais) {
 
 // Busca TODOS os prestadores (Usado no EDITAR para poder selecionar qualquer um)
 async function preencherSelectComTodosPrestadores(elementoSelect) {
-    const urlPrestadores = "http://localhost:8080/index/prestadores";
+    const urlPrestadores = "/api/index/prestadores";
     const selectId = elementoSelect.id;
 
     try {
@@ -242,7 +242,7 @@ async function preencherSelectComTodosPrestadores(elementoSelect) {
 
 // [NOVO] Busca APENAS prestadores ATIVOS (Usado no DESATIVAR)
 async function preencherSelectComPrestadoresAtivos(elementoSelect) {
-    const urlPrestadoresAtivos = "http://localhost:8080/index/prestadores/ativos"; // Endpoint filtrado
+    const urlPrestadoresAtivos = "/api/index/prestadores/ativos"; // Endpoint filtrado
     const selectId = elementoSelect.id;
 
     try {
@@ -282,7 +282,7 @@ async function preencherSelectComPrestadoresAtivos(elementoSelect) {
 
 // Busca APENAS prestadores DESATIVADOS (Usado no ATIVAR)
 async function preencherSelectComPrestadoresDesativados(elementoSelect) {
-    const urlPrestadoresDesativados = "http://localhost:8080/index/prestadores/desativados";
+    const urlPrestadoresDesativados = "/api/index/prestadores/desativados";
     const selectId = elementoSelect.id;
 
     try {
@@ -324,7 +324,7 @@ async function carregarSelectBancosDinamicamente() {
     const selectsIds = ['selectBancoCadastro', 'selectBancoEditar'];
 
     try {
-        const response = await fetchComAuth('http://localhost:8080/geral/bancos');
+        const response = await fetchComAuth('/api/geral/bancos');
         if (!response.ok) return;
 
         const bancos = await response.json();
@@ -412,12 +412,12 @@ function configurarModalDesativarPrestador() {
         toggleLoader(true);
         try {
             // Busca a lista de ATIVOS para encontrar o objeto (já que o select só tem ativos)
-            const prestadoresResponse = await fetchComAuth("http://localhost:8080/index/prestadores/ativos");
+            const prestadoresResponse = await fetchComAuth("/api/index/prestadores/ativos");
             const prestadores = await prestadoresResponse.json();
             const selecionado = prestadores.find(p => p.id == prestadorId);
             if (!selecionado) throw new Error('Prestador não encontrado.');
             
-            const response = await fetchComAuth(`http://localhost:8080/index/prestadores/desativar/${selecionado.codigoPrestador}`, { method: 'PUT' });
+            const response = await fetchComAuth(`/api/index/prestadores/desativar/${selecionado.codigoPrestador}`, { method: 'PUT' });
             if (!response.ok) throw new Error('Falha ao desativar.');
 
             mostrarToast("Desativado com sucesso!", 'success');
@@ -466,12 +466,12 @@ function configurarModalAtivarPrestador() {
         toggleLoader(true);
         try {
             // Busca a lista de DESATIVADOS
-            const resLista = await fetchComAuth("http://localhost:8080/index/prestadores/desativados");
+            const resLista = await fetchComAuth("/api/index/prestadores/desativados");
             const lista = await resLista.json();
             const selecionado = lista.find(p => p.id == prestadorId);
             if (!selecionado) throw new Error('Não encontrado.');
 
-            const response = await fetchComAuth(`http://localhost:8080/index/prestadores/ativar/${selecionado.codigoPrestador}`, { method: 'PUT' });
+            const response = await fetchComAuth(`/api/index/prestadores/ativar/${selecionado.codigoPrestador}`, { method: 'PUT' });
             if (!response.ok) throw new Error('Falha ao ativar.');
 
             mostrarToast("Ativado com sucesso!", 'success');
@@ -566,7 +566,7 @@ function configurarModalEditarPrestador() {
             // Para editar, buscamos TODOS (ativos e inativos)
             await preencherSelectComTodosPrestadores(selectEl);
 
-            const response = await fetchComAuth("http://localhost:8080/index/prestadores");
+            const response = await fetchComAuth("/api/index/prestadores");
             todosOsPrestadores = await response.json();
         } catch (error) {
             mostrarToast("Erro ao preparar modal.", "error");
@@ -634,7 +634,7 @@ function configurarModalEditarPrestador() {
         dadosAtualizados.ativo = todosOsPrestadores.find(p => p.id === prestadorId)?.ativo;
 
         try {
-            const response = await fetchComAuth(`http://localhost:8080/index/prestadores/${prestadorId}`, {
+            const response = await fetchComAuth(`/api/index/prestadores/${prestadorId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(dadosAtualizados)

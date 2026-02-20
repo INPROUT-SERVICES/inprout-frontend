@@ -1,6 +1,6 @@
-const API_GERAL_URL = 'http://localhost:8080/tipos-documentacao';
-const API_BANCOS_URL = 'http://localhost:8080/geral/bancos';
-const API_DOCUMENTISTAS = 'http://localhost:8080/usuarios/documentistas';
+const API_GERAL_URL = '/api/tipos-documentacao';
+const API_BANCOS_URL = '/api/geral/bancos';
+const API_DOCUMENTISTAS = '/api/usuarios/documentistas';
 
 let modalTipoDocInstance;
 let modalBancoInstance;

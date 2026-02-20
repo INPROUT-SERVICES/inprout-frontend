@@ -1,6 +1,6 @@
 // guizs/inprout-services-system/Inprout-Services-System-Correcao_bo/Homologação/frontend/assets/js/cps/export.js
 
-const API_URL = 'http://localhost:8080';
+const API_URL = '/api';
 
 // ==================================================================
 // 1. FUNÇÃO QUE FALTAVA (RESOLVE O ERRO ReferenceError)

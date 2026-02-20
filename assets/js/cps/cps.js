@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURAÇÃO E ELEMENTOS DO DOM ---
-    const API_URL = 'http://localhost:8080';
+    const API_URL = '/api';
     const TOKEN = localStorage.getItem('token');
 
     const kpiTotalValueEl = document.getElementById('kpi-total-value');
