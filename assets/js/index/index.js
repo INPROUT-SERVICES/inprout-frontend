@@ -677,12 +677,17 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 toggleModalLoader(true);
                 const response = await fetchComAuth(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                
+                // NOVA LINHA: Valida erro e pega o retorno para usar o ID
+                if (!response.ok) throw new Error("Erro ao salvar o lançamento.");
+                const lancamentoSalvo = await response.json(); 
+
                 if (document.getElementById('documentoId').value) {
                     await DocumentacaoModule.criarSolicitacao({
                         osId: selectOS.value,
                         documentoId: document.getElementById('documentoId').value,
                         documentistaId: document.getElementById('documentistaId').value,
-                        lancamentoIds: [lancamentoSalvo.id],
+                        lancamentoIds: [lancamentoSalvo.id], // Agora ele existe!
                         acao: acao
                     });
                 }
@@ -839,33 +844,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (todasAsEtapas.length === 0) {
                 todasAsEtapas = await popularSelect(document.getElementById('etapaGeralSelect'), '/api/index/etapas', 'id', item => `${item.codigo} - ${item.nome}`);
             }
-
-            // Só carrega se a lista estiver vazia
-            if (tiposDocumentacaoCache.length === 0) {
-                try {
-                    const res = await fetchComAuth('/api/tipos-documentacao');
-                    if (res.ok) {
-                        tiposDocumentacaoCache = await res.json();
-                    }
-                } catch (err) {
-                    console.error("Erro ao carregar tipos de documentação:", err);
-                }
-            }
-
-            // Popula o select usando o cache
-            if (selectTipoDoc && tiposDocumentacaoCache.length > 0) {
-                // Salva o valor selecionado atual (caso esteja editando e rechamou a função)
-                const valorAtual = selectTipoDoc.value;
-
-                selectTipoDoc.innerHTML = '<option value="" selected>Não se aplica</option>';
-                tiposDocumentacaoCache.forEach(tipo => {
-                    selectTipoDoc.add(new Option(tipo.nome, tipo.id));
-                });
-
-                // Restaura o valor se ainda for válido
-                if (valorAtual) selectTipoDoc.value = valorAtual;
-            }
-            // ------------------------------------------------
         }
 
         async function abrirModalParaEdicao(lancamento, editingId) {
