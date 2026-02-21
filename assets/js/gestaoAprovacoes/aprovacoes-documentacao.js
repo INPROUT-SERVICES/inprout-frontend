@@ -1,11 +1,23 @@
 // ==========================================================
-// LÓGICA DA ABA: DOCUMENTAÇÃO (Visualização Geral / Ações Restritas)
+// LÓGICA DA ABA: DOCUMENTAÇÃO (Nova API de Microsserviço)
 // ==========================================================
 
 let filtroDocAtual = 'TODOS';
+let solicitacoesDocCache = []; // Substitui o window.minhasDocsPendentes
+
+async function carregarDadosDocumentacao() {
+    try {
+        const response = await fetchComAuth('/api/docs/solicitacoes');
+        const data = await response.json();
+        solicitacoesDocCache = Array.isArray(data) ? data : (data.content || []);
+        aplicarFiltroDocumentacao(filtroDocAtual);
+    } catch (error) {
+        console.error("Erro ao carregar solicitações de documentação:", error);
+    }
+}
 
 function initDocumentacaoTab() {
-    console.log("Iniciando aba de documentação...");
+    console.log("Iniciando aba de documentação (Nova API)...");
     
     // Listeners dos Filtros
     const radiosFiltro = document.querySelectorAll('input[name="filtroDocStatus"]');
@@ -21,23 +33,20 @@ function initDocumentacaoTab() {
     if (btnAtualizar) {
         btnAtualizar.onclick = async () => {
             toggleLoader(true, '#minhas-docs-pane');
-            await carregarDashboardEBadges(); 
-            aplicarFiltroDocumentacao(filtroDocAtual); 
+            await carregarDadosDocumentacao(); 
             toggleLoader(false, '#minhas-docs-pane');
             mostrarToast("Lista atualizada.");
         };
     }
 
-    // Filtro inicial
+    // Filtro inicial e carga de dados
     const filtroMarcado = document.querySelector('input[name="filtroDocStatus"]:checked');
     if (filtroMarcado) filtroDocAtual = filtroMarcado.value;
-    aplicarFiltroDocumentacao(filtroDocAtual);
+    
+    carregarDadosDocumentacao();
 }
 
 function aplicarFiltroDocumentacao(tipoFiltro) {
-    const dadosPendentes = window.minhasDocsPendentes || [];
-    const dadosHistorico = window.minhasDocsHistorico || [];
-    
     let dadosFiltrados = [];
     
     // Controle da Coluna Assunto (Só aparece no Histórico)
@@ -47,31 +56,36 @@ function aplicarFiltroDocumentacao(tipoFiltro) {
         else thAssunto.classList.add('d-none');
     }
 
+    // Filtra baseado nos status do novo Enum Java (StatusSolicitacaoDocumento)
     switch (tipoFiltro) {
         case 'HISTORICO':
-            // Filtra histórico para exibir apenas itens realmente finalizados/processados
-            dadosFiltrados = dadosHistorico.filter(item => 
-                item.statusDocumentacao.includes('FINALIZADO') || 
-                item.statusDocumentacao === 'DEVOLVIDO' || 
-                item.statusDocumentacao === 'REPROVADO'
+            dadosFiltrados = solicitacoesDocCache.filter(item => 
+                item.status === 'FINALIZADO' || 
+                item.status === 'REPROVADO' || 
+                item.status === 'APROVADO'
             );
             break;
         case 'PENDENTE_RECEBIMENTO':
-            dadosFiltrados = dadosPendentes.filter(item => item.statusDocumentacao === 'PENDENTE_RECEBIMENTO');
+            dadosFiltrados = solicitacoesDocCache.filter(item => item.status === 'AGUARDANDO_RECEBIMENTO');
             break;
         case 'EM_ANALISE':
-            dadosFiltrados = dadosPendentes.filter(item => item.statusDocumentacao === 'EM_ANALISE');
+            dadosFiltrados = solicitacoesDocCache.filter(item => item.status === 'EM_ANALISE');
             break;
         case 'TODOS':
         default:
-            dadosFiltrados = dadosPendentes;
+            // Exibe tudo que NÃO é histórico
+            dadosFiltrados = solicitacoesDocCache.filter(item => 
+                item.status !== 'FINALIZADO' && 
+                item.status !== 'REPROVADO' && 
+                item.status !== 'APROVADO'
+            );
             break;
     }
 
     renderizarTabelaDocsAgrupada(dadosFiltrados, tipoFiltro);
 }
 
-function renderizarTabelaDocsAgrupada(listaDeOsAgrupada, contextoFiltro) {
+function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
     const tbody = document.getElementById('tbody-minhas-docs');
     const msgVazio = document.getElementById('msg-sem-docs');
 
@@ -79,26 +93,22 @@ function renderizarTabelaDocsAgrupada(listaDeOsAgrupada, contextoFiltro) {
     const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
     const podeExecutarAcao = userRole === 'DOCUMENTIST' || userRole === 'ADMIN';
 
-    // Atualiza KPIs
-    if (window.minhasDocsPendentes && window.minhasDocsHistorico) {
-        const totalPendente = window.minhasDocsPendentes.reduce((acc, i) => acc + (i.valorTotalOS || 0), 0);
-        const totalHistorico = window.minhasDocsHistorico
-            .filter(i => i.statusDocumentacao.includes('FINALIZADO'))
-            .reduce((acc, i) => acc + (i.valorTotalOS || 0), 0);
-        
-        const elSaldo = document.getElementById('doc-carteira-previsto');
-        const elFinalizado = document.getElementById('doc-carteira-finalizado');
-        const elTotal = document.getElementById('doc-carteira-total');
+    // Atualiza KPIs (Agora baseados em contagem de documentos, já que o valor não vem na lista da nova API)
+    const totalPendente = solicitacoesDocCache.filter(i => i.status !== 'FINALIZADO' && i.status !== 'REPROVADO').length;
+    const totalHistorico = solicitacoesDocCache.filter(i => i.status === 'FINALIZADO' || i.status === 'REPROVADO').length;
+    
+    const elSaldo = document.getElementById('doc-carteira-previsto');
+    const elFinalizado = document.getElementById('doc-carteira-finalizado');
+    const elTotal = document.getElementById('doc-carteira-total');
 
-        if(elSaldo) elSaldo.innerText = formatarMoeda(totalPendente);
-        if(elFinalizado) elFinalizado.innerText = formatarMoeda(totalHistorico);
-        if(elTotal) elTotal.innerText = formatarMoeda(totalPendente + totalHistorico);
-    }
+    if(elSaldo) elSaldo.innerText = `${totalPendente} docs`;
+    if(elFinalizado) elFinalizado.innerText = `${totalHistorico} docs`;
+    if(elTotal) elTotal.innerText = `${totalPendente + totalHistorico} docs`;
 
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    if (!listaDeOsAgrupada || listaDeOsAgrupada.length === 0) {
+    if (!listaDeSolicitacoes || listaDeSolicitacoes.length === 0) {
         if (msgVazio) {
             msgVazio.classList.remove('d-none');
             const span = msgVazio.querySelector('span');
@@ -109,61 +119,44 @@ function renderizarTabelaDocsAgrupada(listaDeOsAgrupada, contextoFiltro) {
         if (msgVazio) msgVazio.classList.add('d-none');
     }
 
-    listaDeOsAgrupada.forEach(item => {
-        const osObj = item.os || {}; 
-        const status = item.statusDocumentacao || 'PENDENTE';
+    listaDeSolicitacoes.forEach(item => {
+        const status = item.status || 'RASCUNHO';
+        const numOs = item.osId || 'N/D';
+        const tipoDoc = item.documento ? item.documento.nome : '-';
+        const dataCriacao = item.criadoEm;
+        const respId = item.documentistaId ? `ID: ${item.documentistaId}` : '-';
         
-        const solicitanteNome = item.manager ? item.manager.nome : 'N/D';
-        const responsavelNome = item.documentistaNome || '-';
-        const tipoDoc = item.tipoDocumentacaoNome || '-';
-        const prazo = item.dataPrazoDoc;
-        const valor = item.valorTotalOS || 0;
-        const numOs = osObj.os || 'N/D';
-        const assunto = item.assuntoEmail || '-';
-        
-        // Badges Visuais
+        // Badges Visuais Mapeados pro Novo Enum
         let htmlStatus = `<span class="badge bg-secondary">${status}</span>`;
-        if (status === 'PENDENTE_RECEBIMENTO') htmlStatus = `<span class="badge bg-warning text-dark">Aguardando Envio</span>`;
+        if (status === 'AGUARDANDO_RECEBIMENTO') htmlStatus = `<span class="badge bg-warning text-dark">Aguardando Envio</span>`;
         else if (status === 'EM_ANALISE') htmlStatus = `<span class="badge bg-primary">Em Análise</span>`;
-        else if (status.includes('FINALIZADO')) htmlStatus = `<span class="badge bg-success">Finalizado</span>`;
-        else if (status === 'DEVOLVIDO' || status === 'REPROVADO') htmlStatus = `<span class="badge bg-danger">Devolvido</span>`;
+        else if (status === 'FINALIZADO' || status === 'APROVADO') htmlStatus = `<span class="badge bg-success">Finalizado</span>`;
+        else if (status === 'REPROVADO') htmlStatus = `<span class="badge bg-danger">Reprovado</span>`;
 
-        // Cálculo de Prazo
-        let htmlPrazo = '-';
-        if (prazo && !status.includes('FINALIZADO')) {
-            const d = new Date(prazo); const h = new Date(); h.setHours(0,0,0,0); d.setHours(0,0,0,0);
-            let cls = 'bg-success';
-            if (d < h) cls = 'bg-danger';
-            else if (d.getTime() === h.getTime()) cls = 'bg-warning text-dark';
-            htmlPrazo = `<span class="badge ${cls}">${formatarData(prazo)}</span>`;
-        } else if (prazo) {
-            htmlPrazo = `<small class="text-muted">${formatarData(prazo)}</small>`;
-        }
+        let htmlPrazo = dataCriacao ? `<small class="text-muted">${formatarData(dataCriacao)}</small>` : '-';
 
         // =====================================================================
-        // LÓGICA DE BOTÕES (PERMISSÕES)
+        // LÓGICA DE BOTÕES (NOVA API)
         // =====================================================================
         let botoes = '';
         
-        // Se for histórico, ou finalizado, ou se o usuário NÃO tiver permissão de ação, mostra apenas "Ver"
-        if (contextoFiltro === 'HISTORICO' || status.includes('FINALIZADO') || status === 'DEVOLVIDO' || !podeExecutarAcao) {
+        if (contextoFiltro === 'HISTORICO' || status === 'FINALIZADO' || status === 'REPROVADO' || !podeExecutarAcao) {
              botoes = `
-                <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico/Detalhes">
+                <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Detalhes">
                     <i class="bi bi-eye"></i>
                 </button>
              `;
         } else {
-            // Se tem permissão (ADMIN ou DOCUMENTIST) e o status permite ação:
             if (status === 'EM_ANALISE') {
                 botoes = `
                     <div class="btn-group" role="group">
                         <button class="btn btn-sm btn-success btn-finalizar-doc" 
                                 data-id="${item.id}" 
-                                title="Aprovar">
+                                title="Finalizar/Aprovar">
                             <i class="bi bi-check-lg"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-danger" 
-                                onclick="iniciarRecusa('${item.id}')" title="Devolver">
+                                onclick="iniciarRecusa('${item.id}')" title="Reprovar">
                             <i class="bi bi-x-lg"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-secondary" 
@@ -172,8 +165,7 @@ function renderizarTabelaDocsAgrupada(listaDeOsAgrupada, contextoFiltro) {
                         </button>
                     </div>
                 `;
-            } else if (status === 'PENDENTE_RECEBIMENTO') {
-                 // Botão de receber (geralmente ADMIN ou se o fluxo permitir)
+            } else if (status === 'AGUARDANDO_RECEBIMENTO') {
                  botoes = `
                     <button class="btn btn-sm btn-outline-primary" 
                             onclick="receberDocumentacao('${item.id}')" 
@@ -190,22 +182,18 @@ function renderizarTabelaDocsAgrupada(listaDeOsAgrupada, contextoFiltro) {
             <tr>
                 <td class="align-middle text-center">${botoes}</td>
                 <td class="align-middle text-center">${htmlStatus}</td>
-                <td class="align-middle text-truncate" style="max-width:150px;" title="${solicitanteNome}">
-                    ${solicitanteNome}
+                <td class="align-middle text-truncate" style="max-width:150px;">
+                    OS: ${numOs}
                 </td>
                 <td class="align-middle">
                     <span class="fw-medium">${tipoDoc}</span>
-                    <div class="small text-muted" style="font-size: 0.75rem;">OS: ${numOs}</div>
                 </td>
                 <td class="align-middle text-center">${htmlPrazo}</td>
-                <td class="align-middle text-end fw-bold text-secondary">
-                    ${formatarMoeda(valor)}
-                </td>
                 <td class="align-middle text-center small">
-                    ${responsavelNome}
+                    ${respId}
                 </td>
                 <td class="align-middle small ${displayAssunto}">
-                    ${assunto}
+                    ${item.provaEnvio || '-'}
                 </td>
             </tr>
         `;
@@ -213,8 +201,8 @@ function renderizarTabelaDocsAgrupada(listaDeOsAgrupada, contextoFiltro) {
     });
 }
 
-// 1. RECEBER
-async function receberDocumentacao(osId) {
+// 1. RECEBER (Novo Endpoint)
+async function receberDocumentacao(id) {
     if (!confirm('Confirmar o recebimento?')) return;
     
     const btn = document.activeElement;
@@ -222,15 +210,15 @@ async function receberDocumentacao(osId) {
     toggleLoader(true, '#minhas-docs-pane');
 
     try {
-        const userId = localStorage.getItem('usuarioId');
-        await fetchComAuth(`${API_BASE_URL}/lancamentos/${osId}/documentacao/receber`, {
+        const userId = parseInt(localStorage.getItem('usuarioId'));
+        await fetchComAuth(`/api/docs/solicitacoes/${id}/receber`, {
             method: 'POST',
-            body: JSON.stringify({ usuarioId: userId, comentario: 'Recebido via painel web' })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ actorUsuarioId: userId, comentario: 'Recebido para análise' })
         });
         
-        mostrarToast("Documentos recebidos!", "success");
-        await carregarDashboardEBadges();
-        aplicarFiltroDocumentacao(filtroDocAtual);
+        mostrarToast("Documentos recebidos com sucesso!", "success");
+        await carregarDadosDocumentacao();
 
     } catch (e) {
         mostrarToast(e.message, 'error');
@@ -239,18 +227,18 @@ async function receberDocumentacao(osId) {
     }
 }
 
-// 2. RECUSAR
+// 2. RECUSAR / REPROVAR (Novo Endpoint)
 function iniciarRecusa(id) {
     abrirModalComentarios(id, true);
 }
 
-// 3. MODAL E BACKDROP FIX
+// 3. MODAL DE COMENTÁRIOS / REPROVAÇÃO
 function abrirModalComentarios(id, isRecusa = false) {
     const modalEl = document.getElementById('modalComentarios');
     const modal = new bootstrap.Modal(modalEl);
     
     const lista = document.getElementById('listaComentariosContainer');
-    if(lista) lista.innerHTML = '<div class="text-center p-3"><span class="spinner-border text-primary"></span></div>';
+    if(lista) lista.innerHTML = '<div class="text-center p-3"><span class="text-muted">Visualização de histórico na nova API em construção.</span></div>';
     
     const btnEnviar = document.getElementById('btnEnviarComentarioModal'); 
     const txtArea = document.getElementById('novoComentarioTexto');
@@ -260,24 +248,33 @@ function abrirModalComentarios(id, isRecusa = false) {
     btnEnviar.parentNode.replaceChild(novoBtn, btnEnviar);
 
     if (isRecusa) {
-        document.getElementById('modalComentariosLabel').innerHTML = '<i class="bi bi-x-circle text-danger"></i> Devolver Documentação';
+        document.getElementById('modalComentariosLabel').innerHTML = '<i class="bi bi-x-circle text-danger"></i> Reprovar Documentação';
         novoBtn.className = 'btn btn-danger';
-        novoBtn.innerHTML = '<i class="bi bi-x-lg"></i> Confirmar Devolução';
-        txtArea.placeholder = "Motivo da devolução (obrigatório)...";
+        novoBtn.innerHTML = '<i class="bi bi-x-lg"></i> Confirmar Reprovação';
+        txtArea.placeholder = "Motivo da reprovação (obrigatório)...";
         novoBtn.addEventListener('click', () => processarRecusa(id, txtArea.value, modal));
     } else {
-        document.getElementById('modalComentariosLabel').innerHTML = '<i class="bi bi-chat-left-text"></i> Histórico & Comentários';
+        document.getElementById('modalComentariosLabel').innerHTML = '<i class="bi bi-chat-left-text"></i> Enviar Comentário';
         novoBtn.className = 'btn btn-primary';
         novoBtn.innerHTML = '<i class="bi bi-send"></i> Enviar Comentário';
         txtArea.placeholder = "Digite um comentário...";
-        novoBtn.addEventListener('click', () => {
-            if(window.enviarComentarioPeloModal) window.enviarComentarioPeloModal(id, txtArea.value);
-            txtArea.value = ''; 
+        novoBtn.addEventListener('click', async () => {
+             // Chamada de comentário para a nova API
+             try {
+                await fetchComAuth(`/api/docs/solicitacoes/${id}/comentar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ actorUsuarioId: parseInt(localStorage.getItem('usuarioId')), comentario: txtArea.value })
+                });
+                mostrarToast("Comentário adicionado!", "success");
+                modal.hide();
+             } catch(e) {
+                mostrarToast("Erro ao comentar", "error");
+             }
         });
     }
 
     modal.show();
-    if(window.verComentarios) window.verComentarios(id);
 }
 
 async function processarRecusa(id, motivo, modalInstance) {
@@ -291,15 +288,15 @@ async function processarRecusa(id, motivo, modalInstance) {
     toggleLoader(true, '#minhas-docs-pane');
     
     try {
-        const userId = localStorage.getItem('usuarioId');
-        await fetchComAuth(`${API_BASE_URL}/lancamentos/${id}/documentacao/devolver`, {
+        const userId = parseInt(localStorage.getItem('usuarioId'));
+        await fetchComAuth(`/api/docs/solicitacoes/${id}/reprovar`, {
             method: 'POST',
-            body: JSON.stringify({ usuarioId: userId, motivo: motivo })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ actorUsuarioId: userId, comentario: motivo })
         });
         
-        mostrarToast("Documentação devolvida.", "warning");
-        await carregarDashboardEBadges();
-        aplicarFiltroDocumentacao(filtroDocAtual);
+        mostrarToast("Documentação reprovada.", "warning");
+        await carregarDadosDocumentacao();
     } catch (e) {
         mostrarToast("Erro: " + e.message, 'error');
     } finally {
@@ -307,12 +304,12 @@ async function processarRecusa(id, motivo, modalInstance) {
     }
 }
 
-// 4. APROVAR (Listener Global do Botão)
+// 4. FINALIZAR (Novo Endpoint)
 document.addEventListener('click', async function(e) {
     const btn = e.target.closest('.btn-finalizar-doc');
     if(btn) {
         e.stopPropagation();
-        const id = btn.dataset.id; // ID da OS!
+        const id = btn.dataset.id; // ID da Solicitação
         
         const modalFinalizar = new bootstrap.Modal(document.getElementById('modalFinalizarDoc'));
         const inputId = document.getElementById('finalizarDocId');
@@ -324,18 +321,17 @@ document.addEventListener('click', async function(e) {
     }
 });
 
-// Botão Confirmar no Modal de Aprovação
 const btnConfirmarFinalizar = document.getElementById('btnConfirmarFinalizarDoc');
 if(btnConfirmarFinalizar) {
     const novoBtn = btnConfirmarFinalizar.cloneNode(true);
     btnConfirmarFinalizar.parentNode.replaceChild(novoBtn, btnConfirmarFinalizar);
 
     novoBtn.addEventListener('click', async function() {
-        const idOs = document.getElementById('finalizarDocId').value;
-        const assunto = document.getElementById('assuntoEmailDoc').value;
+        const id = document.getElementById('finalizarDocId').value;
+        const assunto = document.getElementById('assuntoEmailDoc').value; // Usado como provaEnvio
 
         if (!assunto.trim()) {
-            mostrarToast("O assunto do e-mail é obrigatório.", "warning");
+            mostrarToast("O assunto/prova de envio é obrigatório.", "warning");
             return;
         }
 
@@ -347,9 +343,19 @@ if(btnConfirmarFinalizar) {
         toggleLoader(true, '#minhas-docs-pane');
         
         try {
-            const response = await fetchComAuth(`${API_BASE_URL}/lancamentos/${idOs}/documentacao/finalizar`, {
+            const userId = parseInt(localStorage.getItem('usuarioId'));
+            
+            // Payload específico do FinalizarSolicitacaoRequest da nova API
+            const payload = {
+                actorUsuarioId: userId,
+                comentario: "Processo finalizado",
+                provaEnvio: assunto 
+            };
+
+            const response = await fetchComAuth(`/api/docs/solicitacoes/${id}/finalizar`, {
                 method: 'POST',
-                body: JSON.stringify({ assuntoEmail: assunto })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
@@ -362,9 +368,7 @@ if(btnConfirmarFinalizar) {
             }
 
             mostrarToast("Documentação finalizada com sucesso!", "success");
-            
-            await carregarDashboardEBadges();
-            aplicarFiltroDocumentacao(filtroDocAtual);
+            await carregarDadosDocumentacao();
 
         } catch (e) {
             console.error(e);

@@ -5,12 +5,18 @@
 const DocumentacaoModule = (function () {
     let documentosCache = [];
     let todosUsuariosCache = [];
+    let cachesCarregados = false;
 
-    // Inicializa o módulo
+    // Garante que os dados sejam baixados da API
+    async function carregarCaches() {
+        if (cachesCarregados) return;
+        await Promise.all([carregarDocumentos(), carregarUsuarios()]);
+        cachesCarregados = true;
+    }
+
     async function init() {
-        await carregarDocumentos();
-        await carregarUsuarios();
-        configurarListenersModalAdicionar();
+        await carregarCaches();
+        configurarListenersGlobais();
         carregarAbaPendenteDoc();
     }
 
@@ -38,44 +44,36 @@ const DocumentacaoModule = (function () {
         }
     }
 
-    // Preenche o Select de Documentistas baseado no Documento selecionado
-    function configurarListenersModalAdicionar() {
-        // Para o Modal Único
-        const selectDocumento = document.getElementById('documentoId');
-        if (selectDocumento) {
-            // Popula os documentos
-            selectDocumento.innerHTML = '<option value="" selected>Não se aplica</option>';
-            documentosCache.forEach(doc => selectDocumento.add(new Option(doc.nome, doc.id)));
+    // NOVA FUNÇÃO: Preenche qualquer select passado para ela
+    async function popularSelectDocumento(selectElement, valorSelecionado = null) {
+        if (!selectElement) return;
+        await carregarCaches(); // Garante que os dados já chegaram da API
 
-            // Listener de mudança
-            selectDocumento.addEventListener('change', (e) => {
-                const selectDocId = e.target.value;
-                const selectDocumentista = document.getElementById('documentistaId');
+        selectElement.innerHTML = '<option value="" selected>Não se aplica</option>';
+        documentosCache.forEach(doc => selectElement.add(new Option(doc.nome, doc.id)));
 
-                selectDocumentista.innerHTML = '<option value="" selected disabled>Selecione...</option>';
-
-                if (!selectDocId) {
-                    selectDocumentista.disabled = true;
-                    return;
-                }
-
-                selectDocumentista.disabled = false;
-                const docSelecionado = documentosCache.find(d => d.id == selectDocId);
-
-                if (docSelecionado && docSelecionado.documentistaIds) {
-                    // Filtra os usuários que estão na lista de IDs permitidos para este documento
-                    const permitidos = todosUsuariosCache.filter(u => docSelecionado.documentistaIds.includes(u.id));
-                    permitidos.forEach(p => selectDocumentista.add(new Option(p.nome, p.id)));
-                }
-            });
+        if (valorSelecionado) {
+            selectElement.value = valorSelecionado;
+            // Força a atualização do select de documentista
+            selectElement.dispatchEvent(new Event('change', { bubbles: true }));
         }
+    }
 
+    // Configura os gatilhos para quando um documento é selecionado
+    function configurarListenersGlobais() {
         document.body.addEventListener('change', (e) => {
-            if (e.target.classList.contains('documento-select-lote')) {
+            // Escuta tanto o select do modal único quanto os do lote
+            if (e.target.id === 'documentoId' || e.target.classList.contains('documento-select-lote')) {
                 const selectDocId = e.target.value;
-                // Extrai o sufixo (o ID da LPU) do ID do select
-                const sufixo = e.target.id.replace('documentoId-lpu-', '');
-                const selectDocumentista = document.getElementById(`documentistaId-lpu-${sufixo}`);
+
+                // Encontra o select de documentista correspondente
+                let selectDocumentista;
+                if (e.target.id === 'documentoId') {
+                    selectDocumentista = document.getElementById('documentistaId');
+                } else {
+                    const sufixo = e.target.id.replace('documentoId-lpu-', '');
+                    selectDocumentista = document.getElementById(`documentistaId-lpu-${sufixo}`);
+                }
 
                 if (!selectDocumentista) return;
 
@@ -97,16 +95,34 @@ const DocumentacaoModule = (function () {
         });
     }
 
-    // Chamada POST para a nova API de solicitações
     async function criarSolicitacao({ osId, documentoId, documentistaId, lancamentoIds, acao }) {
+
+        // 1. Limpa o array de lançamentos (garante que extraia apenas números válidos)
+        let idsLimpos = [];
+        if (Array.isArray(lancamentoIds)) {
+            idsLimpos = lancamentoIds
+                .map(id => (typeof id === 'object' && id !== null ? id.id : id)) // Se for objeto, extrai o id
+                .map(id => parseInt(id)) // Converte pra inteiro
+                .filter(id => !isNaN(id)); // Remove NaNs
+        }
+
+        // 2. Monta o Payload com tratamento de nulos
         const payload = {
-            osId: parseInt(osId),
-            documentoId: parseInt(documentoId),
-            actorUsuarioId: parseInt(localStorage.getItem('usuarioId')),
+            osId: parseInt(osId) || null,
+            documentoId: parseInt(documentoId) || null,
+            actorUsuarioId: parseInt(localStorage.getItem('usuarioId')) || null,
             comentario: acao === 'enviar' ? "Iniciando processo de solicitação" : "Salvo como rascunho",
-            documentistaId: parseInt(documentistaId),
-            lancamentoIds: lancamentoIds
+            documentistaId: documentistaId ? parseInt(documentistaId) : null, // Se vazio, manda null
+            lancamentoIds: idsLimpos
         };
+
+        console.log("PAYLOAD ENVIADO PARA DOC:", JSON.stringify(payload));
+
+        // Trava de segurança no front-end
+        if (!payload.osId || !payload.documentoId || payload.lancamentoIds.length === 0) {
+            console.error("Tentativa de criar solicitação ignorada. Faltam dados no payload.");
+            return; // Interrompe para não dar erro 400 atoa
+        }
 
         try {
             const response = await fetchComAuth('/api/docs/solicitacoes', {
@@ -115,18 +131,28 @@ const DocumentacaoModule = (function () {
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) throw new Error("Erro ao criar solicitação de documento.");
+            if (!response.ok) {
+                const erroTexto = await response.text();
+                console.error("Retorno de erro do servidor:", erroTexto);
+                try {
+                    const erroJson = JSON.parse(erroTexto);
+                    // Lança o erro com a mensagem exata do backend
+                    throw new Error(erroJson.message || "Erro ao criar solicitação de documento.");
+                } catch (e) {
+                    throw new Error(erroTexto || "Erro ao criar solicitação de documento.");
+                }
+            }
 
-            // Recarrega a aba de pendentes
+            // Recarrega a aba de pendentes se der sucesso
             carregarAbaPendenteDoc();
 
         } catch (error) {
             console.error(error);
-            mostrarToast("Aviso: Falha ao gerar solicitação de documento.", "warning");
+            // Mostra o erro do backend no Toast!
+            mostrarToast(error.message, "warning");
         }
     }
 
-    // Renderiza aba "Pendente Doc"
     async function carregarAbaPendenteDoc() {
         const tbody = document.getElementById('tbody-pendente-doc');
         if (!tbody) return;
@@ -135,16 +161,31 @@ const DocumentacaoModule = (function () {
             const response = await fetchComAuth('/api/docs/solicitacoes');
             const data = await response.json();
 
+            // Extrai a lista corretamente
             let solicitacoes = Array.isArray(data) ? data : (data.content || []);
 
-            // Filtragem AGUARDANDO_RECEBIMENTO e Segmento
-            const role = (localStorage.getItem("role") || "").trim().toUpperCase();
-            const meuSegmento = localStorage.getItem("segmentoNome") || ""; // Ajuste conforme salva no login
+            // LOG PARA DEBUG: Pressione F12 para ver se as solicitações estão chegando do backend
+            console.log("Todas as solicitações de doc:", solicitacoes);
 
+            // Filtra por status exato do Enum Java
             solicitacoes = solicitacoes.filter(sol => sol.status === 'AGUARDANDO_RECEBIMENTO');
 
+            const role = (localStorage.getItem("role") || "").trim().toUpperCase();
+
+            // === O GRANDE VILÃO ESTAVA AQUI ===
+            // O microserviço não devolve sol.osSegmento. Então filtramos cruzando 
+            // com os IDs das OSs que o usuário tem acesso (que ficam no select da tela)
             if (['MANAGER', 'COORDINATOR'].includes(role)) {
-                solicitacoes = solicitacoes.filter(sol => sol.osSegmento === meuSegmento);
+                // Procura o select de OS do seu formulário (ajuste o ID se necessário)
+                const osDropdown = document.getElementById('selectOS') || document.querySelector('select[id*="os"]');
+
+                if (osDropdown && osDropdown.options.length > 0) {
+                    // Pega todos os IDs de OS que estão no select
+                    const osPermitidas = Array.from(osDropdown.options).map(opt => parseInt(opt.value)).filter(val => !isNaN(val));
+
+                    // Filtra as solicitações para mostrar apenas as que pertencem a essas OSs
+                    solicitacoes = solicitacoes.filter(sol => osPermitidas.includes(sol.osId));
+                }
             }
 
             // Renderizar na Tabela
@@ -175,7 +216,6 @@ const DocumentacaoModule = (function () {
         }
     }
 
-    // Receber em Lote (Somente Manager)
     async function receberLoteDocumentos() {
         const role = (localStorage.getItem("role") || "").trim().toUpperCase();
         if (role !== 'MANAGER') {
@@ -190,7 +230,7 @@ const DocumentacaoModule = (function () {
         }
 
         const comentario = prompt("Comentário (Opcional):", "Documento recebido para análise");
-        if (comentario === null) return; // Cancelou
+        if (comentario === null) return;
 
         try {
             for (let id of selecionados) {
@@ -211,7 +251,6 @@ const DocumentacaoModule = (function () {
         }
     }
 
-    // Comentar
     async function comentarSolicitacao(id, texto) {
         try {
             await fetchComAuth(`/api/docs/solicitacoes/${id}/comentar`, {
@@ -229,12 +268,9 @@ const DocumentacaoModule = (function () {
         }
     }
 
-    // Bindings de Eventos Gerais
     document.addEventListener('DOMContentLoaded', () => {
         const btnReceberLoteDoc = document.getElementById('btnReceberLoteDoc');
-        if (btnReceberLoteDoc) {
-            btnReceberLoteDoc.addEventListener('click', receberLoteDocumentos);
-        }
+        if (btnReceberLoteDoc) btnReceberLoteDoc.addEventListener('click', receberLoteDocumentos);
 
         document.body.addEventListener('click', (e) => {
             const btnComentar = e.target.closest('.btn-comentar-doc');
@@ -265,12 +301,12 @@ const DocumentacaoModule = (function () {
         });
     });
 
-    // Iniciar módulo quando a página carrega
     document.addEventListener('DOMContentLoaded', init);
 
     return {
         criarSolicitacao,
-        carregarAbaPendenteDoc
+        carregarAbaPendenteDoc,
+        popularSelectDocumento
     };
 
 })();

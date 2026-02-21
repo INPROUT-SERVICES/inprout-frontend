@@ -844,6 +844,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (todasAsEtapas.length === 0) {
                 todasAsEtapas = await popularSelect(document.getElementById('etapaGeralSelect'), '/api/index/etapas', 'id', item => `${item.codigo} - ${item.nome}`);
             }
+
+            if (typeof DocumentacaoModule !== 'undefined') {
+                const selectDoc = document.getElementById('documentoId');
+                const valorAtual = selectDoc ? selectDoc.value : null; // Salva se estiver editando
+                await DocumentacaoModule.popularSelectDocumento(selectDoc, valorAtual);
+            }
         }
 
         async function abrirModalParaEdicao(lancamento, editingId) {

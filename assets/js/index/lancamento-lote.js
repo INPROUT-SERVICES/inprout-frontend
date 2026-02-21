@@ -277,6 +277,11 @@ document.addEventListener('DOMContentLoaded', () => {
             selectEtapaGeral.innerHTML = '<option value="" selected disabled>Selecione...</option>';
             todasAsEtapasLote.forEach(e => selectEtapaGeral.add(new Option(`${e.codigo} - ${e.nome}`, e.id)));
         }
+
+        if (typeof DocumentacaoModule !== 'undefined') {
+            const selectDocLote = document.getElementById(`documentoId-lpu-${idSufixo}`);
+            DocumentacaoModule.popularSelectDocumento(selectDocLote);
+        }
     }
 
     /**
@@ -592,10 +597,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 2. DISPARAR CRIAÇÃO DE DOCUMENTAÇÃO (NOVA API)
             if (typeof DocumentacaoModule !== 'undefined') {
-                // Se "Replicar Dados" estiver ativo e houver documento, 
-                // mandamos um POST só agrupando os IDs de lançamento.
+
+                // Se "Replicar Dados" estiver ativo
                 if (replicarDados && dadosReplicados._documentoInfo.documentoId) {
-                    const lancamentosIdsGerados = lancamentosSalvos.map(l => l.id);
+
+                    // === CORREÇÃO: Garante que pegamos o ID corretamente ===
+                    const lancamentosIdsGerados = lancamentosSalvos.map(l => typeof l === 'object' ? l.id : l);
 
                     await DocumentacaoModule.criarSolicitacao({
                         osId: osId,
@@ -605,21 +612,42 @@ document.addEventListener('DOMContentLoaded', () => {
                         acao: acao
                     });
                 }
-                // Se for Individual, itera sobre cada lançamento salvo
+                // Se for Individual
                 else if (!replicarDados) {
+                    const docsAgrupados = {};
+
                     for (const lancamentoSalvo of lancamentosSalvos) {
-                        const lpuIdDoLanc = lancamentoSalvo.detalhe.lpu.id; // Verifica como sua API retorna
+                        const lpuIdDoLanc = lancamentoSalvo.detalhe ? lancamentoSalvo.detalhe.lpu.id : null;
+                        const lancID = typeof lancamentoSalvo === 'object' ? lancamentoSalvo.id : lancamentoSalvo;
+
                         const infoDoc = infoDocsPorLpu.find(i => i.lpuId == lpuIdDoLanc)?.docInfo;
 
-                        if (infoDoc && infoDoc.documentoId) {
-                            await DocumentacaoModule.criarSolicitacao({
-                                osId: osId,
-                                documentoId: infoDoc.documentoId,
-                                documentistaId: infoDoc.documentistaId,
-                                lancamentoIds: [lancamentoSalvo.id], // Manda array com 1 ID
-                                acao: acao
-                            });
+                        if (infoDoc && infoDoc.documentoId && lancID) {
+                            const docId = infoDoc.documentoId;
+
+                            // Se ainda não existe esse doc no grupo, cria
+                            if (!docsAgrupados[docId]) {
+                                docsAgrupados[docId] = {
+                                    documentoId: docId,
+                                    documentistaId: infoDoc.documentistaId,
+                                    lancamentoIds: []
+                                };
+                            }
+                            // Adiciona o ID do lançamento na lista
+                            docsAgrupados[docId].lancamentoIds.push(lancID);
                         }
+                    }
+
+                    // Agora envia uma requisição por documento, contendo o array de lançamentos vinculados
+                    for (const docId in docsAgrupados) {
+                        const dadosDoc = docsAgrupados[docId];
+                        await DocumentacaoModule.criarSolicitacao({
+                            osId: osId,
+                            documentoId: dadosDoc.documentoId,
+                            documentistaId: dadosDoc.documentistaId,
+                            lancamentoIds: dadosDoc.lancamentoIds, // Envia o Array inteiro agrupado!
+                            acao: acao
+                        });
                     }
                 }
             }
