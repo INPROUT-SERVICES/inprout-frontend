@@ -3,12 +3,21 @@
 // ==========================================================
 
 let filtroDocAtual = 'TODOS';
-let solicitacoesDocCache = []; // Substitui o window.minhasDocsPendentes
+let solicitacoesDocCache = [];
 
 async function carregarDadosDocumentacao() {
     try {
-        const response = await fetchComAuth('/api/docs/solicitacoes');
+        const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
+        const userId = localStorage.getItem("usuarioId");
+        
+        let url = '/api/docs/solicitacoes?size=1000';
+        if (userRole === 'DOCUMENTIST') {
+            url += `&documentistaId=${userId}`;
+        }
+
+        const response = await fetchComAuth(url);
         const data = await response.json();
+        
         solicitacoesDocCache = Array.isArray(data) ? data : (data.content || []);
         aplicarFiltroDocumentacao(filtroDocAtual);
     } catch (error) {
@@ -35,7 +44,7 @@ function initDocumentacaoTab() {
             toggleLoader(true, '#minhas-docs-pane');
             await carregarDadosDocumentacao(); 
             toggleLoader(false, '#minhas-docs-pane');
-            mostrarToast("Lista atualizada.");
+            mostrarToast("Lista atualizada.", "success");
         };
     }
 
@@ -49,20 +58,16 @@ function initDocumentacaoTab() {
 function aplicarFiltroDocumentacao(tipoFiltro) {
     let dadosFiltrados = [];
     
-    // Controle da Coluna Assunto (Só aparece no Histórico)
     const thAssunto = document.getElementById('th-assunto-email');
     if(thAssunto) {
         if(tipoFiltro === 'HISTORICO') thAssunto.classList.remove('d-none');
         else thAssunto.classList.add('d-none');
     }
 
-    // Filtra baseado nos status do novo Enum Java (StatusSolicitacaoDocumento)
     switch (tipoFiltro) {
         case 'HISTORICO':
             dadosFiltrados = solicitacoesDocCache.filter(item => 
-                item.status === 'FINALIZADO' || 
-                item.status === 'REPROVADO' || 
-                item.status === 'APROVADO'
+                item.status === 'FINALIZADO' || item.status === 'REPROVADO' || item.status === 'APROVADO'
             );
             break;
         case 'PENDENTE_RECEBIMENTO':
@@ -73,11 +78,8 @@ function aplicarFiltroDocumentacao(tipoFiltro) {
             break;
         case 'TODOS':
         default:
-            // Exibe tudo que NÃO é histórico
             dadosFiltrados = solicitacoesDocCache.filter(item => 
-                item.status !== 'FINALIZADO' && 
-                item.status !== 'REPROVADO' && 
-                item.status !== 'APROVADO'
+                item.status !== 'FINALIZADO' && item.status !== 'REPROVADO' && item.status !== 'APROVADO'
             );
             break;
     }
@@ -89,21 +91,29 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
     const tbody = document.getElementById('tbody-minhas-docs');
     const msgVazio = document.getElementById('msg-sem-docs');
 
-    // Identifica o papel do usuário para controlar as ações
+    // Dados do usuário logado para controle dos botões
     const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
-    const podeExecutarAcao = userRole === 'DOCUMENTIST' || userRole === 'ADMIN';
+    const userId = parseInt(localStorage.getItem('usuarioId') || "0");
 
-    // Atualiza KPIs (Agora baseados em contagem de documentos, já que o valor não vem na lista da nova API)
-    const totalPendente = solicitacoesDocCache.filter(i => i.status !== 'FINALIZADO' && i.status !== 'REPROVADO').length;
-    const totalHistorico = solicitacoesDocCache.filter(i => i.status === 'FINALIZADO' || i.status === 'REPROVADO').length;
+    // =====================================================================
+    // ATUALIZAÇÃO DOS KPIs (DASHBOARD) - SOMANDO OS VALORES
+    // =====================================================================
+    const docsPendentes = solicitacoesDocCache.filter(i => i.status !== 'FINALIZADO' && i.status !== 'REPROVADO' && i.status !== 'APROVADO');
+    const docsHistorico = solicitacoesDocCache.filter(i => i.status === 'FINALIZADO' || i.status === 'REPROVADO' || i.status === 'APROVADO');
     
+    const valorPendente = docsPendentes.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+    const valorHistorico = docsHistorico.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+    const valorTotal = valorPendente + valorHistorico;
+
+    const formataMoeda = (val) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
     const elSaldo = document.getElementById('doc-carteira-previsto');
     const elFinalizado = document.getElementById('doc-carteira-finalizado');
     const elTotal = document.getElementById('doc-carteira-total');
 
-    if(elSaldo) elSaldo.innerText = `${totalPendente} docs`;
-    if(elFinalizado) elFinalizado.innerText = `${totalHistorico} docs`;
-    if(elTotal) elTotal.innerText = `${totalPendente + totalHistorico} docs`;
+    if(elSaldo) elSaldo.innerText = formataMoeda(valorPendente);
+    if(elFinalizado) elFinalizado.innerText = formataMoeda(valorHistorico);
+    if(elTotal) elTotal.innerText = formataMoeda(valorTotal);
 
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -123,24 +133,43 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
         const status = item.status || 'RASCUNHO';
         const numOs = item.osId || 'N/D';
         const tipoDoc = item.documento ? item.documento.nome : '-';
-        const dataCriacao = item.criadoEm;
-        const respId = item.documentistaId ? `ID: ${item.documentistaId}` : '-';
         
-        // Badges Visuais Mapeados pro Novo Enum
+        // Tratamento da Coluna Solicitante e Valor
+        const nomeSolicitante = item.solicitanteNome || 'N/D';
+        const responsavelNome = item.documentistaNome || (item.documentistaId ? `ID: ${item.documentistaId}` : 'Sem Responsável');
+        const valorFormatado = (item.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        // Cálculo do Prazo (48h após o recebimento)
+        let htmlPrazo = '-';
+        if (item.recebidoEm) {
+            const dataRecebimento = new Date(item.recebidoEm);
+            dataRecebimento.setHours(dataRecebimento.getHours() + 48); // Adiciona as 48 horas
+            
+            const dataStr = dataRecebimento.toLocaleDateString('pt-BR');
+            const horaStr = dataRecebimento.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            // Se já passou do prazo, fica vermelho
+            const isVencido = dataRecebimento < new Date();
+            const corPrazo = isVencido ? 'text-danger fw-bold' : 'text-muted';
+            
+            htmlPrazo = `<small class="${corPrazo}">${dataStr} às ${horaStr}</small>`;
+        } else {
+            htmlPrazo = '<small class="text-warning">Aguardando Recebimento</small>';
+        }
+
         let htmlStatus = `<span class="badge bg-secondary">${status}</span>`;
         if (status === 'AGUARDANDO_RECEBIMENTO') htmlStatus = `<span class="badge bg-warning text-dark">Aguardando Envio</span>`;
         else if (status === 'EM_ANALISE') htmlStatus = `<span class="badge bg-primary">Em Análise</span>`;
         else if (status === 'FINALIZADO' || status === 'APROVADO') htmlStatus = `<span class="badge bg-success">Finalizado</span>`;
         else if (status === 'REPROVADO') htmlStatus = `<span class="badge bg-danger">Reprovado</span>`;
 
-        let htmlPrazo = dataCriacao ? `<small class="text-muted">${formatarData(dataCriacao)}</small>` : '-';
-
         // =====================================================================
-        // LÓGICA DE BOTÕES (NOVA API)
+        // LÓGICA DE BOTÕES (APARECE SE FOR ADMIN OU O DOCUMENTISTA RESPONSÁVEL)
         // =====================================================================
+        const podeExecutarAcao = userRole === 'ADMIN' || (userRole === 'DOCUMENTIST' && item.documentistaId === userId);
         let botoes = '';
         
-        if (contextoFiltro === 'HISTORICO' || status === 'FINALIZADO' || status === 'REPROVADO' || !podeExecutarAcao) {
+        if (contextoFiltro === 'HISTORICO' || status === 'FINALIZADO' || status === 'REPROVADO' || status === 'APROVADO' || !podeExecutarAcao) {
              botoes = `
                 <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Detalhes">
                     <i class="bi bi-eye"></i>
@@ -182,15 +211,17 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
             <tr>
                 <td class="align-middle text-center">${botoes}</td>
                 <td class="align-middle text-center">${htmlStatus}</td>
-                <td class="align-middle text-truncate" style="max-width:150px;">
-                    OS: ${numOs}
+                <td class="align-middle text-truncate" style="max-width:180px;">
+                    <span class="fw-medium">${nomeSolicitante}</span><br>
+                    <small class="text-muted">OS: ${numOs}</small>
                 </td>
                 <td class="align-middle">
-                    <span class="fw-medium">${tipoDoc}</span>
+                    <span class="fw-medium">${tipoDoc}</span><br>
+                    <small class="text-success fw-bold">${valorFormatado}</small>
                 </td>
                 <td class="align-middle text-center">${htmlPrazo}</td>
                 <td class="align-middle text-center small">
-                    ${respId}
+                    ${responsavelNome}
                 </td>
                 <td class="align-middle small ${displayAssunto}">
                     ${item.provaEnvio || '-'}
@@ -201,7 +232,7 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
     });
 }
 
-// 1. RECEBER (Novo Endpoint)
+// 1. RECEBER
 async function receberDocumentacao(id) {
     if (!confirm('Confirmar o recebimento?')) return;
     
@@ -227,7 +258,7 @@ async function receberDocumentacao(id) {
     }
 }
 
-// 2. RECUSAR / REPROVAR (Novo Endpoint)
+// 2. RECUSAR / REPROVAR
 function iniciarRecusa(id) {
     abrirModalComentarios(id, true);
 }
@@ -259,7 +290,6 @@ function abrirModalComentarios(id, isRecusa = false) {
         novoBtn.innerHTML = '<i class="bi bi-send"></i> Enviar Comentário';
         txtArea.placeholder = "Digite um comentário...";
         novoBtn.addEventListener('click', async () => {
-             // Chamada de comentário para a nova API
              try {
                 await fetchComAuth(`/api/docs/solicitacoes/${id}/comentar`, {
                     method: 'POST',
@@ -304,18 +334,17 @@ async function processarRecusa(id, motivo, modalInstance) {
     }
 }
 
-// 4. FINALIZAR (Novo Endpoint)
+// 4. FINALIZAR
 document.addEventListener('click', async function(e) {
     const btn = e.target.closest('.btn-finalizar-doc');
     if(btn) {
         e.stopPropagation();
-        const id = btn.dataset.id; // ID da Solicitação
+        const id = btn.dataset.id;
         
         const modalFinalizar = new bootstrap.Modal(document.getElementById('modalFinalizarDoc'));
         const inputId = document.getElementById('finalizarDocId');
-        if(inputId) {
-            inputId.value = id; 
-        }
+        if(inputId) inputId.value = id; 
+        
         document.getElementById('assuntoEmailDoc').value = '';
         modalFinalizar.show();
     }
@@ -328,7 +357,7 @@ if(btnConfirmarFinalizar) {
 
     novoBtn.addEventListener('click', async function() {
         const id = document.getElementById('finalizarDocId').value;
-        const assunto = document.getElementById('assuntoEmailDoc').value; // Usado como provaEnvio
+        const assunto = document.getElementById('assuntoEmailDoc').value;
 
         if (!assunto.trim()) {
             mostrarToast("O assunto/prova de envio é obrigatório.", "warning");
@@ -345,7 +374,6 @@ if(btnConfirmarFinalizar) {
         try {
             const userId = parseInt(localStorage.getItem('usuarioId'));
             
-            // Payload específico do FinalizarSolicitacaoRequest da nova API
             const payload = {
                 actorUsuarioId: userId,
                 comentario: "Processo finalizado",
