@@ -28,7 +28,10 @@ async function carregarDadosDocumentacao() {
 function initDocumentacaoTab() {
     console.log("Iniciando aba de documentação (Nova API)...");
     
-    // Listeners dos Filtros
+    // REMOVER QUADRO DE EVOLUÇÃO (Esconde qualquer card/div que mencione evolucao)
+    const quadroEvolucao = document.querySelector('[id*="evolucao"], [class*="evolucao"]');
+    if(quadroEvolucao) quadroEvolucao.style.display = 'none';
+
     const radiosFiltro = document.querySelectorAll('input[name="filtroDocStatus"]');
     radiosFiltro.forEach(radio => {
         radio.addEventListener('change', (e) => {
@@ -37,18 +40,18 @@ function initDocumentacaoTab() {
         });
     });
 
-    // Listener do Refresh
     const btnAtualizar = document.getElementById('btn-atualizar-docs');
     if (btnAtualizar) {
-        btnAtualizar.onclick = async () => {
+        btnAtualizar.onclick = async function() {
+            if(typeof setButtonLoading === 'function') setButtonLoading(this, true);
             toggleLoader(true, '#minhas-docs-pane');
             await carregarDadosDocumentacao(); 
             toggleLoader(false, '#minhas-docs-pane');
+            if(typeof setButtonLoading === 'function') setButtonLoading(this, false);
             mostrarToast("Lista atualizada.", "success");
         };
     }
 
-    // Filtro inicial e carga de dados
     const filtroMarcado = document.querySelector('input[name="filtroDocStatus"]:checked');
     if (filtroMarcado) filtroDocAtual = filtroMarcado.value;
     
@@ -67,19 +70,19 @@ function aplicarFiltroDocumentacao(tipoFiltro) {
     switch (tipoFiltro) {
         case 'HISTORICO':
             dadosFiltrados = solicitacoesDocCache.filter(item => 
-                item.status === 'FINALIZADO' || item.status === 'REPROVADO' || item.status === 'APROVADO'
+                item.status === 'FINALIZADO' || item.status === 'FINALIZADO_FORA_PRAZO' || item.status === 'DEVOLVIDO' || item.status === 'REPROVADO'
             );
             break;
         case 'PENDENTE_RECEBIMENTO':
             dadosFiltrados = solicitacoesDocCache.filter(item => item.status === 'AGUARDANDO_RECEBIMENTO');
             break;
         case 'EM_ANALISE':
-            dadosFiltrados = solicitacoesDocCache.filter(item => item.status === 'EM_ANALISE');
+            dadosFiltrados = solicitacoesDocCache.filter(item => item.status === 'RECEBIDO');
             break;
         case 'TODOS':
         default:
             dadosFiltrados = solicitacoesDocCache.filter(item => 
-                item.status !== 'FINALIZADO' && item.status !== 'REPROVADO' && item.status !== 'APROVADO'
+                item.status !== 'FINALIZADO' && item.status !== 'FINALIZADO_FORA_PRAZO' && item.status !== 'DEVOLVIDO' && item.status !== 'REPROVADO'
             );
             break;
     }
@@ -91,15 +94,12 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
     const tbody = document.getElementById('tbody-minhas-docs');
     const msgVazio = document.getElementById('msg-sem-docs');
 
-    // Dados do usuário logado para controle dos botões
     const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
-    const userId = parseInt(localStorage.getItem('usuarioId') || "0");
+    const userId = String(localStorage.getItem('usuarioId') || "0");
 
-    // =====================================================================
-    // ATUALIZAÇÃO DOS KPIs (DASHBOARD) - SOMANDO OS VALORES
-    // =====================================================================
-    const docsPendentes = solicitacoesDocCache.filter(i => i.status !== 'FINALIZADO' && i.status !== 'REPROVADO' && i.status !== 'APROVADO');
-    const docsHistorico = solicitacoesDocCache.filter(i => i.status === 'FINALIZADO' || i.status === 'REPROVADO' || i.status === 'APROVADO');
+    // KPIs Dashboard 
+    const docsPendentes = solicitacoesDocCache.filter(i => i.status !== 'FINALIZADO' && i.status !== 'FINALIZADO_FORA_PRAZO' && i.status !== 'DEVOLVIDO' && i.status !== 'REPROVADO');
+    const docsHistorico = solicitacoesDocCache.filter(i => i.status === 'FINALIZADO' || i.status === 'FINALIZADO_FORA_PRAZO' || i.status === 'DEVOLVIDO' || i.status === 'REPROVADO');
     
     const valorPendente = docsPendentes.reduce((acc, curr) => acc + (curr.valor || 0), 0);
     const valorHistorico = docsHistorico.reduce((acc, curr) => acc + (curr.valor || 0), 0);
@@ -131,113 +131,114 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
 
     listaDeSolicitacoes.forEach(item => {
         const status = item.status || 'RASCUNHO';
-        const numOs = item.osId || 'N/D';
         const tipoDoc = item.documento ? item.documento.nome : '-';
         
-        // Tratamento da Coluna Solicitante e Valor
-        const nomeSolicitante = item.solicitanteNome || 'N/D';
+        const nomeSolicitante = item.solicitanteNome || 'Sistema (Legado)';
         const responsavelNome = item.documentistaNome || (item.documentistaId ? `ID: ${item.documentistaId}` : 'Sem Responsável');
         const valorFormatado = (item.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-        // Cálculo do Prazo (48h após o recebimento)
+        // Cálculo do Prazo
         let htmlPrazo = '-';
-        if (item.recebidoEm) {
-            const dataRecebimento = new Date(item.recebidoEm);
-            dataRecebimento.setHours(dataRecebimento.getHours() + 48); // Adiciona as 48 horas
-            
-            const dataStr = dataRecebimento.toLocaleDateString('pt-BR');
-            const horaStr = dataRecebimento.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            
-            // Se já passou do prazo, fica vermelho
-            const isVencido = dataRecebimento < new Date();
-            const corPrazo = isVencido ? 'text-danger fw-bold' : 'text-muted';
-            
-            htmlPrazo = `<small class="${corPrazo}">${dataStr} às ${horaStr}</small>`;
+        if (contextoFiltro === 'HISTORICO') {
+            const dataCriado = item.criadoEm ? new Date(item.criadoEm).toLocaleDateString('pt-BR') : '-';
+            const dataFinalizado = item.finalizadoEm ? new Date(item.finalizadoEm).toLocaleDateString('pt-BR') : '-';
+            htmlPrazo = `
+                <div class="small">
+                    <span class="text-muted d-block">Solicitado: <b>${dataCriado}</b></span>
+                    <span class="text-success d-block">Finalizado: <b>${dataFinalizado}</b></span>
+                </div>`;
         } else {
-            htmlPrazo = '<small class="text-warning">Aguardando Recebimento</small>';
-        }
-
-        let htmlStatus = `<span class="badge bg-secondary">${status}</span>`;
-        if (status === 'AGUARDANDO_RECEBIMENTO') htmlStatus = `<span class="badge bg-warning text-dark">Aguardando Envio</span>`;
-        else if (status === 'EM_ANALISE') htmlStatus = `<span class="badge bg-primary">Em Análise</span>`;
-        else if (status === 'FINALIZADO' || status === 'APROVADO') htmlStatus = `<span class="badge bg-success">Finalizado</span>`;
-        else if (status === 'REPROVADO') htmlStatus = `<span class="badge bg-danger">Reprovado</span>`;
-
-        // =====================================================================
-        // LÓGICA DE BOTÕES (APARECE SE FOR ADMIN OU O DOCUMENTISTA RESPONSÁVEL)
-        // =====================================================================
-        const podeExecutarAcao = userRole === 'ADMIN' || (userRole === 'DOCUMENTIST' && item.documentistaId === userId);
-        let botoes = '';
-        
-        if (contextoFiltro === 'HISTORICO' || status === 'FINALIZADO' || status === 'REPROVADO' || status === 'APROVADO' || !podeExecutarAcao) {
-             botoes = `
-                <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Detalhes">
-                    <i class="bi bi-eye"></i>
-                </button>
-             `;
-        } else {
-            if (status === 'EM_ANALISE') {
-                botoes = `
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-sm btn-success btn-finalizar-doc" 
-                                data-id="${item.id}" 
-                                title="Finalizar/Aprovar">
-                            <i class="bi bi-check-lg"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" 
-                                onclick="iniciarRecusa('${item.id}')" title="Reprovar">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary" 
-                                onclick="abrirModalComentarios('${item.id}', false)" title="Comentários">
-                            <i class="bi bi-chat-left-text"></i>
-                        </button>
-                    </div>
-                `;
-            } else if (status === 'AGUARDANDO_RECEBIMENTO') {
-                 botoes = `
-                    <button class="btn btn-sm btn-outline-primary" 
-                            onclick="receberDocumentacao('${item.id}')" 
-                            title="Confirmar Recebimento">
-                        <i class="bi bi-box-arrow-in-down"></i>
-                    </button>
-                `;
+            if (item.recebidoEm) {
+                const dataRecebimento = new Date(item.recebidoEm);
+                dataRecebimento.setHours(dataRecebimento.getHours() + 48);
+                const dataStr = dataRecebimento.toLocaleDateString('pt-BR');
+                const horaStr = dataRecebimento.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                
+                const isVencido = dataRecebimento < new Date();
+                const corPrazo = isVencido ? 'text-danger fw-bold' : 'text-muted';
+                htmlPrazo = `<span class="${corPrazo}">${dataStr} às ${horaStr}</span>`;
+            } else {
+                htmlPrazo = '<span class="text-warning small"><i class="bi bi-clock"></i> Aguardando<br>Recebimento</span>';
             }
         }
 
+        // Badges de Status
+        let htmlStatus = `<span class="badge bg-secondary">${status}</span>`;
+        if (status === 'AGUARDANDO_RECEBIMENTO') htmlStatus = `<span class="badge bg-warning text-dark">Aguardando Envio</span>`;
+        else if (status === 'RECEBIDO') htmlStatus = `<span class="badge bg-primary">Em Análise</span>`;
+        else if (status === 'FINALIZADO' || status === 'FINALIZADO_FORA_PRAZO') htmlStatus = `<span class="badge bg-success">Finalizado</span>`;
+        else if (status === 'DEVOLVIDO' || status === 'REPROVADO') htmlStatus = `<span class="badge bg-danger">Recusado</span>`;
+
+        // =====================================================================
+        // BOTÕES E PERMISSÕES 
+        // =====================================================================
+        const isAdmin = userRole === 'ADMIN';
+        const isManager = userRole === 'MANAGER';
+        const isDocResponsavel = (userRole === 'DOCUMENTIST' && String(item.documentistaId) === userId);
+        
+        let botoes = '';
+        
+        // Histórico ou Fechado = Apenas ver
+        if (contextoFiltro === 'HISTORICO' || status.includes('FINALIZADO') || status === 'DEVOLVIDO' || status === 'REPROVADO') {
+             botoes = `<button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico/Comentários"><i class="bi bi-clock-history"></i></button>`;
+        } else {
+            if (status === 'RECEBIDO') {
+                // REGRA: APROVAR/RECUSAR SÓ ADMIN OU O DOCUMENTISTA DONO
+                if (isAdmin || isDocResponsavel) {
+                    botoes = `
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-success btn-finalizar-doc" data-id="${item.id}" title="Aprovar e Finalizar"><i class="bi bi-check-lg"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="iniciarRecusa('${item.id}')" title="Recusar Documento"><i class="bi bi-x-lg"></i></button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico"><i class="bi bi-clock-history"></i></button>
+                        </div>
+                    `;
+                } else {
+                    botoes = `<button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico"><i class="bi bi-clock-history"></i></button>`;
+                }
+            } else if (status === 'AGUARDANDO_RECEBIMENTO') {
+                 let btnReceber = '';
+                 // REGRA: MARCAR RECEBIDO SÓ ADMIN OU MANAGER
+                 if (isAdmin || isManager) {
+                     btnReceber = `<button class="btn btn-sm btn-outline-primary me-1" onclick="receberDocumentacao(this, '${item.id}')" title="Confirmar Recebimento"><i class="bi bi-box-arrow-in-down"></i></button>`;
+                 }
+                 
+                 botoes = `
+                    <div class="btn-group" role="group">
+                        ${btnReceber}
+                        <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico"><i class="bi bi-clock-history"></i></button>
+                    </div>
+                 `;
+            }
+        }
+
+        // Tabela
         const displayAssunto = contextoFiltro === 'HISTORICO' ? '' : 'd-none';
+        const provaEnvioTexto = item.provaEnvio ? `<span class="text-truncate d-inline-block text-primary fw-bold" style="max-width: 150px;" title="${item.provaEnvio}"><i class="bi bi-link-45deg"></i> ${item.provaEnvio}</span>` : '-';
 
         const tr = `
             <tr>
                 <td class="align-middle text-center">${botoes}</td>
                 <td class="align-middle text-center">${htmlStatus}</td>
-                <td class="align-middle text-truncate" style="max-width:180px;">
-                    <span class="fw-medium">${nomeSolicitante}</span><br>
-                    <small class="text-muted">OS: ${numOs}</small>
-                </td>
-                <td class="align-middle">
-                    <span class="fw-medium">${tipoDoc}</span><br>
-                    <small class="text-success fw-bold">${valorFormatado}</small>
-                </td>
+                <td class="align-middle">${nomeSolicitante}</td>
+                <td class="align-middle fw-medium text-wrap" style="max-width:200px;">${tipoDoc}</td>
                 <td class="align-middle text-center">${htmlPrazo}</td>
-                <td class="align-middle text-center small">
-                    ${responsavelNome}
-                </td>
-                <td class="align-middle small ${displayAssunto}">
-                    ${item.provaEnvio || '-'}
-                </td>
+                <td class="align-middle text-success fw-bold">${valorFormatado}</td>
+                <td class="align-middle text-center small">${responsavelNome}</td>
+                <td class="align-middle text-center small ${displayAssunto}">${provaEnvioTexto}</td>
             </tr>
         `;
         tbody.innerHTML += tr;
     });
 }
 
-// 1. RECEBER
-async function receberDocumentacao(id) {
-    if (!confirm('Confirmar o recebimento?')) return;
+// =====================================================================
+// FLUXO DE AÇÕES E INTEGRAÇÕES
+// =====================================================================
+
+async function receberDocumentacao(btnElement, id) {
+    if (!confirm('Confirmar o recebimento do documento? O prazo de 48h começará a contar agora.')) return;
     
-    const btn = document.activeElement;
-    if(btn) btn.disabled = true;
+    if(typeof setButtonLoading === 'function') setButtonLoading(btnElement, true);
     toggleLoader(true, '#minhas-docs-pane');
 
     try {
@@ -245,31 +246,83 @@ async function receberDocumentacao(id) {
         await fetchComAuth(`/api/docs/solicitacoes/${id}/receber`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ actorUsuarioId: userId, comentario: 'Recebido para análise' })
+            body: JSON.stringify({ actorUsuarioId: userId, comentario: 'Documento marcado como recebido pelo Gestor/Admin.' })
         });
         
         mostrarToast("Documentos recebidos com sucesso!", "success");
         await carregarDadosDocumentacao();
-
     } catch (e) {
-        mostrarToast(e.message, 'error');
+        mostrarToast("Erro ao confirmar recebimento: " + e.message, 'error');
     } finally {
         toggleLoader(false, '#minhas-docs-pane');
+        if(typeof setButtonLoading === 'function') setButtonLoading(btnElement, false);
     }
 }
 
-// 2. RECUSAR / REPROVAR
+// =====================================================================
+// MODAL DE HISTÓRICO / COMENTÁRIOS E RECUSA
+// =====================================================================
+
 function iniciarRecusa(id) {
     abrirModalComentarios(id, true);
 }
 
-// 3. MODAL DE COMENTÁRIOS / REPROVAÇÃO
+async function carregarHistoricoNoModal(id) {
+    const container = document.getElementById('listaComentariosContainer');
+    container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><br><span class="mt-2 text-muted">Carregando histórico...</span></div>';
+    
+    try {
+        const res = await fetchComAuth(`/api/docs/solicitacoes/${id}/historico`);
+        if (!res.ok) throw new Error("Falha na API de histórico");
+        const historico = await res.json();
+
+        if (!historico || historico.length === 0) {
+            container.innerHTML = '<div class="text-center p-4 text-muted"><i class="bi bi-inbox fs-1 d-block mb-2"></i>Nenhum registro encontrado.</div>';
+            return;
+        }
+
+        let htmlTimeline = '<div class="timeline-container position-relative mt-2" style="border-left: 2px solid #dee2e6; margin-left: 15px; padding-left: 20px;">';
+        
+        historico.forEach(ev => {
+            const dataForm = new Date(ev.criadoEm).toLocaleString('pt-BR');
+            const eventoNome = ev.tipoEvento ? ev.tipoEvento.replace(/_/g, ' ') : 'ATUALIZAÇÃO';
+            const atorNome = ev.actorNome || `ID: ${ev.actorUsuarioId}`;
+            
+            let iconClass = 'bg-primary';
+            if(eventoNome.includes('RECUSA')) iconClass = 'bg-danger';
+            else if(eventoNome.includes('FINALIZADO')) iconClass = 'bg-success';
+            else if(eventoNome.includes('COMENTARIO')) iconClass = 'bg-secondary';
+            
+            htmlTimeline += `
+                <div class="mb-4 position-relative">
+                    <span class="position-absolute translate-middle rounded-circle border border-white border-2 ${iconClass}" 
+                          style="width: 16px; height: 16px; left: -21px; top: 15px;"></span>
+                    <div class="card border-0 shadow-sm bg-light">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0 text-dark fw-bold">${atorNome}</h6>
+                                <span class="badge ${iconClass} bg-opacity-10 text-dark" style="font-size: 0.70rem;">${eventoNome}</span>
+                            </div>
+                            <p class="mb-2 text-secondary small" style="white-space: pre-wrap;">${ev.comentario || 'Ação registrada no sistema.'}</p>
+                            <small class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-calendar3 me-1"></i>${dataForm}</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        htmlTimeline += '</div>';
+        container.innerHTML = htmlTimeline;
+
+    } catch (e) {
+        container.innerHTML = '<div class="text-center p-3 text-danger"><i class="bi bi-exclamation-triangle"></i> Não foi possível carregar o histórico.</div>';
+    }
+}
+
 function abrirModalComentarios(id, isRecusa = false) {
     const modalEl = document.getElementById('modalComentarios');
     const modal = new bootstrap.Modal(modalEl);
     
-    const lista = document.getElementById('listaComentariosContainer');
-    if(lista) lista.innerHTML = '<div class="text-center p-3"><span class="text-muted">Visualização de histórico na nova API em construção.</span></div>';
+    carregarHistoricoNoModal(id);
     
     const btnEnviar = document.getElementById('btnEnviarComentarioModal'); 
     const txtArea = document.getElementById('novoComentarioTexto');
@@ -279,62 +332,79 @@ function abrirModalComentarios(id, isRecusa = false) {
     btnEnviar.parentNode.replaceChild(novoBtn, btnEnviar);
 
     if (isRecusa) {
-        document.getElementById('modalComentariosLabel').innerHTML = '<i class="bi bi-x-circle text-danger"></i> Reprovar Documentação';
+        document.getElementById('modalComentariosLabel').innerHTML = '<i class="bi bi-x-circle text-danger"></i> Recusar Documento';
         novoBtn.className = 'btn btn-danger';
-        novoBtn.innerHTML = '<i class="bi bi-x-lg"></i> Confirmar Reprovação';
-        txtArea.placeholder = "Motivo da reprovação (obrigatório)...";
-        novoBtn.addEventListener('click', () => processarRecusa(id, txtArea.value, modal));
+        novoBtn.innerHTML = '<i class="bi bi-x-lg"></i> Confirmar Recusa';
+        txtArea.placeholder = "Motivo da recusa (obrigatório para recusar)...";
+        
+        novoBtn.addEventListener('click', () => processarRecusa(id, txtArea.value, novoBtn, modal));
     } else {
-        document.getElementById('modalComentariosLabel').innerHTML = '<i class="bi bi-chat-left-text"></i> Enviar Comentário';
+        document.getElementById('modalComentariosLabel').innerHTML = '<i class="bi bi-chat-dots text-primary"></i> Histórico e Comentários';
         novoBtn.className = 'btn btn-primary';
         novoBtn.innerHTML = '<i class="bi bi-send"></i> Enviar Comentário';
-        txtArea.placeholder = "Digite um comentário...";
+        txtArea.placeholder = "Adicionar um comentário...";
+        
         novoBtn.addEventListener('click', async () => {
-             try {
+            if (!txtArea.value.trim()) {
+                mostrarToast("O comentário não pode ser vazio.", "warning");
+                return;
+            }
+            if(typeof setButtonLoading === 'function') setButtonLoading(novoBtn, true);
+            
+            try {
+                const userId = parseInt(localStorage.getItem('usuarioId'));
                 await fetchComAuth(`/api/docs/solicitacoes/${id}/comentar`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ actorUsuarioId: parseInt(localStorage.getItem('usuarioId')), comentario: txtArea.value })
+                    body: JSON.stringify({ actorUsuarioId: userId, comentario: txtArea.value })
                 });
                 mostrarToast("Comentário adicionado!", "success");
-                modal.hide();
-             } catch(e) {
-                mostrarToast("Erro ao comentar", "error");
-             }
+                txtArea.value = '';
+                carregarHistoricoNoModal(id);
+            } catch(e) {
+                mostrarToast("Erro ao comentar.", "error");
+            } finally {
+                if(typeof setButtonLoading === 'function') setButtonLoading(novoBtn, false);
+            }
         });
     }
 
     modal.show();
 }
 
-async function processarRecusa(id, motivo, modalInstance) {
+async function processarRecusa(id, motivo, btnElement, modalInstance) {
     if (!motivo.trim()) {
-        alert("O motivo é obrigatório.");
+        mostrarToast("O motivo da recusa é obrigatório.", "warning");
         return;
     }
     
-    modalInstance.hide();
-    limparBackdropModal();
+    if(typeof setButtonLoading === 'function') setButtonLoading(btnElement, true);
     toggleLoader(true, '#minhas-docs-pane');
     
     try {
         const userId = parseInt(localStorage.getItem('usuarioId'));
-        await fetchComAuth(`/api/docs/solicitacoes/${id}/reprovar`, {
+        await fetchComAuth(`/api/docs/solicitacoes/${id}/recusar`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ actorUsuarioId: userId, comentario: motivo })
         });
         
-        mostrarToast("Documentação reprovada.", "warning");
+        mostrarToast("Documentação recusada com sucesso.", "success");
+        modalInstance.hide();
+        limparBackdropModal();
         await carregarDadosDocumentacao();
     } catch (e) {
-        mostrarToast("Erro: " + e.message, 'error');
+        mostrarToast("Erro na recusa: " + e.message, 'error');
+        if(typeof setButtonLoading === 'function') setButtonLoading(btnElement, false);
     } finally {
         toggleLoader(false, '#minhas-docs-pane');
     }
 }
 
-// 4. FINALIZAR
+// =====================================================================
+// FINALIZAR (Aprovar e inserir prova de envio)
+// =====================================================================
+
 document.addEventListener('click', async function(e) {
     const btn = e.target.closest('.btn-finalizar-doc');
     if(btn) {
@@ -360,23 +430,18 @@ if(btnConfirmarFinalizar) {
         const assunto = document.getElementById('assuntoEmailDoc').value;
 
         if (!assunto.trim()) {
-            mostrarToast("O assunto/prova de envio é obrigatório.", "warning");
+            mostrarToast("O envio da prova/link é obrigatório para aprovar.", "warning");
             return;
         }
-
-        const modalEl = document.getElementById('modalFinalizarDoc');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if(modal) modal.hide();
         
-        limparBackdropModal();
+        if(typeof setButtonLoading === 'function') setButtonLoading(novoBtn, true);
         toggleLoader(true, '#minhas-docs-pane');
         
         try {
             const userId = parseInt(localStorage.getItem('usuarioId'));
-            
             const payload = {
                 actorUsuarioId: userId,
-                comentario: "Processo finalizado",
+                comentario: "Documento Aprovado e Finalizado pelo responsável.",
                 provaEnvio: assunto 
             };
 
@@ -395,13 +460,20 @@ if(btnConfirmarFinalizar) {
                 throw new Error(erroMsg);
             }
 
-            mostrarToast("Documentação finalizada com sucesso!", "success");
+            mostrarToast("Aprovado e Finalizado com sucesso!", "success");
+            
+            const modalEl = document.getElementById('modalFinalizarDoc');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if(modal) modal.hide();
+            limparBackdropModal();
+            
             await carregarDadosDocumentacao();
 
         } catch (e) {
             console.error(e);
             mostrarToast(e.message, 'error');
         } finally {
+            if(typeof setButtonLoading === 'function') setButtonLoading(novoBtn, false);
             toggleLoader(false, '#minhas-docs-pane');
         }
     });
