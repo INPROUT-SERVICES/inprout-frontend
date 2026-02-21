@@ -11,6 +11,7 @@ async function carregarDadosDocumentacao() {
         const userId = localStorage.getItem("usuarioId");
         
         let url = '/api/docs/solicitacoes?size=1000';
+        // Documentista só puxa os documentos atrelados a ele
         if (userRole === 'DOCUMENTIST') {
             url += `&documentistaId=${userId}`;
         }
@@ -97,7 +98,7 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
     const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
     const userId = String(localStorage.getItem('usuarioId') || "0");
 
-    // KPIs Dashboard 
+    // KPIs Dashboard - Somando Valores Monetários
     const docsPendentes = solicitacoesDocCache.filter(i => i.status !== 'FINALIZADO' && i.status !== 'FINALIZADO_FORA_PRAZO' && i.status !== 'DEVOLVIDO' && i.status !== 'REPROVADO');
     const docsHistorico = solicitacoesDocCache.filter(i => i.status === 'FINALIZADO' || i.status === 'FINALIZADO_FORA_PRAZO' || i.status === 'DEVOLVIDO' || i.status === 'REPROVADO');
     
@@ -170,54 +171,50 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
         else if (status === 'DEVOLVIDO' || status === 'REPROVADO') htmlStatus = `<span class="badge bg-danger">Recusado</span>`;
 
         // =====================================================================
-        // BOTÕES E PERMISSÕES 
+        // CONTROLE CRÍTICO DE PERMISSÕES E BOTÕES
         // =====================================================================
         const isAdmin = userRole === 'ADMIN';
         const isManager = userRole === 'MANAGER';
         const isDocResponsavel = (userRole === 'DOCUMENTIST' && String(item.documentistaId) === userId);
         
-        let botoes = '';
+        // BOTÃO UNIVERSAL (Todos veem)
+        const btnComentarios = `<button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico/Comentários"><i class="bi bi-clock-history"></i></button>`;
         
-        // Histórico ou Fechado = Apenas ver
-        if (contextoFiltro === 'HISTORICO' || status.includes('FINALIZADO') || status === 'DEVOLVIDO' || status === 'REPROVADO') {
-             botoes = `<button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico/Comentários"><i class="bi bi-clock-history"></i></button>`;
-        } else {
-            if (status === 'RECEBIDO') {
-                // REGRA: APROVAR/RECUSAR SÓ ADMIN OU O DOCUMENTISTA DONO
-                if (isAdmin || isDocResponsavel) {
-                    botoes = `
-                        <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-success btn-finalizar-doc" data-id="${item.id}" title="Aprovar e Finalizar"><i class="bi bi-check-lg"></i></button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="iniciarRecusa('${item.id}')" title="Recusar Documento"><i class="bi bi-x-lg"></i></button>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico"><i class="bi bi-clock-history"></i></button>
-                        </div>
-                    `;
-                } else {
-                    botoes = `<button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico"><i class="bi bi-clock-history"></i></button>`;
+        let acoesHtml = '';
+        const isHistoricoOuFinalizado = contextoFiltro === 'HISTORICO' || status.includes('FINALIZADO') || status === 'DEVOLVIDO' || status === 'REPROVADO';
+
+        if (!isHistoricoOuFinalizado) {
+            if (status === 'AGUARDANDO_RECEBIMENTO') {
+                // REGRA: MARCAR RECEBIDO APENAS PARA ADMIN E MANAGER
+                if (isAdmin || isManager) {
+                    acoesHtml += `<button class="btn btn-sm btn-outline-primary me-1" onclick="receberDocumentacao(this, '${item.id}')" title="Confirmar Recebimento"><i class="bi bi-box-arrow-in-down"></i></button>`;
                 }
-            } else if (status === 'AGUARDANDO_RECEBIMENTO') {
-                 let btnReceber = '';
-                 // REGRA: MARCAR RECEBIDO SÓ ADMIN OU MANAGER
-                 if (isAdmin || isManager) {
-                     btnReceber = `<button class="btn btn-sm btn-outline-primary me-1" onclick="receberDocumentacao(this, '${item.id}')" title="Confirmar Recebimento"><i class="bi bi-box-arrow-in-down"></i></button>`;
-                 }
-                 
-                 botoes = `
-                    <div class="btn-group" role="group">
-                        ${btnReceber}
-                        <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico"><i class="bi bi-clock-history"></i></button>
-                    </div>
-                 `;
+            } else if (status === 'RECEBIDO') {
+                // REGRA: APROVAR E RECUSAR APENAS PARA ADMIN E DOCUMENTISTA (Dono)
+                if (isAdmin || isDocResponsavel) {
+                    acoesHtml += `
+                        <button class="btn btn-sm btn-success btn-finalizar-doc me-1" data-id="${item.id}" title="Aprovar e Finalizar"><i class="bi bi-check-lg"></i></button>
+                        <button class="btn btn-sm btn-outline-danger me-1" onclick="iniciarRecusa('${item.id}')" title="Recusar Documento"><i class="bi bi-x-lg"></i></button>
+                    `;
+                }
             }
         }
 
-        // Tabela
+        // Monta o grupo final de botões juntando as ações permitidas com o botão de comentários
+        let botoesFinal = '';
+        if (acoesHtml !== '') {
+            botoesFinal = `<div class="d-flex justify-content-center align-items-center">${acoesHtml}${btnComentarios}</div>`;
+        } else {
+            botoesFinal = btnComentarios; // Se não tiver ações, exibe só os comentários
+        }
+
+        // Exibição da Prova de Envio (Tabela)
         const displayAssunto = contextoFiltro === 'HISTORICO' ? '' : 'd-none';
         const provaEnvioTexto = item.provaEnvio ? `<span class="text-truncate d-inline-block text-primary fw-bold" style="max-width: 150px;" title="${item.provaEnvio}"><i class="bi bi-link-45deg"></i> ${item.provaEnvio}</span>` : '-';
 
         const tr = `
             <tr>
-                <td class="align-middle text-center">${botoes}</td>
+                <td class="align-middle text-center">${botoesFinal}</td>
                 <td class="align-middle text-center">${htmlStatus}</td>
                 <td class="align-middle">${nomeSolicitante}</td>
                 <td class="align-middle fw-medium text-wrap" style="max-width:200px;">${tipoDoc}</td>
@@ -441,7 +438,7 @@ if(btnConfirmarFinalizar) {
             const userId = parseInt(localStorage.getItem('usuarioId'));
             const payload = {
                 actorUsuarioId: userId,
-                comentario: "Documento Aprovado e Finalizado pelo responsável.",
+                comentario: "Documento Aprovado e Finalizado.",
                 provaEnvio: assunto 
             };
 

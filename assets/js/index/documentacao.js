@@ -47,14 +47,13 @@ const DocumentacaoModule = (function () {
     // NOVA FUNÇÃO: Preenche qualquer select passado para ela
     async function popularSelectDocumento(selectElement, valorSelecionado = null) {
         if (!selectElement) return;
-        await carregarCaches(); // Garante que os dados já chegaram da API
+        await carregarCaches();
 
         selectElement.innerHTML = '<option value="" selected>Não se aplica</option>';
         documentosCache.forEach(doc => selectElement.add(new Option(doc.nome, doc.id)));
 
         if (valorSelecionado) {
             selectElement.value = valorSelecionado;
-            // Força a atualização do select de documentista
             selectElement.dispatchEvent(new Event('change', { bubbles: true }));
         }
     }
@@ -62,11 +61,9 @@ const DocumentacaoModule = (function () {
     // Configura os gatilhos para quando um documento é selecionado
     function configurarListenersGlobais() {
         document.body.addEventListener('change', (e) => {
-            // Escuta tanto o select do modal único quanto os do lote
             if (e.target.id === 'documentoId' || e.target.classList.contains('documento-select-lote')) {
                 const selectDocId = e.target.value;
 
-                // Encontra o select de documentista correspondente
                 let selectDocumentista;
                 if (e.target.id === 'documentoId') {
                     selectDocumentista = document.getElementById('documentistaId');
@@ -96,32 +93,26 @@ const DocumentacaoModule = (function () {
     }
 
     async function criarSolicitacao({ osId, documentoId, documentistaId, lancamentoIds, acao }) {
-
-        // 1. Limpa o array de lançamentos (garante que extraia apenas números válidos)
         let idsLimpos = [];
         if (Array.isArray(lancamentoIds)) {
             idsLimpos = lancamentoIds
-                .map(id => (typeof id === 'object' && id !== null ? id.id : id)) // Se for objeto, extrai o id
-                .map(id => parseInt(id)) // Converte pra inteiro
-                .filter(id => !isNaN(id)); // Remove NaNs
+                .map(id => (typeof id === 'object' && id !== null ? id.id : id))
+                .map(id => parseInt(id))
+                .filter(id => !isNaN(id));
         }
 
-        // 2. Monta o Payload com tratamento de nulos
         const payload = {
             osId: parseInt(osId) || null,
             documentoId: parseInt(documentoId) || null,
             actorUsuarioId: parseInt(localStorage.getItem('usuarioId')) || null,
             comentario: acao === 'enviar' ? "Iniciando processo de solicitação" : "Salvo como rascunho",
-            documentistaId: documentistaId ? parseInt(documentistaId) : null, // Se vazio, manda null
+            documentistaId: documentistaId ? parseInt(documentistaId) : null,
             lancamentoIds: idsLimpos
         };
 
-        console.log("PAYLOAD ENVIADO PARA DOC:", JSON.stringify(payload));
-
-        // Trava de segurança no front-end
         if (!payload.osId || !payload.documentoId || payload.lancamentoIds.length === 0) {
-            console.error("Tentativa de criar solicitação ignorada. Faltam dados no payload.");
-            return; // Interrompe para não dar erro 400 atoa
+            console.error("Tentativa de criar solicitação ignorada. Faltam dados.");
+            return;
         }
 
         try {
@@ -133,22 +124,17 @@ const DocumentacaoModule = (function () {
 
             if (!response.ok) {
                 const erroTexto = await response.text();
-                console.error("Retorno de erro do servidor:", erroTexto);
                 try {
                     const erroJson = JSON.parse(erroTexto);
-                    // Lança o erro com a mensagem exata do backend
                     throw new Error(erroJson.message || "Erro ao criar solicitação de documento.");
                 } catch (e) {
                     throw new Error(erroTexto || "Erro ao criar solicitação de documento.");
                 }
             }
 
-            // Recarrega a aba de pendentes se der sucesso
             carregarAbaPendenteDoc();
 
         } catch (error) {
-            console.error(error);
-            // Mostra o erro do backend no Toast!
             mostrarToast(error.message, "warning");
         }
     }
@@ -157,49 +143,80 @@ const DocumentacaoModule = (function () {
         const tbody = document.getElementById('tbody-pendente-doc');
         if (!tbody) return;
 
+        // =================================================================
+        // CORREÇÃO DOS CABEÇALHOS GIGANTES DA TABELA HTML
+        // =================================================================
+        const table = tbody.closest('table');
+        if (table) {
+            const thead = table.querySelector('thead');
+            if (thead) {
+                // Substitui aquela imensidão de colunas de atividades apenas pelas que importam
+                thead.innerHTML = `
+                    <tr>
+                        <th class="text-center" style="width: 120px;">Ação</th>
+                        <th class="text-center">Status</th>
+                        <th>Solicitante</th>
+                        <th>Tipo Documento</th>
+                        <th class="text-center">Responsável</th>
+                    </tr>
+                `;
+            }
+        }
+
         try {
             const response = await fetchComAuth('/api/docs/solicitacoes');
             const data = await response.json();
 
-            // Extrai a lista corretamente
             let solicitacoes = Array.isArray(data) ? data : (data.content || []);
-
-            // LOG PARA DEBUG: Pressione F12 para ver se as solicitações estão chegando do backend
-            console.log("Todas as solicitações de doc:", solicitacoes);
-
-            // Filtra por status exato do Enum Java
             solicitacoes = solicitacoes.filter(sol => sol.status === 'AGUARDANDO_RECEBIMENTO');
 
             const role = (localStorage.getItem("role") || "").trim().toUpperCase();
 
-            // === O GRANDE VILÃO ESTAVA AQUI ===
-            // O microserviço não devolve sol.osSegmento. Então filtramos cruzando 
-            // com os IDs das OSs que o usuário tem acesso (que ficam no select da tela)
+            // Filtragem cruzada para MANAGER e COORDINATOR verem apenas as de suas OSs
             if (['MANAGER', 'COORDINATOR'].includes(role)) {
-                // Procura o select de OS do seu formulário (ajuste o ID se necessário)
                 const osDropdown = document.getElementById('selectOS') || document.querySelector('select[id*="os"]');
-
                 if (osDropdown && osDropdown.options.length > 0) {
-                    // Pega todos os IDs de OS que estão no select
                     const osPermitidas = Array.from(osDropdown.options).map(opt => parseInt(opt.value)).filter(val => !isNaN(val));
-
-                    // Filtra as solicitações para mostrar apenas as que pertencem a essas OSs
                     solicitacoes = solicitacoes.filter(sol => osPermitidas.includes(sol.osId));
                 }
             }
 
-            // Renderizar na Tabela
             tbody.innerHTML = '';
+            
+            if(solicitacoes.length === 0) {
+                 tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">Nenhuma pendência de documento encontrada.</td></tr>';
+            }
+
             solicitacoes.forEach(sol => {
                 const tr = document.createElement('tr');
+                
+                // Mapeamento de dados
+                const nomeSolicitante = sol.solicitanteNome || 'Sistema';
+                const responsavelNome = sol.documentistaNome || (sol.documentistaId ? `ID: ${sol.documentistaId}` : 'Sem Responsável');
+                const tipoDoc = sol.documento ? sol.documento.nome : '-';
+                const osBadge = sol.osId ? `<br><span class="badge bg-secondary opacity-75 mt-1">OS: ${sol.osId}</span>` : '';
+
                 tr.innerHTML = `
-                    <td class="text-center"><input type="checkbox" class="form-check-input check-doc-lote" value="${sol.id}"></td>
-                    <td>
-                        <button class="btn btn-sm btn-info btn-comentar-doc" data-id="${sol.id}" title="Comentar"><i class="bi bi-chat-dots"></i></button>
+                    <td class="align-middle text-center">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <input type="checkbox" class="form-check-input check-doc-lote me-2" value="${sol.id}" style="margin-top: 0;">
+                            <button class="btn btn-sm btn-outline-secondary btn-comentar-doc" data-id="${sol.id}" title="Comentar">
+                                <i class="bi bi-chat-dots"></i>
+                            </button>
+                        </div>
                     </td>
-                    <td>OS: ${sol.osId || '-'}</td>
-                    <td>${sol.documento ? sol.documento.nome : '-'}</td>
-                    <td><span class="badge text-bg-warning">Aguardando Recebimento</span></td>
+                    <td class="align-middle text-center">
+                        <span class="badge bg-warning text-dark">Aguardando Recebimento</span>
+                    </td>
+                    <td class="align-middle">
+                        <span class="fw-medium">${nomeSolicitante}</span>${osBadge}
+                    </td>
+                    <td class="align-middle fw-medium">
+                        ${tipoDoc}
+                    </td>
+                    <td class="align-middle text-center small">
+                        ${responsavelNome}
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -218,8 +235,8 @@ const DocumentacaoModule = (function () {
 
     async function receberLoteDocumentos() {
         const role = (localStorage.getItem("role") || "").trim().toUpperCase();
-        if (role !== 'MANAGER') {
-            mostrarToast("Somente perfis MANAGER podem marcar como recebido.", "error");
+        if (role !== 'MANAGER' && role !== 'ADMIN') {
+            mostrarToast("Somente perfis de Gestão podem marcar como recebido.", "error");
             return;
         }
 
@@ -229,7 +246,7 @@ const DocumentacaoModule = (function () {
             return;
         }
 
-        const comentario = prompt("Comentário (Opcional):", "Documento recebido para análise");
+        const comentario = prompt("Comentário (Opcional):", "Documento marcado como recebido (Em Lote).");
         if (comentario === null) return;
 
         try {
@@ -244,6 +261,14 @@ const DocumentacaoModule = (function () {
                 });
             }
             mostrarToast("Documentos marcados como recebidos com sucesso!", "success");
+            
+            // Oculta a barra de ações em lote
+            const barra = document.getElementById('acoes-lote-doc');
+            if(barra) {
+                barra.classList.add('d-none');
+                barra.classList.remove('d-flex');
+            }
+            
             carregarAbaPendenteDoc();
         } catch (err) {
             console.error(err);
@@ -275,8 +300,10 @@ const DocumentacaoModule = (function () {
         document.body.addEventListener('click', (e) => {
             const btnComentar = e.target.closest('.btn-comentar-doc');
             if (btnComentar) {
-                const texto = prompt("Digite o comentário:");
-                if (texto) comentarSolicitacao(btnComentar.dataset.id, texto);
+                const texto = prompt("Digite o comentário para a equipe de documentos:");
+                if (texto && texto.trim() !== '') {
+                    comentarSolicitacao(btnComentar.dataset.id, texto);
+                }
             }
         });
 
