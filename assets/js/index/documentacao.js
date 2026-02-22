@@ -172,10 +172,6 @@ const DocumentacaoModule = (function () {
         const tbody = document.getElementById('tbody-pendente-doc');
         if (!tbody) return;
 
-        // =================================================================
-        // DESTRÓI O CABEÇALHO ANTIGO E CRIA O NOVO (PADRÃO DO SISTEMA)
-        // Retirei as classes forçadas para o CSS do sistema agir naturalmente
-        // =================================================================
         const table = tbody.closest('table');
         if (table) {
             const thead = table.querySelector('thead');
@@ -184,6 +180,7 @@ const DocumentacaoModule = (function () {
                     <tr>
                         <th class="text-center align-middle" style="width: 120px;">AÇÃO</th>
                         <th class="text-center align-middle">STATUS</th>
+                        <th class="align-middle">DATA DA SOLICITAÇÃO</th>
                         <th class="align-middle">SOLICITANTE</th>
                         <th class="align-middle">TIPO DOCUMENTO</th>
                         <th class="text-center align-middle">RESPONSÁVEL</th>
@@ -213,7 +210,8 @@ const DocumentacaoModule = (function () {
             tbody.innerHTML = '';
             
             if(solicitacoes.length === 0) {
-                 tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">Nenhuma pendência de documento encontrada.</td></tr>';
+                 // Aumentado colspan de 5 para 6 por causa da nova coluna
+                 tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">Nenhuma pendência de documento encontrada.</td></tr>';
             }
 
             solicitacoes.forEach(sol => {
@@ -223,9 +221,8 @@ const DocumentacaoModule = (function () {
                 const responsavelNome = sol.documentistaNome || (sol.documentistaId ? `ID: ${sol.documentistaId}` : 'Sem Responsável');
                 const tipoDoc = sol.documento ? sol.documento.nome : '-';
                 
-                // Mapeia o nome completo da OS via Cache ou Select
-                const stringOs = obterNomeOS(sol.osId);
-                const osHtml = `<br><small class="text-secondary mt-1" style="font-size: 0.75rem;"><i class="bi bi-hdd-network"></i> ${stringOs}</small>`;
+                // Formatação da Data de Solicitação (criadoEm)
+                const dataSolicitacao = sol.criadoEm ? new Date(sol.criadoEm).toLocaleDateString('pt-BR') : '-';
 
                 tr.innerHTML = `
                     <td class="align-middle text-center">
@@ -240,7 +237,10 @@ const DocumentacaoModule = (function () {
                         <span class="badge bg-warning text-dark">Aguardando Recebimento</span>
                     </td>
                     <td class="align-middle">
-                        <span class="fw-medium">${nomeSolicitante}</span>${osHtml}
+                        <span class="text-secondary fw-medium">${dataSolicitacao}</span>
+                    </td>
+                    <td class="align-middle">
+                        <span class="fw-medium">${nomeSolicitante}</span>
                     </td>
                     <td class="align-middle fw-medium">
                         ${tipoDoc}
@@ -276,20 +276,59 @@ const DocumentacaoModule = (function () {
             return;
         }
 
-        const comentario = prompt("Comentário (Opcional):", "Documento marcado como recebido (Em Lote).");
-        if (comentario === null) return;
+        // Usando o SweetAlert2 para um modal "bonitinho" com loading
+        const { value: comentario, isConfirmed } = await Swal.fire({
+            title: 'Confirmar Recebimento',
+            text: 'Deseja adicionar uma observação? (Opcional)',
+            input: 'textarea',
+            inputValue: 'Documento marcado como recebido (Em Lote).',
+            inputPlaceholder: 'Digite seu comentário aqui...',
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-check-lg me-1"></i> Confirmar Recebimento',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#198754', // Verde padrão do sistema
+            showLoaderOnConfirm: true, // Habilita o spinner de carregamento!
+            allowOutsideClick: () => !Swal.isLoading(),
+            preConfirm: async (comentarioValue) => {
+                // Adiciona o loading visual também no botão da barra (por garantia)
+                const btnBarra = document.getElementById('btnReceberLoteDoc');
+                const btnBarraHtmlOrig = btnBarra ? btnBarra.innerHTML : '';
+                if (btnBarra) {
+                    btnBarra.disabled = true;
+                    btnBarra.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processando...';
+                }
 
-        try {
-            for (let id of selecionados) {
-                await fetchComAuth(`/api/docs/solicitacoes/${id}/receber`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        actorUsuarioId: parseInt(localStorage.getItem('usuarioId')),
-                        comentario: comentario
-                    })
-                });
+                try {
+                    for (let id of selecionados) {
+                        const response = await fetchComAuth(`/api/docs/solicitacoes/${id}/receber`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                actorUsuarioId: parseInt(localStorage.getItem('usuarioId')),
+                                comentario: comentarioValue
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Falha na comunicação com o servidor.');
+                        }
+                    }
+                    return true;
+                } catch (err) {
+                    Swal.showValidationMessage(`Erro ao processar o lote: ${err.message}`);
+                    return false;
+                } finally {
+                    // Restaura o botão original após acabar o loading
+                    if (btnBarra) {
+                        btnBarra.disabled = false;
+                        btnBarra.innerHTML = btnBarraHtmlOrig;
+                    }
+                }
             }
+        });
+
+        // Só atualiza a tela e dá sucesso se a Promise terminou certinha!
+        if (isConfirmed) {
             mostrarToast("Documentos marcados como recebidos com sucesso!", "success");
             
             const barra = document.getElementById('acoes-lote-doc');
@@ -299,8 +338,6 @@ const DocumentacaoModule = (function () {
             }
             
             carregarAbaPendenteDoc();
-        } catch (err) {
-            mostrarToast("Erro ao processar lote.", "error");
         }
     }
 
