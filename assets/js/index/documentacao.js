@@ -237,7 +237,7 @@ const DocumentacaoModule = (function () {
                 
                 const nomeSolicitante = sol.solicitanteNome || 'Sistema';
                 // Pegando a OS gravada ou buscando do cache de OS do usuário
-                const osNomeStr = sol.osNome || obterNomeOS(sol.osId) || `OS Num. ${sol.osId}`;
+                const osNomeStr = sol.osNome || `OS Num. ${sol.osId}`;
                 
                 const responsavelNome = sol.documentistaNome || (sol.documentistaId ? `ID: ${sol.documentistaId}` : 'Sem Responsável');
                 const tipoDoc = sol.documento ? sol.documento.nome : '-';

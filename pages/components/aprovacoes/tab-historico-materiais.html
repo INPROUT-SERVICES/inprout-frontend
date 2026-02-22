@@ -11,14 +11,20 @@
                     <input type="date" class="form-control form-control-sm" id="data-fim-hist-material">
                 </div>
                 <div class="col-md-4">
-                     <label class="form-label small fw-bold text-muted mb-1">Busca Rápida</label>
-                     <div class="input-group input-group-sm">
+                    <label class="form-label small fw-bold text-muted mb-1">Busca Rápida</label>
+                    <div class="input-group input-group-sm">
                         <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control border-start-0" id="filtro-historico-materiais-input" placeholder="OS, Solicitante..." onkeyup="filtrarHistoricoMateriaisNaTela()">
-                     </div>
+                        <input type="text" class="form-control border-start-0" id="filtro-historico-materiais-input"
+                            placeholder="OS, Solicitante..." onkeyup="filtrarHistoricoMateriaisNaTela()">
+                    </div>
                 </div>
+                <button type="button" id="btn-exportar-historico-materiais" class="btn btn-success d-none"
+                    onclick="exportarHistoricoMateriaisExcel()">
+                    <i class="bi bi-file-earmark-excel"></i> Exportar Excel
+                </button>
                 <div class="col-md-2">
-                    <button class="btn btn-sm btn-primary w-100" id="btn-filtrar-historico-materiais" onclick="carregarDadosHistoricoMateriais()">
+                    <button class="btn btn-sm btn-primary w-100" id="btn-filtrar-historico-materiais"
+                        onclick="carregarDadosHistoricoMateriais()">
                         <i class="bi bi-funnel-fill me-1"></i> Filtrar
                     </button>
                 </div>

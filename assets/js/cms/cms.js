@@ -607,13 +607,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     const index = input.dataset.index;
                     const material = itensNoCarrinho[index];
                     const qtd = parseFloat(input.value);
+                    const saldo = parseFloat(material.saldoFisico);
 
                     if (!qtd || qtd <= 0) {
                         mostrarToast(`Quantidade inválida para o material: ${material.codigo}`, 'warning');
                         erroValidacao = true;
                         return;
                     }
-                    // REMOVIDA A TRAVA DE SALDO AQUI. O usuário pode pedir (ficará negativo).
+
+                    // NOVA TRAVA: Verifica se tem saldo 0 ou negativo
+                    if (saldo <= 0) {
+                        mostrarToast(`O material ${material.codigo} não possui saldo disponível.`, 'warning');
+                        erroValidacao = true;
+                        return;
+                    }
+
+                    // NOVA TRAVA: Verifica se a quantidade solicitada é maior que o saldo
+                    if (qtd > saldo) {
+                        mostrarToast(`A quantidade solicitada (${qtd}) excede o saldo (${saldo}) do material: ${material.codigo}`, 'warning');
+                        erroValidacao = true;
+                        return;
+                    }
 
                     itensPayload.push({
                         materialId: material.id,

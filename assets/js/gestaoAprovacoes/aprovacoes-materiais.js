@@ -36,6 +36,8 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
     window.confirmarAprovacao = confirmarAprovacao;
     window.confirmarRejeicao = confirmarRejeicao;
 
+    window.exportarHistoricoMateriaisExcel = exportarHistoricoMateriaisExcel;
+
     // =================================================================
     // 1. INICIALIZAÇÃO E LISTENERS
     // =================================================================
@@ -47,6 +49,12 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         const btnFiltrarHist = document.getElementById('btn-filtrar-historico-materiais');
         if (btnFiltrarHist) {
             btnFiltrarHist.addEventListener('click', carregarDadosHistoricoMateriais);
+        }
+
+        const btnExportar = document.getElementById('btn-exportar-historico-materiais');
+        const role = (typeof userRole !== 'undefined' ? userRole : '').toUpperCase();
+        if (btnExportar && (role.includes('ADMIN') || role.includes('CONTROLLER') || role.includes('COORDINATOR') || role.includes('MANAGER'))) {
+            btnExportar.classList.remove('d-none');
         }
     }
 
@@ -239,10 +247,19 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         accordionWrapper.id = 'accordionMateriais';
 
         const role = (typeof userRole !== 'undefined' ? userRole : '').toUpperCase();
-        const podeAprovar = ['COORDINATOR', 'ADMIN', 'CONTROLLER'].includes(role);
 
         lista.forEach((solicitacao, index) => {
-            const html = criarHtmlCard(solicitacao, index, true, podeAprovar);
+            // Lógica de Permissão Dinâmica por Status do Pedido
+            let podeAprovarPedido = false;
+            if (role.includes('ADMIN')) {
+                podeAprovarPedido = true; // Admin aprova tudo
+            } else if (role.includes('CONTROLLER')) {
+                podeAprovarPedido = solicitacao.status === 'PENDENTE_CONTROLLER'; // Controller só aprova se estiver na mesa dele
+            } else if (role.includes('COORDINATOR') || role.includes('MANAGER')) {
+                podeAprovarPedido = solicitacao.status === 'PENDENTE_COORDENADOR'; // Gestor só aprova na fase inicial
+            }
+
+            const html = criarHtmlCard(solicitacao, index, true, podeAprovarPedido);
             const cardItem = document.createElement('div');
             cardItem.className = 'accordion-item pedido-item-dom fade-in-up';
             cardItem.setAttribute('data-search', `${getOsLabel(solicitacao)} ${solicitacao.nomeSolicitante || ''}`.toLowerCase());
@@ -302,6 +319,12 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
             else if (status === 'REJEITADO') statusGeralBadge = `<span class="badge bg-danger ms-2"><i class="bi bi-x-circle me-1"></i>RECUSADO</span>`;
             else if (status === 'PARCIAL') statusGeralBadge = `<span class="badge bg-warning text-dark ms-2">PARCIAL</span>`;
             else statusGeralBadge = `<span class="badge bg-secondary ms-2">${status}</span>`;
+        } else {
+            if (solicitacao.status === 'PENDENTE_COORDENADOR') {
+                statusGeralBadge = `<span class="badge bg-warning text-dark ms-2"><i class="bi bi-hourglass-split me-1"></i>Aguardando Coordenador</span>`;
+            } else if (solicitacao.status === 'PENDENTE_CONTROLLER') {
+                statusGeralBadge = `<span class="badge bg-primary ms-2"><i class="bi bi-hourglass-split me-1"></i>Aguardando Controller</span>`;
+            }
         }
 
         const linhasItens = (solicitacao.itens || []).map(item => {
@@ -354,9 +377,13 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         if (solicitacao.lpu && solicitacao.lpu.site && solicitacao.lpu.site !== '-' && solicitacao.lpu.site !== 'Sem Site') {
             site = solicitacao.lpu.site;
         }
-        // 2. Se falhou, tenta OS (novo campo que adicionamos no DTO)
+        // 2. Se falhou, tenta OS
         else if (solicitacao.os && solicitacao.os.site && solicitacao.os.site !== '-' && solicitacao.os.site !== 'Sem Site') {
             site = solicitacao.os.site;
+        }
+        // 3. Fallback extra caso o backend grave direto na solicitação pai
+        else if (solicitacao.site && solicitacao.site !== '-' && solicitacao.site !== 'Sem Site') {
+            site = solicitacao.site;
         }
 
         return `
@@ -658,5 +685,69 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
     function calcularTotal(itens) { return (itens || []).reduce((acc, i) => acc + (toNumber(i.quantidadeSolicitada) * toNumber(i.material?.custoMedioPonderado)), 0); }
     function formatarDataHora(iso) { if (!iso) return '-'; const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
     const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+    function exportarHistoricoMateriaisExcel() {
+        if (!listaCompletaHistorico || listaCompletaHistorico.length === 0) {
+            if (window.mostrarToast) mostrarToast('Nenhum dado para exportar. Faça uma busca primeiro.', 'warning');
+            return;
+        }
+
+        const dadosExportacao = [];
+
+        // Varre todas as solicitações e seus itens para achatar os dados
+        listaCompletaHistorico.forEach(solicitacao => {
+            const osReal = getOsLabel(solicitacao);
+            const solicitante = solicitacao.nomeSolicitante && solicitacao.nomeSolicitante !== 'null' ? solicitacao.nomeSolicitante : 'Desconhecido';
+            const dataStr = formatarDataHora(solicitacao.dataSolicitacao);
+            const segmento = getSegmentoLabel(solicitacao);
+            
+            let site = 'Sem Site';
+            if (solicitacao.lpu && solicitacao.lpu.site && solicitacao.lpu.site !== '-' && solicitacao.lpu.site !== 'Sem Site') site = solicitacao.lpu.site;
+            else if (solicitacao.os && solicitacao.os.site && solicitacao.os.site !== '-' && solicitacao.os.site !== 'Sem Site') site = solicitacao.os.site;
+            else if (solicitacao.site && solicitacao.site !== '-' && solicitacao.site !== 'Sem Site') site = solicitacao.site;
+
+            const statusGeral = calcularStatusGeral(solicitacao);
+
+            // Cada item do pedido vai virar uma linha na planilha
+            (solicitacao.itens || []).forEach(item => {
+                const mat = item.material || {};
+                const qtd = toNumber(item.quantidadeSolicitada);
+                const custo = toNumber(mat.custoMedioPonderado);
+                const totalItem = qtd * custo;
+
+                dadosExportacao.push({
+                    "OS": osReal,
+                    "Segmento": segmento,
+                    "Site": site,
+                    "Solicitante": solicitante,
+                    "Data Solicitação": dataStr,
+                    "Status Pedido": statusGeral,
+                    "Código Material": mat.codigo || '-',
+                    "Descrição Material": mat.descricao || 'Item Desconhecido',
+                    "Unidade": mat.unidadeMedida || 'UN',
+                    "Qtd Solicitada": qtd,
+                    "Custo Unitário": custo,
+                    "Custo Total": totalItem,
+                    "Status do Item": item.statusItem || 'PENDENTE',
+                    "Motivo Recusa / Obs": item.observacao || item.motivoRecusa || '-'
+                });
+            });
+        });
+
+        // Verifica se a biblioteca XLSX está injetada no index
+        if (typeof XLSX === 'undefined') {
+            if (window.mostrarToast) mostrarToast('Biblioteca de exportação não encontrada.', 'error');
+            console.error("A biblioteca XLSX (SheetJS) não está definida.");
+            return;
+        }
+
+        // Gera a planilha e faz o download
+        const worksheet = XLSX.utils.json_to_sheet(dadosExportacao);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Histórico Materiais");
+
+        const dataAtual = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(workbook, `Historico_Materiais_${dataAtual}.xlsx`);
+    }
 
 })();
