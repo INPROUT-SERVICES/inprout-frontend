@@ -119,13 +119,31 @@ const DocumentacaoModule = (function () {
                 .filter(id => !isNaN(id)); 
         }
 
+        // Captura os dados dinâmicos da tela e LocalStorage para salvar no banco do Microsserviço
+        let osNomeStr = '-';
+        const selectOS = document.getElementById('osId');
+        if (selectOS && selectOS.options.length > 0 && selectOS.selectedIndex >= 0) {
+            osNomeStr = selectOS.options[selectOS.selectedIndex].text;
+        }
+
+        let segmentoNomeStr = '-';
+        const inputSegmento = document.getElementById('segmento');
+        if (inputSegmento) {
+            segmentoNomeStr = inputSegmento.value;
+        }
+
+        const nomeUsuarioStr = localStorage.getItem('usuario') || 'Sistema';
+
         const payload = {
             osId: parseInt(osId) || null,
             documentoId: parseInt(documentoId) || null,
             actorUsuarioId: parseInt(localStorage.getItem('usuarioId')) || null,
             comentario: acao === 'enviar' ? "Iniciando processo de solicitação" : "Salvo como rascunho",
             documentistaId: documentistaId ? parseInt(documentistaId) : null,
-            lancamentoIds: idsLimpos
+            lancamentoIds: idsLimpos,
+            osNome: osNomeStr,
+            segmentoNome: segmentoNomeStr,
+            solicitanteNome: nomeUsuarioStr
         };
 
         if (!payload.osId || !payload.documentoId || payload.lancamentoIds.length === 0) return;
@@ -190,7 +208,8 @@ const DocumentacaoModule = (function () {
         }
 
         try {
-            const response = await fetchComAuth('/api/docs/solicitacoes');
+            const usuarioLogadoId = localStorage.getItem('usuarioId') || '';
+            const response = await fetchComAuth(`/api/docs/solicitacoes?usuarioId=${usuarioLogadoId}`);
             const data = await response.json();
 
             let solicitacoes = Array.isArray(data) ? data : (data.content || []);
@@ -200,9 +219,9 @@ const DocumentacaoModule = (function () {
 
             // MANAGER e COORDINATOR veem apenas as de suas OSs
             if (['MANAGER', 'COORDINATOR'].includes(role)) {
-                const osDropdown = document.getElementById('selectOS') || document.querySelector('select[id*="os"]');
-                if (osDropdown && osDropdown.options.length > 0) {
-                    const osPermitidas = Array.from(osDropdown.options).map(opt => parseInt(opt.value)).filter(val => !isNaN(val));
+                // Usa o cache de OS que o Monolito devolveu para esse usuário
+                if (osCache && osCache.length > 0) {
+                    const osPermitidas = osCache.map(o => parseInt(o.id));
                     solicitacoes = solicitacoes.filter(sol => osPermitidas.includes(sol.osId));
                 }
             }
@@ -210,7 +229,6 @@ const DocumentacaoModule = (function () {
             tbody.innerHTML = '';
             
             if(solicitacoes.length === 0) {
-                 // Aumentado colspan de 5 para 6 por causa da nova coluna
                  tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">Nenhuma pendência de documento encontrada.</td></tr>';
             }
 
@@ -218,10 +236,11 @@ const DocumentacaoModule = (function () {
                 const tr = document.createElement('tr');
                 
                 const nomeSolicitante = sol.solicitanteNome || 'Sistema';
+                // Pegando a OS gravada ou buscando do cache de OS do usuário
+                const osNomeStr = sol.osNome || obterNomeOS(sol.osId) || `OS Num. ${sol.osId}`;
+                
                 const responsavelNome = sol.documentistaNome || (sol.documentistaId ? `ID: ${sol.documentistaId}` : 'Sem Responsável');
                 const tipoDoc = sol.documento ? sol.documento.nome : '-';
-                
-                // Formatação da Data de Solicitação (criadoEm)
                 const dataSolicitacao = sol.criadoEm ? new Date(sol.criadoEm).toLocaleDateString('pt-BR') : '-';
 
                 tr.innerHTML = `
@@ -240,7 +259,8 @@ const DocumentacaoModule = (function () {
                         <span class="text-secondary fw-medium">${dataSolicitacao}</span>
                     </td>
                     <td class="align-middle">
-                        <span class="fw-medium">${nomeSolicitante}</span>
+                        <span class="fw-medium d-block text-dark">${nomeSolicitante}</span>
+                        <span class="small text-muted"><i class="bi bi-tag-fill me-1"></i>${osNomeStr}</span>
                     </td>
                     <td class="align-middle fw-medium">
                         ${tipoDoc}
