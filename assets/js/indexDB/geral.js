@@ -1,4 +1,4 @@
-const API_GERAL_URL = '/api/tipos-documentacao';
+const API_DOCS_URL = '/api/docs/documentos';
 const API_BANCOS_URL = '/api/geral/bancos';
 const API_DOCUMENTISTAS = '/api/usuarios/documentistas';
 
@@ -206,35 +206,43 @@ async function carregarTiposDoc() {
     tbody.innerHTML = '<tr><td colspan="4" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
 
     try {
-        const response = await fetchComAuth(API_GERAL_URL);
-        const dados = await response.json();
+        // 1. Busca a lista básica de documentos (só traz dados básicos)
+        const response = await fetchComAuth(API_DOCS_URL);
+        const documentosBasicos = await response.json();
+        
         tbody.innerHTML = '';
 
-        if (dados.length === 0) {
+        // Filtra apenas os ativos, já que o novo backend usa soft delete (ativo = true)
+        const ativos = documentosBasicos.filter(doc => doc.ativo);
+
+        if (ativos.length === 0) {
             tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">Nenhum registro encontrado.</td></tr>`;
             return;
         }
 
+        // 2. Busca o detalhe de cada documento para obter as precificações e montar a tabela
+        const detalhesPromises = ativos.map(doc => 
+            fetchComAuth(`${API_DOCS_URL}/${doc.id}`).then(res => res.json())
+        );
+            
+        let dados = await Promise.all(detalhesPromises);
         dados.sort((a, b) => a.nome.localeCompare(b.nome));
 
         dados.forEach(tipo => {
             const tr = document.createElement('tr');
 
-            // Formata o valor padrão
-            const valorFormatado = tipo.valorPadrao
-                ? tipo.valorPadrao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                : '-';
+            // O novo backend não tem valor padrão, deixamos como um traço ou aviso visual
+            const valorFormatado = '-';
 
-            // Cria badges para os documentistas
+            // Cria badges para os documentistas e seus respectivos valores
             let docBadges = '';
-            if (tipo.configuracoes && tipo.configuracoes.length > 0) {
+            if (tipo.precificacoes && tipo.precificacoes.length > 0) {
                 docBadges = '<div class="d-flex flex-wrap gap-1 justify-content-center">';
-                tipo.configuracoes.forEach(c => {
-                    // Encontra o nome do documentista no cache
-                    const docInfo = listaDocumentistasCache.find(d => d.id === c.documentistaId);
-                    const nome = docInfo ? docInfo.nome.split(' ')[0] : 'ID:' + c.documentistaId;
-                    const styleClass = c.valor ? 'bg-success' : 'bg-secondary'; // Verde se tiver preço especial
-                    const title = c.valor ? `Valor especial: R$ ${c.valor}` : 'Valor padrão';
+                tipo.precificacoes.forEach(c => {
+                    const docInfo = listaDocumentistasCache.find(d => d.id === c.usuarioId);
+                    const nome = docInfo ? docInfo.nome.split(' ')[0] : 'ID:' + c.usuarioId;
+                    const styleClass = c.valor ? 'bg-success' : 'bg-secondary';
+                    const title = c.valor ? `Valor: R$ ${c.valor}` : 'Sem valor definido';
 
                     docBadges += `<span class="badge ${styleClass}" title="${title}">${nome}</span>`;
                 });
@@ -243,20 +251,15 @@ async function carregarTiposDoc() {
                 docBadges = '<span class="text-muted small">Nenhum habilitado</span>';
             }
 
-            // Prepara dados para edição (atenção as aspas)
-            const jsonConfigs = JSON.stringify(tipo.configuracoes).replace(/"/g, "&quot;");
+            // Prepara dados para edição
+            const jsonConfigs = JSON.stringify(tipo.precificacoes).replace(/"/g, "&quot;");
 
             tr.innerHTML = `
                 <td class="fw-semibold text-dark align-middle">${tipo.nome}</td>
-                
-                <td class="align-middle">${valorFormatado}</td>
-                
-                <td class="align-middle text-center">
-                    ${docBadges}
-                </td>
-                
+                <td class="align-middle text-muted">${valorFormatado}</td>
+                <td class="align-middle text-center">${docBadges}</td>
                 <td class="align-middle text-end">
-                    <button class="btn-icon-modern edit" onclick='editarTipoDoc(${tipo.id}, "${tipo.nome}", ${tipo.valorPadrao}, ${jsonConfigs})' title="Editar">
+                    <button class="btn-icon-modern edit" onclick='editarTipoDoc(${tipo.id}, "${tipo.nome}", ${jsonConfigs})' title="Editar">
                         <i class="bi bi-pencil-square"></i>
                     </button>
                     <button class="btn-icon-modern delete" onclick="prepararDeletarTipoDoc(${tipo.id}, '${tipo.nome}')" title="Excluir">
@@ -266,7 +269,10 @@ async function carregarTiposDoc() {
             `;
             tbody.appendChild(tr);
         });
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error(e); 
+        mostrarToast("Erro ao carregar os documentos.", "error");
+    }
 }
 
 function renderizarListaConfig(configsExistentes = []) {
@@ -279,16 +285,14 @@ function renderizarListaConfig(configsExistentes = []) {
     }
 
     listaDocumentistasCache.forEach(doc => {
-        // Verifica configuração existente
-        const config = configsExistentes.find(c => c.documentistaId === doc.id);
+        // No novo backend a referência é "usuarioId" em vez de "documentistaId"
+        const config = configsExistentes.find(c => c.usuarioId === doc.id);
         const isChecked = !!config;
         const valorEspecifico = config && config.valor !== null ? config.valor : '';
 
-        // Cria o elemento da linha (div .mdoc-item-row)
         const row = document.createElement('div');
         row.className = 'mdoc-item-row';
 
-        // Monta o HTML interno usando as classes mdoc-
         row.innerHTML = `
             <div class="mdoc-col-check">
                 <input type="checkbox" class="form-check-input chk-doc-habilitar" 
@@ -296,14 +300,12 @@ function renderizarListaConfig(configsExistentes = []) {
                     style="cursor: pointer;"
                     onchange="toggleInputValor(this)">
             </div>
-            
             <div class="mdoc-col-nome" title="${doc.nome}">
                 ${doc.nome}
             </div>
-            
             <div class="mdoc-col-valor">
                 <input type="number" step="0.01" class="form-control mdoc-input-valor input-doc-valor" 
-                    placeholder="Padrão" value="${valorEspecifico}" 
+                    placeholder="Valor" value="${valorEspecifico}" 
                     ${!isChecked ? 'disabled' : ''}>
             </div>
         `;
@@ -312,7 +314,6 @@ function renderizarListaConfig(configsExistentes = []) {
 }
 
 window.toggleInputValor = function (checkbox) {
-    // Busca o input dentro da mesma linha (.mdoc-item-row)
     const row = checkbox.closest('.mdoc-item-row');
     const input = row.querySelector('.input-doc-valor');
     if (input) {
@@ -324,21 +325,33 @@ window.toggleInputValor = function (checkbox) {
 function abrirModalTipoDoc() {
     document.getElementById('formTipoDoc').reset();
     document.getElementById('tipoDocId').value = '';
-    document.getElementById('modalTipoDocLabel').textContent = 'Novo Tipo de Documentação';
+    
+    // Desabilita o valor padrão visualmente
+    const valorPadraoEl = document.getElementById('tipoDocValorPadrao');
+    if(valorPadraoEl) {
+        valorPadraoEl.value = '';
+        valorPadraoEl.disabled = true; 
+        valorPadraoEl.placeholder = "Indisponível no novo modelo";
+    }
 
-    // Renderiza a lista vazia (nenhum marcado)
+    document.getElementById('modalTipoDocLabel').textContent = 'Novo Tipo de Documentação';
     renderizarListaConfig([]);
     modalTipoDocInstance.show();
 }
 
-function editarTipoDoc(id, nome, valorPadrao, configs) {
+function editarTipoDoc(id, nome, configs) {
     document.getElementById('tipoDocId').value = id;
     document.getElementById('tipoDocNome').value = nome;
-    document.getElementById('tipoDocValorPadrao').value = valorPadrao || '';
+    
+    // Desabilita o valor padrão visualmente
+    const valorPadraoEl = document.getElementById('tipoDocValorPadrao');
+    if(valorPadraoEl) {
+        valorPadraoEl.value = '';
+        valorPadraoEl.disabled = true; 
+        valorPadraoEl.placeholder = "Indisponível no novo modelo";
+    }
 
-    // configs vem do objeto DTO no carregarTiposDoc
     renderizarListaConfig(configs);
-
     document.getElementById('modalTipoDocLabel').textContent = 'Editar Tipo de Documentação';
     modalTipoDocInstance.show();
 }
@@ -346,7 +359,6 @@ function editarTipoDoc(id, nome, valorPadrao, configs) {
 async function salvarTipoDoc() {
     const id = document.getElementById('tipoDocId').value;
     const nome = document.getElementById('tipoDocNome').value.trim();
-    const valorPadrao = document.getElementById('tipoDocValorPadrao').value;
 
     if (!nome) {
         mostrarToast("O nome é obrigatório.", "warning");
@@ -354,8 +366,8 @@ async function salvarTipoDoc() {
     }
 
     // Coleta configurações
-    const configuracoes = [];
-    // Seleciona todas as linhas geradas
+    const documentistaIds = [];
+    const precificacoes = [];
     const rows = document.querySelectorAll('#listaDocumentistasConfig .mdoc-item-row');
 
     rows.forEach(row => {
@@ -363,47 +375,71 @@ async function salvarTipoDoc() {
         const inputValor = row.querySelector('.input-doc-valor');
 
         if (checkbox && checkbox.checked) {
-            const valor = inputValor.value ? parseFloat(inputValor.value) : null;
-            configuracoes.push({
-                documentistaId: parseInt(checkbox.value),
+            const docId = parseInt(checkbox.value);
+            documentistaIds.push(docId);
+            const valor = inputValor.value ? parseFloat(inputValor.value) : 0.0;
+            precificacoes.push({
+                usuarioId: docId,
                 valor: valor
             });
         }
     });
 
-    const payload = {
-        id: id ? parseInt(id) : null,
+    const payloadDocumento = {
         nome: nome,
-        valorPadrao: valorPadrao ? parseFloat(valorPadrao) : null,
-        configuracoes: configuracoes
+        documentistaIds: documentistaIds
     };
 
     toggleLoader(true);
 
     try {
-        const response = await fetchComAuth(API_GERAL_URL, { // Confirme se API_GERAL_URL está apontando para /tipos-documentacao
-            method: 'POST',
+        let docId = id;
+        
+        // 1. CHAMA O ENDPOINT DE CRIAR OU ATUALIZAR
+        if (!id) {
+            const response = await fetchComAuth(API_DOCS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payloadDocumento)
+            });
+            if (!response.ok) throw new Error("Erro ao criar documento.");
+            const data = await response.json();
+            docId = data.id; // Guarda o ID gerado
+        } else {
+            const response = await fetchComAuth(`${API_DOCS_URL}/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payloadDocumento)
+            });
+            if (!response.ok) throw new Error("Erro ao atualizar documento.");
+        }
+
+        // 2. CHAMA O ENDPOINT DE PRECIFICAR COM OS VALORES COLETADOS
+        const payloadPrecificacao = {
+            precificacoes: precificacoes
+        };
+
+        const precificacaoResponse = await fetchComAuth(`${API_DOCS_URL}/${docId}/precificar`, {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payloadPrecificacao)
         });
 
-        if (response.ok) {
-            modalTipoDocInstance.hide();
-            mostrarToast("Salvo com sucesso!", "success");
-            await carregarTiposDoc();
-        } else {
-            const txt = await response.text();
-            mostrarToast("Erro ao salvar: " + txt, "error");
-        }
+        if (!precificacaoResponse.ok) throw new Error("Erro ao salvar as precificações dos documentistas.");
+
+        modalTipoDocInstance.hide();
+        mostrarToast("Documento salvo e precificado com sucesso!", "success");
+        await carregarTiposDoc();
+        
     } catch (error) {
         console.error(error);
-        mostrarToast("Erro de conexão.", "error");
+        mostrarToast(error.message || "Erro de conexão.", "error");
     } finally {
         toggleLoader(false);
     }
 }
 
-// -- Lógica de Exclusão de Tipo Doc (Com Modal) --
+// -- Lógica de Exclusão de Tipo Doc --
 
 function prepararDeletarTipoDoc(id, nome) {
     idTipoDocParaDeletar = id;
@@ -418,54 +454,22 @@ async function confirmarDeletarTipoDoc() {
     toggleLoader(true);
 
     try {
-        const response = await fetchComAuth(`${API_GERAL_URL}/${idTipoDocParaDeletar}`, { method: 'DELETE' });
+        // No novo backend, deletar é um PATCH que desativa o documento
+        const response = await fetchComAuth(`${API_DOCS_URL}/${idTipoDocParaDeletar}/desativar`, { 
+            method: 'PATCH' 
+        });
+        
         if (response.ok) {
-            mostrarToast("Item excluído com sucesso.", "success");
+            mostrarToast("Documento desativado com sucesso.", "success");
             await carregarTiposDoc();
         } else {
-            // Caso o backend retorne erro (ex: chave estrangeira)
-            mostrarToast('Erro ao excluir. O item pode estar em uso.', "error");
+            mostrarToast('Erro ao tentar desativar o documento.', "error");
         }
     } catch (error) {
         console.error(error);
-        mostrarToast('Erro ao tentar excluir.', "error");
+        mostrarToast('Erro de conexão ao tentar desativar.', "error");
     } finally {
         toggleLoader(false);
         idTipoDocParaDeletar = null;
-    }
-}
-
-// As funções verificarPermissaoGeral e carregarDocumentistasParaSelect permanecem iguais...
-// (Elas já estão no código original que você enviou, pode mantê-las abaixo se não tiver apagado)
-function verificarPermissaoGeral() {
-    const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
-    const allowedRoles = ['ADMIN', 'CONTROLLER', 'ASSISTANT'];
-    const cardGeral = document.querySelector('.segment-card[data-filter="geral"]');
-
-    if (cardGeral) {
-        if (allowedRoles.includes(userRole)) {
-            cardGeral.style.display = 'block';
-        } else {
-            cardGeral.style.display = 'none';
-        }
-    }
-}
-
-async function carregarDocumentistasParaSelect() {
-    if (listaDocumentistasCache.length > 0) return;
-    try {
-        const response = await fetchComAuth(API_DOCUMENTISTAS);
-        if (response.ok) {
-            listaDocumentistasCache = await response.json();
-            const select = document.getElementById('tipoDocResponsavel');
-            if (select) {
-                select.innerHTML = '';
-                listaDocumentistasCache.forEach(doc => {
-                    select.add(new Option(doc.nome, doc.id));
-                });
-            }
-        }
-    } catch (error) {
-        console.error("Erro documentistas", error);
     }
 }

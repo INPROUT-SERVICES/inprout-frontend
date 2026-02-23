@@ -12,7 +12,7 @@ const DocumentacaoModule = (function () {
     async function carregarCaches() {
         if (cachesCarregados) return;
         await Promise.all([
-            carregarDocumentos(), 
+            carregarDocumentos(),
             carregarUsuarios(),
             carregarOsCache() // Vai no monolito buscar os nomes das OSs
         ]);
@@ -20,7 +20,7 @@ const DocumentacaoModule = (function () {
     }
 
     async function init() {
-        injetarModalSeNecessario(); 
+        injetarModalSeNecessario();
         await carregarCaches();
         configurarListenersGlobais();
         carregarAbaPendenteDoc();
@@ -66,7 +66,7 @@ const DocumentacaoModule = (function () {
 
     async function popularSelectDocumento(selectElement, valorSelecionado = null) {
         if (!selectElement) return;
-        await carregarCaches(); 
+        await carregarCaches();
 
         selectElement.innerHTML = '<option value="" selected>Não se aplica</option>';
         documentosCache.forEach(doc => selectElement.add(new Option(doc.nome, doc.id)));
@@ -116,7 +116,7 @@ const DocumentacaoModule = (function () {
             idsLimpos = lancamentoIds
                 .map(id => (typeof id === 'object' && id !== null ? id.id : id))
                 .map(id => parseInt(id))
-                .filter(id => !isNaN(id)); 
+                .filter(id => !isNaN(id));
         }
 
         // Captura os dados dinâmicos da tela e LocalStorage para salvar no banco do Microsserviço
@@ -165,25 +165,27 @@ const DocumentacaoModule = (function () {
     // INTEGRAÇÃO REAL: Pega o ID devolvido e converte para o Nome da OS (Site)
     function obterNomeOS(osId) {
         if (!osId) return '-';
-        
+
         // 1. Tenta buscar no Cache da API de OS primeiro
         if (Array.isArray(osCache)) {
             const osEncontrada = osCache.find(o => parseInt(o.id) === parseInt(osId));
             if (osEncontrada) {
-                return `OS ${osEncontrada.id} - ${osEncontrada.site || 'S/ Site'}`;
-            }
-        }
-        
-        // 2. Fallback: Tenta buscar no select da tela (caso a OS não esteja na página 0 do cache)
-        const osDropdown = document.getElementById('selectOS') || document.querySelector('select[id*="os"]');
-        if (osDropdown && osDropdown.options.length > 0) {
-            const opcaoEncontrada = Array.from(osDropdown.options).find(opt => parseInt(opt.value) === parseInt(osId));
-            if (opcaoEncontrada) {
-                return opcaoEncontrada.text; 
+                const numeroOsStr = osEncontrada.os || osEncontrada.id;
+                return `${numeroOsStr} - ${osEncontrada.site || 'S/ Site'}`;
             }
         }
 
-        return `OS Num. ${osId}`; 
+        // 2. Fallback: Tenta buscar no select da tela
+        const osDropdown = document.getElementById('selectOS') || document.querySelector('select[id*="os"]');
+        if (osDropdown && osDropdown.options.length > 0) {
+            const opcaoEncontrada = Array.from(osDropdown.options).find(opt => parseInt(opt.value) === parseInt(osId));
+            // Evita retornar "Carregando..." se o select estiver carregando
+            if (opcaoEncontrada && !opcaoEncontrada.text.toLowerCase().includes('carregando')) {
+                return opcaoEncontrada.text;
+            }
+        }
+
+        return `OS Num. ${osId}`;
     }
 
     async function carregarAbaPendenteDoc() {
@@ -227,18 +229,23 @@ const DocumentacaoModule = (function () {
             }
 
             tbody.innerHTML = '';
-            
-            if(solicitacoes.length === 0) {
-                 tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">Nenhuma pendência de documento encontrada.</td></tr>';
+
+            if (solicitacoes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">Nenhuma pendência de documento encontrada.</td></tr>';
             }
 
             solicitacoes.forEach(sol => {
                 const tr = document.createElement('tr');
-                
+
                 const nomeSolicitante = sol.solicitanteNome || 'Sistema';
                 // Pegando a OS gravada ou buscando do cache de OS do usuário
-                const osNomeStr = sol.osNome || `OS Num. ${sol.osId}`;
-                
+                let osNomeStr = obterNomeOS(sol.osId);
+
+                // Fallback: se o cache falhar, tenta pegar do banco (desde que não seja a palavra Carregando)
+                if (osNomeStr === `OS Num. ${sol.osId}` && sol.osNome && !sol.osNome.toLowerCase().includes("carregando")) {
+                    osNomeStr = sol.osNome;
+                }
+
                 const responsavelNome = sol.documentistaNome || (sol.documentistaId ? `ID: ${sol.documentistaId}` : 'Sem Responsável');
                 const tipoDoc = sol.documento ? sol.documento.nome : '-';
                 const dataSolicitacao = sol.criadoEm ? new Date(sol.criadoEm).toLocaleDateString('pt-BR') : '-';
@@ -350,13 +357,13 @@ const DocumentacaoModule = (function () {
         // Só atualiza a tela e dá sucesso se a Promise terminou certinha!
         if (isConfirmed) {
             mostrarToast("Documentos marcados como recebidos com sucesso!", "success");
-            
+
             const barra = document.getElementById('acoes-lote-doc');
-            if(barra) {
+            if (barra) {
                 barra.classList.add('d-none');
                 barra.classList.remove('d-flex');
             }
-            
+
             carregarAbaPendenteDoc();
         }
     }
@@ -364,7 +371,7 @@ const DocumentacaoModule = (function () {
     // =====================================================================
     // LÓGICA DO MODAL DE COMENTÁRIOS (COM IDs ÚNICOS PARA O INDEX)
     // =====================================================================
-    
+
     function injetarModalSeNecessario() {
         if (!document.getElementById('modalComentariosDocIndex')) {
             const modalHtml = `
@@ -398,9 +405,9 @@ const DocumentacaoModule = (function () {
     async function carregarHistoricoNoModalIndex(id) {
         const container = document.getElementById('listaComentariosContainerDocIndex');
         if (!container) return;
-        
+
         container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><br><span class="mt-2 text-muted">Carregando histórico...</span></div>';
-        
+
         try {
             const res = await fetchComAuth(`/api/docs/solicitacoes/${id}/historico`);
             if (!res.ok) throw new Error("Falha na API");
@@ -412,17 +419,17 @@ const DocumentacaoModule = (function () {
             }
 
             let htmlTimeline = '<div class="timeline-container position-relative mt-2" style="border-left: 2px solid #dee2e6; margin-left: 15px; padding-left: 20px;">';
-            
+
             historico.forEach(ev => {
                 const dataForm = new Date(ev.criadoEm).toLocaleString('pt-BR');
                 const eventoNome = ev.tipoEvento ? ev.tipoEvento.replace(/_/g, ' ') : 'ATUALIZAÇÃO';
                 const atorNome = ev.actorNome || `ID: ${ev.actorUsuarioId}`;
-                
+
                 let iconClass = 'bg-primary';
-                if(eventoNome.includes('RECUSA')) iconClass = 'bg-danger';
-                else if(eventoNome.includes('FINALIZADO')) iconClass = 'bg-success';
-                else if(eventoNome.includes('COMENTARIO')) iconClass = 'bg-secondary';
-                
+                if (eventoNome.includes('RECUSA')) iconClass = 'bg-danger';
+                else if (eventoNome.includes('FINALIZADO')) iconClass = 'bg-success';
+                else if (eventoNome.includes('COMENTARIO')) iconClass = 'bg-secondary';
+
                 htmlTimeline += `
                     <div class="mb-4 position-relative">
                         <span class="position-absolute translate-middle rounded-circle border border-white border-2 ${iconClass}" 
@@ -448,21 +455,21 @@ const DocumentacaoModule = (function () {
     }
 
     // Função Exposta (Global) para o onClick funcionar sem conflitos de NULL
-    window.abrirModalComentariosIndex = function(id) {
+    window.abrirModalComentariosIndex = function (id) {
         const modalEl = document.getElementById('modalComentariosDocIndex');
-        if(!modalEl) {
+        if (!modalEl) {
             console.error("Modal de comentários não encontrado na DOM.");
             return;
         }
-        
+
         const modal = new bootstrap.Modal(modalEl);
         carregarHistoricoNoModalIndex(id);
-        
-        const btnEnviar = document.getElementById('btnEnviarComentarioModalDocIndex'); 
+
+        const btnEnviar = document.getElementById('btnEnviarComentarioModalDocIndex');
         const txtArea = document.getElementById('novoComentarioTextoDocIndex');
-        
-        if(!btnEnviar || !txtArea) return;
-        
+
+        if (!btnEnviar || !txtArea) return;
+
         txtArea.value = '';
 
         // Clona o botão para remover EventListeners antigos (evita multi-envios)
@@ -474,8 +481,8 @@ const DocumentacaoModule = (function () {
                 mostrarToast("O comentário não pode ser vazio.", "warning");
                 return;
             }
-            if(typeof setButtonLoading === 'function') setButtonLoading(novoBtn, true);
-            
+            if (typeof setButtonLoading === 'function') setButtonLoading(novoBtn, true);
+
             try {
                 const userId = parseInt(localStorage.getItem('usuarioId'));
                 await fetchComAuth(`/api/docs/solicitacoes/${id}/comentar`, {
@@ -486,10 +493,10 @@ const DocumentacaoModule = (function () {
                 mostrarToast("Comentário adicionado!", "success");
                 txtArea.value = '';
                 carregarHistoricoNoModalIndex(id);
-            } catch(e) {
+            } catch (e) {
                 mostrarToast("Erro ao comentar.", "error");
             } finally {
-                if(typeof setButtonLoading === 'function') setButtonLoading(novoBtn, false);
+                if (typeof setButtonLoading === 'function') setButtonLoading(novoBtn, false);
             }
         });
 
