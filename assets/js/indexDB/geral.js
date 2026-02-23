@@ -4,40 +4,38 @@ const API_DOCUMENTISTAS = '/api/usuarios/documentistas';
 
 let modalTipoDocInstance;
 let modalBancoInstance;
-// Novas instâncias para os modais de exclusão
 let modalExcluirBancoInstance;
 let modalExcluirTipoDocInstance;
 
 let listaDocumentistasCache = [];
 
-// Variáveis para armazenar o ID temporariamente antes de excluir
 let idBancoParaDeletar = null;
 let idTipoDocParaDeletar = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Verifica permissão
     verificarPermissaoGeral();
 
-    // Inicializa modais existentes
+    // 2. Inicializa modais
     const modalDocEl = document.getElementById('modalTipoDoc');
     if (modalDocEl) modalTipoDocInstance = new bootstrap.Modal(modalDocEl);
 
     const modalBancoEl = document.getElementById('modalBanco');
     if (modalBancoEl) modalBancoInstance = new bootstrap.Modal(modalBancoEl);
 
-    // Inicializa NOVOS modais de exclusão
     const modalExcluirBancoEl = document.getElementById('modalExcluirBanco');
     if (modalExcluirBancoEl) modalExcluirBancoInstance = new bootstrap.Modal(modalExcluirBancoEl);
 
     const modalExcluirTipoDocEl = document.getElementById('modalExcluirTipoDoc');
     if (modalExcluirTipoDocEl) modalExcluirTipoDocInstance = new bootstrap.Modal(modalExcluirTipoDocEl);
 
-
-    // Listener para carregar dados ao clicar na aba
+    // 3. Listener para carregar dados ao clicar na aba
     const cardGeral = document.querySelector('.segment-card[data-filter="geral"]');
     if (cardGeral) {
-        cardGeral.addEventListener('click', () => {
+        cardGeral.addEventListener('click', async () => {
+            // Aguarda carregar os documentistas primeiro para renderizar a tabela com os nomes corretos
+            await carregarDocumentistasParaSelect();
             alternarSubsecao('docs');
-            carregarDocumentistasParaSelect();
         });
     }
 });
@@ -91,7 +89,6 @@ async function carregarBancos() {
 
         bancos.forEach(banco => {
             const tr = document.createElement('tr');
-            // Nota: Adicionei as aspas simples corretamente nos argumentos do onclick
             tr.innerHTML = `
                 <td class="fw-bold text-secondary">${banco.codigo}</td>
                 <td class="fw-medium text-dark">${banco.nome}</td>
@@ -140,7 +137,6 @@ async function salvarBanco() {
     const payload = { codigo, nome };
     if (id) payload.id = parseInt(id);
 
-    // 1. Mostrar Loader
     toggleLoader(true);
 
     try {
@@ -161,12 +157,9 @@ async function salvarBanco() {
         console.error(error);
         mostrarToast("Erro de conexão.", "error");
     } finally {
-        // 2. Esconder Loader
         toggleLoader(false);
     }
 }
-
-// -- Lógica de Exclusão de Banco (Com Modal) --
 
 function prepararDeletarBanco(id, nome) {
     idBancoParaDeletar = id;
@@ -206,13 +199,13 @@ async function carregarTiposDoc() {
     tbody.innerHTML = '<tr><td colspan="4" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
 
     try {
-        // 1. Busca a lista básica de documentos (só traz dados básicos)
+        // 1. Busca a lista básica de documentos
         const response = await fetchComAuth(API_DOCS_URL);
         const documentosBasicos = await response.json();
         
         tbody.innerHTML = '';
 
-        // Filtra apenas os ativos, já que o novo backend usa soft delete (ativo = true)
+        // Filtra apenas os ativos (soft delete)
         const ativos = documentosBasicos.filter(doc => doc.ativo);
 
         if (ativos.length === 0) {
@@ -220,7 +213,7 @@ async function carregarTiposDoc() {
             return;
         }
 
-        // 2. Busca o detalhe de cada documento para obter as precificações e montar a tabela
+        // 2. Busca o detalhe de cada documento para obter as precificações
         const detalhesPromises = ativos.map(doc => 
             fetchComAuth(`${API_DOCS_URL}/${doc.id}`).then(res => res.json())
         );
@@ -231,8 +224,7 @@ async function carregarTiposDoc() {
         dados.forEach(tipo => {
             const tr = document.createElement('tr');
 
-            // O novo backend não tem valor padrão, deixamos como um traço ou aviso visual
-            const valorFormatado = '-';
+            const valorFormatado = '-'; // Removido o valor padrão no novo modelo
 
             // Cria badges para os documentistas e seus respectivos valores
             let docBadges = '';
@@ -251,7 +243,7 @@ async function carregarTiposDoc() {
                 docBadges = '<span class="text-muted small">Nenhum habilitado</span>';
             }
 
-            // Prepara dados para edição
+            // Prepara dados para edição (escapa aspas para o HTML)
             const jsonConfigs = JSON.stringify(tipo.precificacoes).replace(/"/g, "&quot;");
 
             tr.innerHTML = `
@@ -285,7 +277,7 @@ function renderizarListaConfig(configsExistentes = []) {
     }
 
     listaDocumentistasCache.forEach(doc => {
-        // No novo backend a referência é "usuarioId" em vez de "documentistaId"
+        // No novo backend a referência é "usuarioId"
         const config = configsExistentes.find(c => c.usuarioId === doc.id);
         const isChecked = !!config;
         const valorEspecifico = config && config.valor !== null ? config.valor : '';
@@ -365,7 +357,7 @@ async function salvarTipoDoc() {
         return;
     }
 
-    // Coleta configurações
+    // Coleta configurações e valores
     const documentistaIds = [];
     const precificacoes = [];
     const rows = document.querySelectorAll('#listaDocumentistasConfig .mdoc-item-row');
@@ -404,7 +396,7 @@ async function salvarTipoDoc() {
             });
             if (!response.ok) throw new Error("Erro ao criar documento.");
             const data = await response.json();
-            docId = data.id; // Guarda o ID gerado
+            docId = data.id; 
         } else {
             const response = await fetchComAuth(`${API_DOCS_URL}/${id}`, {
                 method: 'PUT',
@@ -414,18 +406,20 @@ async function salvarTipoDoc() {
             if (!response.ok) throw new Error("Erro ao atualizar documento.");
         }
 
-        // 2. CHAMA O ENDPOINT DE PRECIFICAR COM OS VALORES COLETADOS
-        const payloadPrecificacao = {
-            precificacoes: precificacoes
-        };
+        // 2. CHAMA O ENDPOINT DE PRECIFICAR (Somente se já pegou o id)
+        if (docId) {
+            const payloadPrecificacao = {
+                precificacoes: precificacoes
+            };
 
-        const precificacaoResponse = await fetchComAuth(`${API_DOCS_URL}/${docId}/precificar`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payloadPrecificacao)
-        });
+            const precificacaoResponse = await fetchComAuth(`${API_DOCS_URL}/${docId}/precificar`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payloadPrecificacao)
+            });
 
-        if (!precificacaoResponse.ok) throw new Error("Erro ao salvar as precificações dos documentistas.");
+            if (!precificacaoResponse.ok) throw new Error("Erro ao salvar as precificações dos documentistas.");
+        }
 
         modalTipoDocInstance.hide();
         mostrarToast("Documento salvo e precificado com sucesso!", "success");
@@ -438,8 +432,6 @@ async function salvarTipoDoc() {
         toggleLoader(false);
     }
 }
-
-// -- Lógica de Exclusão de Tipo Doc --
 
 function prepararDeletarTipoDoc(id, nome) {
     idTipoDocParaDeletar = id;
@@ -454,7 +446,7 @@ async function confirmarDeletarTipoDoc() {
     toggleLoader(true);
 
     try {
-        // No novo backend, deletar é um PATCH que desativa o documento
+        // Usa o soft delete no backend
         const response = await fetchComAuth(`${API_DOCS_URL}/${idTipoDocParaDeletar}/desativar`, { 
             method: 'PATCH' 
         });
@@ -471,5 +463,42 @@ async function confirmarDeletarTipoDoc() {
     } finally {
         toggleLoader(false);
         idTipoDocParaDeletar = null;
+    }
+}
+
+// ==========================================
+//               FUNÇÕES GERAIS
+// ==========================================
+
+function verificarPermissaoGeral() {
+    const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
+    const allowedRoles = ['ADMIN', 'CONTROLLER', 'ASSISTANT'];
+    const cardGeral = document.querySelector('.segment-card[data-filter="geral"]');
+
+    if (cardGeral) {
+        if (allowedRoles.includes(userRole)) {
+            cardGeral.style.display = 'block';
+        } else {
+            cardGeral.style.display = 'none';
+        }
+    }
+}
+
+async function carregarDocumentistasParaSelect() {
+    if (listaDocumentistasCache.length > 0) return;
+    try {
+        const response = await fetchComAuth(API_DOCUMENTISTAS);
+        if (response.ok) {
+            listaDocumentistasCache = await response.json();
+            const select = document.getElementById('tipoDocResponsavel');
+            if (select) {
+                select.innerHTML = '';
+                listaDocumentistasCache.forEach(doc => {
+                    select.add(new Option(doc.nome, doc.id));
+                });
+            }
+        }
+    } catch (error) {
+        console.error("Erro documentistas", error);
     }
 }
