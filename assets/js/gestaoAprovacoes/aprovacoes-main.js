@@ -862,7 +862,7 @@ function atualizarBadgesMenuAprovacoes() {
     // setBadgeById('badge-cps', (window.todasPendenciasCps || []).length);
 }
 
-5.0
+async function carregarDashboardEBadges() {
     toggleLoader(true, '.overview-card');
 
     try {
@@ -884,7 +884,7 @@ function atualizarBadgesMenuAprovacoes() {
 
         // Carregamentos paralelos iniciais
         const promises = [
-            fetchComAuth(`${API_BASE_URL}/lancamentos`), // Geral (Lista Completa)
+            fetchComAuth(`${API_BASE_URL}/lancamentos`), 
             fetchComAuth(`${API_BASE_URL}/lancamentos/pendencias-por-coordenador`),
             fetchComAuth(`${URL_MATERIAIS}/api/materiais/solicitacoes/pendentes`, {
                 headers: { 'X-User-Role': userRole, 'X-User-ID': userId }
@@ -925,7 +925,6 @@ function atualizarBadgesMenuAprovacoes() {
                 const docsData = await resDocs.json();
                 const allDocs = Array.isArray(docsData) ? docsData : (docsData.content || []);
 
-                // Ajuste se você tiver outros status de “histórico”
                 window.minhasDocsPendentes = allDocs.filter(
                     d => d.status !== 'FINALIZADO' && d.status !== 'REPROVADO'
                 );
@@ -942,7 +941,6 @@ function atualizarBadgesMenuAprovacoes() {
             window.minhasDocsHistorico = [];
         }
 
-        // Resto da lógica de dashboard mantida
         window.todasPendenciasAtividades = todasPendenciasGerais;
 
         if (userRole === 'DOCUMENTIST') {
@@ -967,7 +965,6 @@ function atualizarBadgesMenuAprovacoes() {
             );
         }
 
-        // ✅ Atualiza os badges do menu usando os <span id="badge-..."> do HTML
         atualizarBadgesMenuAprovacoes();
 
         const abaAtivaAgora = document.querySelector('#aprovacoesTab .nav-link.active');
