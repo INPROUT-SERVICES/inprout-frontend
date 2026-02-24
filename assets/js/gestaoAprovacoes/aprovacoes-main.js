@@ -678,94 +678,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 });
 
-async function carregarDashboardEBadges() {
-    toggleLoader(true, '.overview-card');
-    try {
-        const URL_MATERIAIS = window.API_MATERIALS_URL || (window.location.origin.includes('localhost') ? 'http://localhost:8081' : window.location.origin);
-        const URL_COMPLEMENTARES = window.API_COMPLEMENTARES_URL || (window.location.origin.includes('localhost') ? 'http://localhost:8082' : window.location.origin + '/atividades');
-        const userRole = localStorage.getItem('role') || localStorage.getItem('userRole');
-        const userId = localStorage.getItem('usuarioId');
-
-        // Carregamentos paralelos iniciais (REMOVIDO ENDPOINT 404)
-        const promises = [
-            fetchComAuth(`${API_BASE_URL}/lancamentos`), // Geral (Lista Completa)
-            fetchComAuth(`${API_BASE_URL}/lancamentos/pendencias-por-coordenador`),
-            fetchComAuth(`${URL_MATERIAIS}/api/materiais/solicitacoes/pendentes`, { headers: { 'X-User-Role': userRole, 'X-User-ID': userId } }),
-            fetchComAuth(`${URL_COMPLEMENTARES}/v1/solicitacoes-complementares/pendentes?role=${userRole}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
-        ];
-
-        const [resGeral, resPendCoord, resPendMat, resPendCompl] = await Promise.all(promises);
-
-        if (!resGeral.ok) throw new Error('Falha no dashboard.');
-
-        window.todosOsLancamentosGlobais = await resGeral.json();
-
-        let statusPendentes = [];
-        if (userRole === 'COORDINATOR' || userRole === 'MANAGER') {
-            statusPendentes = ['PENDENTE_COORDENADOR'];
-        } else if (userRole === 'CONTROLLER') {
-            statusPendentes = ['PENDENTE_CONTROLLER', 'AGUARDANDO_EXTENSAO_PRAZO', 'PRAZO_VENCIDO'];
-        } else if (userRole === 'ADMIN') {
-            statusPendentes = ['PENDENTE_COORDENADOR', 'PENDENTE_CONTROLLER', 'AGUARDANDO_EXTENSAO_PRAZO', 'PRAZO_VENCIDO'];
-        }
-
-        const todasPendenciasGerais = window.todosOsLancamentosGlobais.filter(l => statusPendentes.includes(l.situacaoAprovacao));
-
-        // 2. NOVA INTEGRAÇÃO DE DOCUMENTAÇÃO (MICROSSERVIÇO)
-        let urlDocs = `/api/docs/solicitacoes?size=1000`;
-        if (userRole === 'DOCUMENTIST') {
-            urlDocs += `&documentistaId=${userId}`;
-        }
-        
-        try {
-            const resDocs = await fetchComAuth(urlDocs);
-            if (resDocs.ok) {
-                const docsData = await resDocs.json();
-                const allDocs = Array.isArray(docsData) ? docsData : (docsData.content || []);
-                window.minhasDocsPendentes = allDocs.filter(d => d.status !== 'FINALIZADO' && d.status !== 'REPROVADO');
-                window.minhasDocsHistorico = allDocs.filter(d => d.status === 'FINALIZADO' || d.status === 'REPROVADO');
-            } else {
-                window.minhasDocsPendentes = [];
-                window.minhasDocsHistorico = [];
-            }
-        } catch (e) {
-            console.error("Erro API Docs:", e);
-            window.minhasDocsPendentes = [];
-            window.minhasDocsHistorico = [];
-        }
-
-        // Resto da lógica de dashboard mantida intacta
-        window.todasPendenciasAtividades = todasPendenciasGerais;
-        
-        if (userRole === 'DOCUMENTIST') {
-             window.todasPendenciasAtividades = [];
-             window.todosOsLancamentosGlobais = [];
-        }
-
-        const pendenciasPorCoordenador = await resPendCoord.json();
-        if (resPendMat.ok) window.todasPendenciasMateriais = await resPendMat.json(); else window.todasPendenciasMateriais = [];
-        if (resPendCompl.ok) window.todasPendenciasComplementares = await resPendCompl.json(); else window.todasPendenciasComplementares = [];
-
-        if (typeof renderizarCardsDashboard === 'function') {
-            renderizarCardsDashboard(window.todosOsLancamentosGlobais, pendenciasPorCoordenador, window.todasPendenciasMateriais.length, window.todasPendenciasComplementares.length);
-        }
-        atualizarBadge('#materiais-tab', window.todasPendenciasMateriais.length);
-        atualizarBadge('#complementares-tab', window.todasPendenciasComplementares.length);
-        atualizarBadge('#minhas-docs-tab', window.minhasDocsPendentes.length);
-
-        const abaAtivaAgora = document.querySelector('#aprovacoesTab .nav-link.active');
-        if (abaAtivaAgora) {
-            const painelAtivoId = abaAtivaAgora.getAttribute('data-bs-target');
-            if (painelAtivoId === '#minhas-docs-pane' && typeof initDocumentacaoTab === 'function') {
-                initDocumentacaoTab();
-            }
-        }
-
-    } catch (e) { console.error(e); }
-    finally { toggleLoader(false, '.overview-card'); }
-}
-
-
 function atualizarBadge(selector, count) {
     const tab = document.querySelector(selector);
     if (!tab) return;
@@ -921,5 +833,154 @@ function atualizarEstadoAcoesLoteComplementar() {
     if (checkboxes.length > 0) {
         document.getElementById('contador-aprovacao-complementar').textContent = checkboxes.length;
         document.getElementById('contador-recusa-complementar').textContent = checkboxes.length;
+    }
+}
+
+function setBadgeById(badgeId, count, maxLabel = 99) {
+    const badge = document.getElementById(badgeId);
+    if (!badge) return;
+
+    const n = Number(count || 0);
+
+    if (n <= 0) {
+        badge.textContent = '0';
+        badge.classList.add('d-none');
+        return;
+    }
+
+    badge.textContent = n > maxLabel ? `${maxLabel}+` : String(n);
+    badge.classList.remove('d-none');
+}
+
+function atualizarBadgesMenuAprovacoes() {
+    setBadgeById('badge-atividades', (window.todasPendenciasAtividades || []).length);
+    setBadgeById('badge-materiais', (window.todasPendenciasMateriais || []).length);
+    setBadgeById('badge-complementares', (window.todasPendenciasComplementares || []).length);
+    setBadgeById('badge-documentacao', (window.minhasDocsPendentes || []).length);
+
+    // CPS: se você tiver um array global só com pendências de CPS, plugue aqui
+    // setBadgeById('badge-cps', (window.todasPendenciasCps || []).length);
+}
+
+5.0
+    toggleLoader(true, '.overview-card');
+
+    try {
+        const URL_MATERIAIS =
+            window.API_MATERIALS_URL ||
+            (window.location.origin.includes('localhost')
+                ? 'http://localhost:8081'
+                : window.location.origin);
+
+        const URL_COMPLEMENTARES =
+            window.API_COMPLEMENTARES_URL ||
+            (window.location.origin.includes('localhost')
+                ? 'http://localhost:8082'
+                : window.location.origin + '/atividades');
+
+        const userRoleRaw = localStorage.getItem('role') || localStorage.getItem('userRole') || '';
+        const userRole = userRoleRaw.trim().toUpperCase();
+        const userId = localStorage.getItem('usuarioId');
+
+        // Carregamentos paralelos iniciais
+        const promises = [
+            fetchComAuth(`${API_BASE_URL}/lancamentos`), // Geral (Lista Completa)
+            fetchComAuth(`${API_BASE_URL}/lancamentos/pendencias-por-coordenador`),
+            fetchComAuth(`${URL_MATERIAIS}/api/materiais/solicitacoes/pendentes`, {
+                headers: { 'X-User-Role': userRole, 'X-User-ID': userId }
+            }),
+            fetchComAuth(`${URL_COMPLEMENTARES}/v1/solicitacoes-complementares/pendentes?role=${encodeURIComponent(userRole)}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            })
+        ];
+
+        const [resGeral, resPendCoord, resPendMat, resPendCompl] = await Promise.all(promises);
+
+        if (!resGeral.ok) throw new Error('Falha no dashboard.');
+
+        window.todosOsLancamentosGlobais = await resGeral.json();
+
+        let statusPendentes = [];
+        if (userRole === 'COORDINATOR' || userRole === 'MANAGER') {
+            statusPendentes = ['PENDENTE_COORDENADOR'];
+        } else if (userRole === 'CONTROLLER') {
+            statusPendentes = ['PENDENTE_CONTROLLER', 'AGUARDANDO_EXTENSAO_PRAZO', 'PRAZO_VENCIDO'];
+        } else if (userRole === 'ADMIN') {
+            statusPendentes = ['PENDENTE_COORDENADOR', 'PENDENTE_CONTROLLER', 'AGUARDANDO_EXTENSAO_PRAZO', 'PRAZO_VENCIDO'];
+        }
+
+        const todasPendenciasGerais = (window.todosOsLancamentosGlobais || []).filter(
+            l => statusPendentes.includes(l.situacaoAprovacao)
+        );
+
+        // 2. INTEGRAÇÃO DE DOCUMENTAÇÃO (MICROSSERVIÇO)
+        let urlDocs = `/api/docs/solicitacoes?size=1000`;
+        if (userRole === 'DOCUMENTIST') {
+            urlDocs += `&documentistaId=${encodeURIComponent(userId)}`;
+        }
+
+        try {
+            const resDocs = await fetchComAuth(urlDocs);
+            if (resDocs.ok) {
+                const docsData = await resDocs.json();
+                const allDocs = Array.isArray(docsData) ? docsData : (docsData.content || []);
+
+                // Ajuste se você tiver outros status de “histórico”
+                window.minhasDocsPendentes = allDocs.filter(
+                    d => d.status !== 'FINALIZADO' && d.status !== 'REPROVADO'
+                );
+                window.minhasDocsHistorico = allDocs.filter(
+                    d => d.status === 'FINALIZADO' || d.status === 'REPROVADO'
+                );
+            } else {
+                window.minhasDocsPendentes = [];
+                window.minhasDocsHistorico = [];
+            }
+        } catch (e) {
+            console.error("Erro API Docs:", e);
+            window.minhasDocsPendentes = [];
+            window.minhasDocsHistorico = [];
+        }
+
+        // Resto da lógica de dashboard mantida
+        window.todasPendenciasAtividades = todasPendenciasGerais;
+
+        if (userRole === 'DOCUMENTIST') {
+            window.todasPendenciasAtividades = [];
+            window.todosOsLancamentosGlobais = [];
+        }
+
+        const pendenciasPorCoordenador = resPendCoord.ok ? await resPendCoord.json() : [];
+
+        if (resPendMat.ok) window.todasPendenciasMateriais = await resPendMat.json();
+        else window.todasPendenciasMateriais = [];
+
+        if (resPendCompl.ok) window.todasPendenciasComplementares = await resPendCompl.json();
+        else window.todasPendenciasComplementares = [];
+
+        if (typeof renderizarCardsDashboard === 'function') {
+            renderizarCardsDashboard(
+                window.todosOsLancamentosGlobais,
+                pendenciasPorCoordenador,
+                window.todasPendenciasMateriais.length,
+                window.todasPendenciasComplementares.length
+            );
+        }
+
+        // ✅ Atualiza os badges do menu usando os <span id="badge-..."> do HTML
+        atualizarBadgesMenuAprovacoes();
+
+        const abaAtivaAgora = document.querySelector('#aprovacoesTab .nav-link.active');
+        if (abaAtivaAgora) {
+            const painelAtivoId = abaAtivaAgora.getAttribute('data-bs-target');
+            if (painelAtivoId === '#minhas-docs-pane' && typeof initDocumentacaoTab === 'function') {
+                initDocumentacaoTab();
+            }
+        }
+
+    } catch (e) {
+        console.error(e);
+    } finally {
+        toggleLoader(false, '.overview-card');
     }
 }

@@ -9,7 +9,7 @@ async function carregarDadosDocumentacao() {
     try {
         const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
         const userId = localStorage.getItem("usuarioId");
-        
+
         let url = `/api/docs/solicitacoes?size=1000&usuarioId=${userId}`;
         if (userRole === 'DOCUMENTIST') {
             url += `&documentistaId=${userId}`;
@@ -17,7 +17,7 @@ async function carregarDadosDocumentacao() {
 
         const response = await fetchComAuth(url);
         const data = await response.json();
-        
+
         let todasSolicitacoes = Array.isArray(data) ? data : (data.content || []);
 
         // FILTRO CLIENT-SIDE RIGOROSO DE SEGMENTO PARA MANAGER E COORDINATOR
@@ -32,17 +32,48 @@ async function carregarDadosDocumentacao() {
                             return meusSegmentos.includes(sol.segmentoNome.toUpperCase());
                         }
                         // Deixa passar documentos antigos (legados) que não tinham segmento
-                        return true; 
+                        return true;
                     });
-                } catch(e) { console.error("Erro ao filtrar segmentos no frontend", e); }
+                } catch (e) { console.error("Erro ao filtrar segmentos no frontend", e); }
             }
         }
 
         solicitacoesDocCache = todasSolicitacoes;
+        atualizarBadgeDocumentacao();
         aplicarFiltroDocumentacao(filtroDocAtual);
     } catch (error) {
         console.error("Erro ao carregar solicitações de documentação:", error);
     }
+}
+
+function atualizarBadgeDocumentacao() {
+    // Pendência = tudo que NÃO é status de histórico/final
+    const pendentes = (solicitacoesDocCache || []).filter(item => {
+        const st = (item.status || '').toUpperCase();
+        return ![
+            'FINALIZADO',
+            'FINALIZADO_FORA_PRAZO',
+            'DEVOLVIDO',
+            'REPROVADO'
+        ].includes(st);
+    });
+
+    // Usa a mesma regra do menu (id do seu HTML)
+    const badge = document.getElementById('badge-documentacao');
+    if (!badge) return;
+
+    const n = pendentes.length;
+    if (n <= 0) {
+        badge.textContent = '0';
+        badge.classList.add('d-none');
+        return;
+    }
+
+    badge.textContent = n > 99 ? '99+' : String(n);
+    badge.classList.remove('d-none');
+
+    // (Opcional) se você quiser também salvar para outras telas:
+    window.minhasDocsPendentes = pendentes;
 }
 
 function initDocumentacaoTab() {
@@ -152,10 +183,10 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
     listaDeSolicitacoes.forEach(item => {
         const status = item.status || 'RASCUNHO';
         const tipoDoc = item.documento ? item.documento.nome : '-';
-        
+
         const nomeSolicitante = item.solicitanteNome || 'Sistema (Legado)';
         const osNomeStr = item.osNome || `OS Num. ${item.osId}`;
-        
+
         const responsavelNome = item.documentistaNome || (item.documentistaId ? `ID: ${item.documentistaId}` : 'Sem Responsável');
         const valorFormatado = (item.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
