@@ -119,7 +119,6 @@ const DocumentacaoModule = (function () {
                 .filter(id => !isNaN(id));
         }
 
-        // Captura os dados dinâmicos da tela e LocalStorage para salvar no banco do Microsserviço
         let osNomeStr = '-';
         const selectOS = document.getElementById('osId');
         if (selectOS && selectOS.options.length > 0 && selectOS.selectedIndex >= 0) {
@@ -138,15 +137,15 @@ const DocumentacaoModule = (function () {
             osId: parseInt(osId) || null,
             documentoId: parseInt(documentoId) || null,
             actorUsuarioId: parseInt(localStorage.getItem('usuarioId')) || null,
-            comentario: acao === 'enviar' ? "Iniciando processo de solicitação" : "Salvo como rascunho",
+            comentario: acao === 'enviar'
+                ? "Iniciando processo de solicitação"
+                : "Salvo como rascunho",
             documentistaId: documentistaId ? parseInt(documentistaId) : null,
             lancamentoIds: idsLimpos,
             osNome: osNomeStr,
             segmentoNome: segmentoNomeStr,
             solicitanteNome: nomeUsuarioStr
         };
-
-        if (!payload.osId || !payload.documentoId || payload.lancamentoIds.length === 0) return;
 
         try {
             const response = await fetchComAuth('/api/docs/solicitacoes', {
@@ -155,10 +154,39 @@ const DocumentacaoModule = (function () {
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) throw new Error("Erro ao criar solicitação de documento.");
+            if (!response.ok) {
+                let errorBody = null;
+                let errorText = null;
+
+                try {
+                    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+
+                    if (contentType.includes('application/json')) {
+                        errorBody = await response.json();
+                    } else {
+                        errorText = await response.text();
+                    }
+                } catch (_) { }
+
+                throw new Error(
+                    errorBody?.message ||
+                    errorBody?.error ||
+                    errorText ||
+                    `Erro ao criar solicitação (HTTP ${response.status})`
+                );
+            }
+
+            await response.json().catch(() => null);
+
             carregarAbaPendenteDoc();
+            mostrarToast("Solicitação criada com sucesso!", "success");
+
         } catch (error) {
-            mostrarToast(error.message, "warning");
+            console.error("Erro ao criar solicitação:", error);
+            mostrarToast(
+                error.message || "Erro ao criar solicitação de documento.",
+                "warning"
+            );
         }
     }
 

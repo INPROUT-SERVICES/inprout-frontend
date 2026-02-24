@@ -700,8 +700,15 @@ async function carregarDashboardEBadges() {
 
         window.todosOsLancamentosGlobais = await resGeral.json();
 
-        // 1. FILTRO LOCAL DE PENDÊNCIAS DE ATIVIDADE (Substitui o antigo /pendentes que dava 404)
-        const statusPendentes = ['PENDENTE_COORDENADOR', 'PENDENTE_CONTROLLER', 'AGUARDANDO_EXTENSAO_PRAZO', 'PRAZO_VENCIDO'];
+        let statusPendentes = [];
+        if (userRole === 'COORDINATOR' || userRole === 'MANAGER') {
+            statusPendentes = ['PENDENTE_COORDENADOR'];
+        } else if (userRole === 'CONTROLLER') {
+            statusPendentes = ['PENDENTE_CONTROLLER', 'AGUARDANDO_EXTENSAO_PRAZO', 'PRAZO_VENCIDO'];
+        } else if (userRole === 'ADMIN') {
+            statusPendentes = ['PENDENTE_COORDENADOR', 'PENDENTE_CONTROLLER', 'AGUARDANDO_EXTENSAO_PRAZO', 'PRAZO_VENCIDO'];
+        }
+
         const todasPendenciasGerais = window.todosOsLancamentosGlobais.filter(l => statusPendentes.includes(l.situacaoAprovacao));
 
         // 2. NOVA INTEGRAÇÃO DE DOCUMENTAÇÃO (MICROSSERVIÇO)
