@@ -71,35 +71,6 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         iniciarComponentes();
     }
 
-    function verificarPermissaoBotoesExportar() {
-        const role = (localStorage.getItem('role') || localStorage.getItem('userRole') || '').toUpperCase();
-        if (role.includes('ADMIN') || role.includes('CONTROLLER') || role.includes('COORDINATOR') || role.includes('MANAGER')) {
-
-            // Procura os botões repetidamente até o HTML dinâmico carregar na tela
-            const intervaloBusca = setInterval(() => {
-                const btnExportarHist = document.getElementById('btn-exportar-historico-materiais');
-                const btnExportarPendentes = document.getElementById('btn-exportar-materiais-pendentes');
-
-                let achou = false;
-
-                if (btnExportarHist) {
-                    btnExportarHist.classList.remove('d-none');
-                    achou = true;
-                }
-
-                if (btnExportarPendentes) {
-                    btnExportarPendentes.classList.remove('d-none');
-                    achou = true;
-                }
-
-                if (achou) clearInterval(intervaloBusca);
-            }, 500);
-
-            // Para a busca após 5 segundos para não consumir memória
-            setTimeout(() => clearInterval(intervaloBusca), 5000);
-        }
-    }
-
     function criarToolbarFlutuante() {
         if (!document.querySelector('.actions-group-modern')) {
             const toolbar = document.createElement('div');
@@ -186,7 +157,6 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
 
     // 2.1 PENDENTES
     async function carregarDadosMateriais() {
-        verificarPermissaoBotoesExportar();
         const container = document.getElementById('container-pedidos-materiais');
         if (window.toggleLoader) window.toggleLoader(true, '#materiais-pane');
         if (!container) return;
@@ -208,6 +178,8 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
             listaCompletaSolicitacoes = Array.isArray(dados) ? dados : [];
             renderizarCardsPedidos(listaCompletaSolicitacoes);
 
+            aplicarPermissoesExportacao();
+
         } catch (error) {
             console.error(error);
             renderizarErro(container, error.message, 'carregarDadosMateriais');
@@ -216,9 +188,20 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         }
     }
 
+    function aplicarPermissoesExportacao() {
+        const role = (localStorage.getItem('role') || localStorage.getItem('userRole') || '').toUpperCase();
+        if (role.includes('ADMIN') || role.includes('CONTROLLER') || role.includes('COORDINATOR') || role.includes('MANAGER')) {
+            const btnPendentes = document.getElementById('btn-exportar-materiais-pendentes');
+            const btnHist = document.getElementById('btn-exportar-historico-materiais');
+
+            if (btnPendentes) btnPendentes.classList.remove('d-none');
+            if (btnHist) btnHist.classList.remove('d-none');
+        }
+    }
+
     // 2.2 HISTÓRICO
     async function carregarDadosHistoricoMateriais() {
-        verificarPermissaoBotoesExportar()
+
         const container = document.getElementById('container-historico-materiais');
         if (!container) {
             console.warn("Container 'container-historico-materiais' não encontrado.");
@@ -254,6 +237,8 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
             const dados = await response.json();
             listaCompletaHistorico = Array.isArray(dados) ? dados : [];
             renderizarHistoricoMateriais(listaCompletaHistorico);
+
+            aplicarPermissoesExportacao();
 
         } catch (error) {
             console.error("Erro ao carregar histórico:", error);
@@ -849,26 +834,14 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
     }
 
     function baixarExcelSeguro(workbook, nomeArquivo) {
-        // Gera um ArrayBuffer (formato binário) da planilha
-        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        
-        // Cria um pacote seguro (Blob) declarando explicitamente que é um arquivo Excel confiável
-        const dataBlob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        
-        // Cria um link temporário e simula o clique do usuário
-        const urlDownload = window.URL.createObjectURL(dataBlob);
-        const linkFalso = document.createElement('a');
-        linkFalso.href = urlDownload;
-        linkFalso.download = nomeArquivo;
-        
-        document.body.appendChild(linkFalso);
-        linkFalso.click();
-        
-        // Limpa a memória do navegador
-        setTimeout(() => {
-            document.body.removeChild(linkFalso);
-            window.URL.revokeObjectURL(urlDownload);
-        }, 100);
+        // Verifica se a função segura de escrita está disponível na biblioteca XLSX
+        if (typeof XLSX !== 'undefined' && XLSX.writeFile) {
+            // Usa a função nativa da biblioteca, que evita bloqueios de segurança do navegador
+            XLSX.writeFile(workbook, nomeArquivo);
+        } else {
+            if (window.mostrarToast) mostrarToast('Erro ao gerar o arquivo de forma segura.', 'error');
+            console.error("Função XLSX.writeFile não encontrada.");
+        }
     }
 
 })();
