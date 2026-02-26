@@ -37,6 +37,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
     window.confirmarRejeicao = confirmarRejeicao;
 
     window.exportarHistoricoMateriaisExcel = exportarHistoricoMateriaisExcel;
+    window.exportarMateriaisPendentesExcel = exportarMateriaisPendentesExcel;
 
     // =================================================================
     // 1. INICIALIZAÇÃO E LISTENERS
@@ -51,10 +52,16 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
             btnFiltrarHist.addEventListener('click', carregarDadosHistoricoMateriais);
         }
 
-        const btnExportar = document.getElementById('btn-exportar-historico-materiais');
-        const role = (typeof userRole !== 'undefined' ? userRole : '').toUpperCase();
-        if (btnExportar && (role.includes('ADMIN') || role.includes('CONTROLLER') || role.includes('COORDINATOR') || role.includes('MANAGER'))) {
-            btnExportar.classList.remove('d-none');
+        const role = (localStorage.getItem('role') || localStorage.getItem('userRole') || (typeof userRole !== 'undefined' ? userRole : '')).toUpperCase();
+        
+        // Verifica se o usuário tem uma das roles permitidas
+        if (role.includes('ADMIN') || role.includes('CONTROLLER') || role.includes('COORDINATOR') || role.includes('MANAGER')) {
+            const btnExportarHist = document.getElementById('btn-exportar-historico-materiais');
+            const btnExportarPendentes = document.getElementById('btn-exportar-materiais-pendentes');
+            
+            // Remove o d-none para exibir os botões
+            if (btnExportarHist) btnExportarHist.classList.remove('d-none');
+            if (btnExportarPendentes) btnExportarPendentes.classList.remove('d-none');
         }
     }
 
@@ -748,6 +755,66 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
 
         const dataAtual = new Date().toISOString().slice(0, 10);
         XLSX.writeFile(workbook, `Historico_Materiais_${dataAtual}.xlsx`);
+    }
+
+    function exportarMateriaisPendentesExcel() {
+        if (!listaCompletaSolicitacoes || listaCompletaSolicitacoes.length === 0) {
+            if (window.mostrarToast) mostrarToast('Nenhum dado pendente para exportar.', 'warning');
+            return;
+        }
+
+        const dadosExportacao = [];
+
+        // Varre todas as solicitações pendentes
+        listaCompletaSolicitacoes.forEach(solicitacao => {
+            const osReal = getOsLabel(solicitacao);
+            const solicitante = solicitacao.nomeSolicitante && solicitacao.nomeSolicitante !== 'null' ? solicitacao.nomeSolicitante : 'Desconhecido';
+            const dataStr = formatarDataHora(solicitacao.dataSolicitacao);
+            const segmento = getSegmentoLabel(solicitacao);
+            
+            let site = 'Sem Site';
+            if (solicitacao.lpu && solicitacao.lpu.site && solicitacao.lpu.site !== '-' && solicitacao.lpu.site !== 'Sem Site') site = solicitacao.lpu.site;
+            else if (solicitacao.os && solicitacao.os.site && solicitacao.os.site !== '-' && solicitacao.os.site !== 'Sem Site') site = solicitacao.os.site;
+            else if (solicitacao.site && solicitacao.site !== '-' && solicitacao.site !== 'Sem Site') site = solicitacao.site;
+
+            // Cada item pendente vira uma linha na planilha
+            (solicitacao.itens || []).forEach(item => {
+                const mat = item.material || {};
+                const qtd = toNumber(item.quantidadeSolicitada);
+                const custo = toNumber(mat.custoMedioPonderado);
+                const totalItem = qtd * custo;
+
+                dadosExportacao.push({
+                    "OS": osReal,
+                    "Segmento": segmento,
+                    "Site": site,
+                    "Solicitante": solicitante,
+                    "Data Solicitação": dataStr,
+                    "Status Pedido": solicitacao.status || 'PENDENTE',
+                    "Código Material": mat.codigo || '-',
+                    "Descrição Material": mat.descricao || 'Item Desconhecido',
+                    "Unidade": mat.unidadeMedida || 'UN',
+                    "Qtd Solicitada": qtd,
+                    "Custo Unitário": custo,
+                    "Custo Total": totalItem,
+                    "Status do Item": item.statusItem || 'PENDENTE'
+                });
+            });
+        });
+
+        // Verifica se a biblioteca XLSX está disponível
+        if (typeof XLSX === 'undefined') {
+            if (window.mostrarToast) mostrarToast('Biblioteca de exportação não encontrada.', 'error');
+            return;
+        }
+
+        // Gera a planilha e faz o download
+        const worksheet = XLSX.utils.json_to_sheet(dadosExportacao);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Materiais Pendentes");
+
+        const dataAtual = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(workbook, `Materiais_Pendentes_${dataAtual}.xlsx`);
     }
 
 })();
