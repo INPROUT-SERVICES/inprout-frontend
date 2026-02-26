@@ -53,12 +53,12 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         }
 
         const role = (localStorage.getItem('role') || localStorage.getItem('userRole') || (typeof userRole !== 'undefined' ? userRole : '')).toUpperCase();
-        
+
         // Verifica se o usuário tem uma das roles permitidas
         if (role.includes('ADMIN') || role.includes('CONTROLLER') || role.includes('COORDINATOR') || role.includes('MANAGER')) {
             const btnExportarHist = document.getElementById('btn-exportar-historico-materiais');
             const btnExportarPendentes = document.getElementById('btn-exportar-materiais-pendentes');
-            
+
             // Remove o d-none para exibir os botões
             if (btnExportarHist) btnExportarHist.classList.remove('d-none');
             if (btnExportarPendentes) btnExportarPendentes.classList.remove('d-none');
@@ -69,6 +69,35 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         document.addEventListener('DOMContentLoaded', iniciarComponentes);
     } else {
         iniciarComponentes();
+    }
+
+    function verificarPermissaoBotoesExportar() {
+        const role = (localStorage.getItem('role') || localStorage.getItem('userRole') || '').toUpperCase();
+        if (role.includes('ADMIN') || role.includes('CONTROLLER') || role.includes('COORDINATOR') || role.includes('MANAGER')) {
+
+            // Procura os botões repetidamente até o HTML dinâmico carregar na tela
+            const intervaloBusca = setInterval(() => {
+                const btnExportarHist = document.getElementById('btn-exportar-historico-materiais');
+                const btnExportarPendentes = document.getElementById('btn-exportar-materiais-pendentes');
+
+                let achou = false;
+
+                if (btnExportarHist) {
+                    btnExportarHist.classList.remove('d-none');
+                    achou = true;
+                }
+
+                if (btnExportarPendentes) {
+                    btnExportarPendentes.classList.remove('d-none');
+                    achou = true;
+                }
+
+                if (achou) clearInterval(intervaloBusca);
+            }, 500);
+
+            // Para a busca após 5 segundos para não consumir memória
+            setTimeout(() => clearInterval(intervaloBusca), 5000);
+        }
     }
 
     function criarToolbarFlutuante() {
@@ -157,6 +186,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
 
     // 2.1 PENDENTES
     async function carregarDadosMateriais() {
+        verificarPermissaoBotoesExportar();
         const container = document.getElementById('container-pedidos-materiais');
         if (window.toggleLoader) window.toggleLoader(true, '#materiais-pane');
         if (!container) return;
@@ -188,6 +218,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
 
     // 2.2 HISTÓRICO
     async function carregarDadosHistoricoMateriais() {
+        verificarPermissaoBotoesExportar()
         const container = document.getElementById('container-historico-materiais');
         if (!container) {
             console.warn("Container 'container-historico-materiais' não encontrado.");
@@ -707,7 +738,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
             const solicitante = solicitacao.nomeSolicitante && solicitacao.nomeSolicitante !== 'null' ? solicitacao.nomeSolicitante : 'Desconhecido';
             const dataStr = formatarDataHora(solicitacao.dataSolicitacao);
             const segmento = getSegmentoLabel(solicitacao);
-            
+
             let site = 'Sem Site';
             if (solicitacao.lpu && solicitacao.lpu.site && solicitacao.lpu.site !== '-' && solicitacao.lpu.site !== 'Sem Site') site = solicitacao.lpu.site;
             else if (solicitacao.os && solicitacao.os.site && solicitacao.os.site !== '-' && solicitacao.os.site !== 'Sem Site') site = solicitacao.os.site;
@@ -754,7 +785,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         XLSX.utils.book_append_sheet(workbook, worksheet, "Histórico Materiais");
 
         const dataAtual = new Date().toISOString().slice(0, 10);
-        XLSX.writeFile(workbook, `Historico_Materiais_${dataAtual}.xlsx`);
+        baixarExcelSeguro(workbook, `Historico_Materiais_${dataAtual}.xlsx`);
     }
 
     function exportarMateriaisPendentesExcel() {
@@ -771,7 +802,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
             const solicitante = solicitacao.nomeSolicitante && solicitacao.nomeSolicitante !== 'null' ? solicitacao.nomeSolicitante : 'Desconhecido';
             const dataStr = formatarDataHora(solicitacao.dataSolicitacao);
             const segmento = getSegmentoLabel(solicitacao);
-            
+
             let site = 'Sem Site';
             if (solicitacao.lpu && solicitacao.lpu.site && solicitacao.lpu.site !== '-' && solicitacao.lpu.site !== 'Sem Site') site = solicitacao.lpu.site;
             else if (solicitacao.os && solicitacao.os.site && solicitacao.os.site !== '-' && solicitacao.os.site !== 'Sem Site') site = solicitacao.os.site;
@@ -814,7 +845,30 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         XLSX.utils.book_append_sheet(workbook, worksheet, "Materiais Pendentes");
 
         const dataAtual = new Date().toISOString().slice(0, 10);
-        XLSX.writeFile(workbook, `Materiais_Pendentes_${dataAtual}.xlsx`);
+        baixarExcelSeguro(workbook, `Materiais_Pendentes_${dataAtual}.xlsx`);
+    }
+
+    function baixarExcelSeguro(workbook, nomeArquivo) {
+        // Gera um ArrayBuffer (formato binário) da planilha
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        
+        // Cria um pacote seguro (Blob) declarando explicitamente que é um arquivo Excel confiável
+        const dataBlob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        
+        // Cria um link temporário e simula o clique do usuário
+        const urlDownload = window.URL.createObjectURL(dataBlob);
+        const linkFalso = document.createElement('a');
+        linkFalso.href = urlDownload;
+        linkFalso.download = nomeArquivo;
+        
+        document.body.appendChild(linkFalso);
+        linkFalso.click();
+        
+        // Limpa a memória do navegador
+        setTimeout(() => {
+            document.body.removeChild(linkFalso);
+            window.URL.revokeObjectURL(urlDownload);
+        }, 100);
     }
 
 })();
