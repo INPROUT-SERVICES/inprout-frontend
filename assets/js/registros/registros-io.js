@@ -435,9 +435,6 @@ const RegistrosIO = {
             }
 
             if (os.detalhes && os.detalhes.length > 0) {
-                // CORREÇÃO: Não filtramos mais os inativos. Pegamos todos.
-                // const detalhesAtivos = os.detalhes.filter(d => d.statusRegistro !== 'INATIVO'); (REMOVIDO)
-
                 os.detalhes.forEach(detalhe => {
                     let lancamentoParaExibir = detalhe.ultimoLancamento;
 
@@ -445,11 +442,18 @@ const RegistrosIO = {
                     const isInativo = detalhe.statusRegistro === 'INATIVO';
 
                     if (!isInativo && !lancamentoParaExibir && detalhe.lancamentos && detalhe.lancamentos.length > 0) {
-                        const operacionais = detalhe.lancamentos.filter(l => l.situacaoAprovacao !== 'APROVADO_LEGADO');
-                        if (operacionais.length > 0) {
-                            lancamentoParaExibir = operacionais.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
+                        
+                        // CORREÇÃO: Filtra APENAS os lançamentos com status APROVADO ou APROVADO_LEGADO
+                        const historicoAprovado = detalhe.lancamentos.filter(l => 
+                            l.situacaoAprovacao === 'APROVADO' || 
+                            l.situacaoAprovacao === 'APROVADO_LEGADO'
+                        );
+
+                        // Se houver algum aprovado no histórico, pegamos o mais recente (Maior ID)
+                        if (historicoAprovado.length > 0) {
+                            lancamentoParaExibir = historicoAprovado.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
                         } else {
-                            lancamentoParaExibir = detalhe.lancamentos.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
+                            lancamentoParaExibir = null; // Se não houver aprovado, o Excel ficará em branco nas colunas de lançamento
                         }
                     }
 
@@ -462,9 +466,7 @@ const RegistrosIO = {
 
                     // Se estiver inativo, forçamos a situação para CANCELADO visualmente
                     if (isInativo) {
-                        // Criamos uma propriedade virtual para o renderizador usar
                         if (!linhaObj.detalhe) linhaObj.detalhe = {};
-                        // Sobrescrevemos a situação atual apenas para o Excel
                         linhaObj.detalhe.situacaoAtualVirtual = 'CANCELADO';
                     }
 

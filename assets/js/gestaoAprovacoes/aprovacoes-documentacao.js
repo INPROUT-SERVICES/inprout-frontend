@@ -145,6 +145,33 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
     const tbody = document.getElementById('tbody-minhas-docs');
     const msgVazio = document.getElementById('msg-sem-docs');
 
+    // --- NOVA LÓGICA: FORÇAR O CABEÇALHO VIA JS (Bypassa o cache do HTML) ---
+    if (tbody) {
+        const table = tbody.closest('table');
+        if (table) {
+            const thead = table.querySelector('thead');
+            if (thead) {
+                // Mantém a regra do Assunto Email aparecer apenas no histórico
+                const displayAssunto = contextoFiltro === 'HISTORICO' ? '' : 'd-none';
+                thead.innerHTML = `
+                    <tr>
+                        <th style="width: 100px;" class="text-center">Ação</th>
+                        <th style="width: 120px;" class="text-center">Status</th>
+                        <th>OS</th>
+                        <th>Projeto</th>
+                        <th>Solicitante</th>
+                        <th>Tipo Documento</th>
+                        <th style="width: 110px;" class="text-center">Prazo</th>
+                        <th style="width: 110px;" class="text-end">Valor</th>
+                        <th>Responsável</th>
+                        <th id="th-assunto-email" class="${displayAssunto}">Assunto Email</th>
+                    </tr>
+                `;
+            }
+        }
+    }
+    // -------------------------------------------------------------------------
+
     const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
     const userId = String(localStorage.getItem('usuarioId') || "0");
 
@@ -193,7 +220,7 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
         const responsavelNome = item.documentistaNome || (item.documentistaId ? `ID: ${item.documentistaId}` : 'Sem Responsável');
         const valorFormatado = (item.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-        // Cálculo do Prazo (MANTER IGUAL AO SEU)
+        // Cálculo do Prazo
         let htmlPrazo = '-';
         if (contextoFiltro === 'HISTORICO') {
             const dataCriado = item.criadoEm ? new Date(item.criadoEm).toLocaleDateString('pt-BR') : '-';
@@ -218,14 +245,14 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
             }
         }
 
-        // Badges de Status (MANTER IGUAL AO SEU)
+        // Badges de Status
         let htmlStatus = `<span class="badge bg-secondary">${status}</span>`;
         if (status === 'AGUARDANDO_RECEBIMENTO') htmlStatus = `<span class="badge bg-warning text-dark">Aguardando Envio</span>`;
         else if (status === 'RECEBIDO') htmlStatus = `<span class="badge bg-primary">Em Análise</span>`;
         else if (status === 'FINALIZADO' || status === 'FINALIZADO_FORA_PRAZO') htmlStatus = `<span class="badge bg-success">Finalizado</span>`;
         else if (status === 'DEVOLVIDO' || status === 'REPROVADO') htmlStatus = `<span class="badge bg-danger">Recusado</span>`;
 
-        // Lógica de Botões (MANTER IGUAL AO SEU)
+        // Lógica de Botões
         const isAdmin = userRole === 'ADMIN';
         const isManager = userRole === 'MANAGER';
         const isDocResponsavel = (userRole === 'DOCUMENTIST' && String(item.documentistaId) === userId);
