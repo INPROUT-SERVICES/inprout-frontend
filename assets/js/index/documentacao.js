@@ -229,6 +229,8 @@ const DocumentacaoModule = (function () {
                         <th class="text-center align-middle" style="width: 120px;">AÇÃO</th>
                         <th class="text-center align-middle">STATUS</th>
                         <th class="align-middle">DATA DA SOLICITAÇÃO</th>
+                        <th class="align-middle">OS</th>
+                        <th class="align-middle">PROJETO</th>
                         <th class="align-middle">SOLICITANTE</th>
                         <th class="align-middle">TIPO DOCUMENTO</th>
                         <th class="text-center align-middle">RESPONSÁVEL</th>
@@ -266,12 +268,21 @@ const DocumentacaoModule = (function () {
                 const tr = document.createElement('tr');
 
                 const nomeSolicitante = sol.solicitanteNome || 'Sistema';
-                // Pegando a OS gravada ou buscando do cache de OS do usuário
-                let osNomeStr = obterNomeOS(sol.osId);
 
-                // Fallback: se o cache falhar, tenta pegar do banco (desde que não seja a palavra Carregando)
-                if (osNomeStr === `OS Num. ${sol.osId}` && sol.osNome && !sol.osNome.toLowerCase().includes("carregando")) {
-                    osNomeStr = sol.osNome;
+                let osCodigo = sol.os;
+                let projetoNome = sol.projeto;
+
+                // FALLBACK INTELIGENTE PARA DADOS LEGADOS:
+                // Se a API ainda não tiver o dado, ele busca no cache de OS que a tela Index já tem
+                if (!osCodigo || !projetoNome) {
+                    const osNoCache = osCache.find(o => parseInt(o.id) === parseInt(sol.osId));
+                    if (osNoCache) {
+                        if (!osCodigo) osCodigo = osNoCache.os || `OS Num. ${sol.osId}`;
+                        if (!projetoNome) projetoNome = osNoCache.projeto || 'Projeto não informado';
+                    } else {
+                        if (!osCodigo) osCodigo = `OS Num. ${sol.osId}`;
+                        if (!projetoNome) projetoNome = sol.osNome && !sol.osNome.toLowerCase().includes("carregando") ? sol.osNome : 'Projeto não informado';
+                    }
                 }
 
                 const responsavelNome = sol.documentistaNome || (sol.documentistaId ? `ID: ${sol.documentistaId}` : 'Sem Responsável');
@@ -293,9 +304,14 @@ const DocumentacaoModule = (function () {
                     <td class="align-middle">
                         <span class="text-secondary fw-medium">${dataSolicitacao}</span>
                     </td>
+                    <td class="align-middle fw-bold text-primary">
+                        ${osCodigo}
+                    </td>
+                    <td class="align-middle text-secondary" style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${projetoNome}">
+                        ${projetoNome}
+                    </td>
                     <td class="align-middle">
-                        <span class="fw-medium d-block text-dark">${nomeSolicitante}</span>
-                        <span class="small text-muted"><i class="bi bi-tag-fill me-1"></i>${osNomeStr}</span>
+                        <span class="fw-medium text-dark">${nomeSolicitante}</span>
                     </td>
                     <td class="align-middle fw-medium">
                         ${tipoDoc}

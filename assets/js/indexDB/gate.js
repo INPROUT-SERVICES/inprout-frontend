@@ -1,7 +1,13 @@
 // Função para formatar a data (YYYY-MM-DD -> DD/MM/YYYY)
 function formatarDataSimples(dataStr) {
     if (!dataStr) return 'N/A';
-    const [ano, mes, dia] = dataStr.split('-');
+    
+    // Separa a data da hora pelo 'T' e pega só a primeira parte (a data)
+    const apenasData = dataStr.split('T')[0]; 
+    
+    // Agora sim divide a data correta
+    const [ano, mes, dia] = apenasData.split('-');
+    
     return `${dia}/${mes}/${ano}`;
 }
 
@@ -49,6 +55,22 @@ async function carregarTabelaGates() {
 }
 
 // Configura o modal de criação
+function converterDataParaISO(dataStr) {
+    if (!dataStr) return null;
+    const partes = dataStr.split('/');
+    if (partes.length !== 3) return null;
+    const [dia, mes, ano] = partes;
+
+    // Vai buscar a hora exata do computador neste instante
+    const agora = new Date();
+    const horas = String(agora.getHours()).padStart(2, '0');
+    const minutos = String(agora.getMinutes()).padStart(2, '0');
+    const segundos = String(agora.getSeconds()).padStart(2, '0');
+
+    return `${ano}-${mes}-${dia}T${horas}:${minutos}:${segundos}`;
+}
+
+// Configura o modal de criação
 function configurarModalCriarGate() {
     const modalEl = document.getElementById('modalCriarGate');
     if (!modalEl) return;
@@ -74,10 +96,11 @@ function configurarModalCriarGate() {
         btnSalvar.disabled = true;
         btnSalvar.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Salvando...`;
 
+        // CORREÇÃO: Usando a função para converter as datas do formato BR para ISO
         const payload = {
             nome: document.getElementById('gateNome').value,
-            dataInicio: document.getElementById('gateDataInicio').value,
-            dataFim: document.getElementById('gateDataFim').value
+            dataInicio: converterDataParaISO(document.getElementById('gateDataInicio').value),
+            dataFim: converterDataParaISO(document.getElementById('gateDataFim').value)
         };
 
         try {

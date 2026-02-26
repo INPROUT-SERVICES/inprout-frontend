@@ -43,19 +43,24 @@
             <h5 class="mb-0 card-title-modern"><i class="bi bi-folder2-open me-2"></i> Minha fila de documentação</h5>
             <div class="d-flex gap-2">
                 <div class="btn-group" role="group">
-                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocTodos" value="TODOS" checked>
+                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocTodos" value="TODOS"
+                        checked>
                     <label class="btn btn-outline-primary btn-sm" for="filtroDocTodos">Todos</label>
 
-                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocAnalise" value="EM_ANALISE">
+                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocAnalise"
+                        value="EM_ANALISE">
                     <label class="btn btn-outline-primary btn-sm" for="filtroDocAnalise">Em Análise</label>
 
-                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocPendente" value="PENDENTE_RECEBIMENTO">
+                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocPendente"
+                        value="PENDENTE_RECEBIMENTO">
                     <label class="btn btn-outline-primary btn-sm" for="filtroDocPendente">Aguardando Envio</label>
 
-                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocHistorico" value="HISTORICO">
+                    <input type="radio" class="btn-check" name="filtroDocStatus" id="filtroDocHistorico"
+                        value="HISTORICO">
                     <label class="btn btn-outline-secondary btn-sm" for="filtroDocHistorico">Histórico</label>
                 </div>
-                <button class="btn btn-light btn-sm border" id="btn-atualizar-docs"><i class="bi bi-arrow-clockwise"></i></button>
+                <button class="btn btn-light btn-sm border" id="btn-atualizar-docs"><i
+                        class="bi bi-arrow-clockwise"></i></button>
             </div>
         </div>
         <div class="card-body p-0">
@@ -65,6 +70,8 @@
                         <tr>
                             <th style="width: 100px;" class="text-center">Ação</th>
                             <th style="width: 120px;" class="text-center">Status</th>
+                            <th>OS</th>            
+                            <th>Projeto</th>       
                             <th>Solicitante</th>
                             <th>Tipo Documento</th>
                             <th style="width: 110px;" class="text-center">Prazo</th>

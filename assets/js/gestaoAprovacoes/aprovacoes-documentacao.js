@@ -185,12 +185,15 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
         const tipoDoc = item.documento ? item.documento.nome : '-';
 
         const nomeSolicitante = item.solicitanteNome || 'Sistema (Legado)';
-        const osNomeStr = item.osNome || `OS Num. ${item.osId}`;
+        
+        // --- NOVA LÓGICA DE OS E PROJETO ---
+        const osCodigo = item.os ? item.os : `OS Num. ${item.osId}`;
+        const projetoNome = item.projeto ? item.projeto : (item.osNome || 'Projeto não informado');
 
         const responsavelNome = item.documentistaNome || (item.documentistaId ? `ID: ${item.documentistaId}` : 'Sem Responsável');
         const valorFormatado = (item.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-        // Cálculo do Prazo
+        // Cálculo do Prazo (MANTER IGUAL AO SEU)
         let htmlPrazo = '-';
         if (contextoFiltro === 'HISTORICO') {
             const dataCriado = item.criadoEm ? new Date(item.criadoEm).toLocaleDateString('pt-BR') : '-';
@@ -215,21 +218,17 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
             }
         }
 
-        // Badges de Status
+        // Badges de Status (MANTER IGUAL AO SEU)
         let htmlStatus = `<span class="badge bg-secondary">${status}</span>`;
         if (status === 'AGUARDANDO_RECEBIMENTO') htmlStatus = `<span class="badge bg-warning text-dark">Aguardando Envio</span>`;
         else if (status === 'RECEBIDO') htmlStatus = `<span class="badge bg-primary">Em Análise</span>`;
         else if (status === 'FINALIZADO' || status === 'FINALIZADO_FORA_PRAZO') htmlStatus = `<span class="badge bg-success">Finalizado</span>`;
         else if (status === 'DEVOLVIDO' || status === 'REPROVADO') htmlStatus = `<span class="badge bg-danger">Recusado</span>`;
 
-        // =====================================================================
-        // CONTROLE CRÍTICO DE PERMISSÕES E BOTÕES
-        // =====================================================================
+        // Lógica de Botões (MANTER IGUAL AO SEU)
         const isAdmin = userRole === 'ADMIN';
         const isManager = userRole === 'MANAGER';
         const isDocResponsavel = (userRole === 'DOCUMENTIST' && String(item.documentistaId) === userId);
-
-        // BOTÃO UNIVERSAL (Todos veem)
         const btnComentarios = `<button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico/Comentários"><i class="bi bi-clock-history"></i></button>`;
 
         let acoesHtml = '';
@@ -237,12 +236,10 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
 
         if (!isHistoricoOuFinalizado) {
             if (status === 'AGUARDANDO_RECEBIMENTO') {
-                // REGRA: MARCAR RECEBIDO APENAS PARA ADMIN E MANAGER
                 if (isAdmin || isManager) {
                     acoesHtml += `<button class="btn btn-sm btn-outline-primary me-1" onclick="receberDocumentacao(this, '${item.id}')" title="Confirmar Recebimento"><i class="bi bi-box-arrow-in-down"></i></button>`;
                 }
             } else if (status === 'RECEBIDO') {
-                // REGRA: APROVAR E RECUSAR APENAS PARA ADMIN E DOCUMENTISTA (Dono)
                 if (isAdmin || isDocResponsavel) {
                     acoesHtml += `
                         <button class="btn btn-sm btn-success btn-finalizar-doc me-1" data-id="${item.id}" title="Aprovar e Finalizar"><i class="bi bi-check-lg"></i></button>
@@ -252,15 +249,8 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
             }
         }
 
-        // Monta o grupo final de botões juntando as ações permitidas com o botão de comentários
-        let botoesFinal = '';
-        if (acoesHtml !== '') {
-            botoesFinal = `<div class="d-flex justify-content-center align-items-center">${acoesHtml}${btnComentarios}</div>`;
-        } else {
-            botoesFinal = btnComentarios; // Se não tiver ações, exibe só os comentários
-        }
+        let botoesFinal = acoesHtml !== '' ? `<div class="d-flex justify-content-center align-items-center">${acoesHtml}${btnComentarios}</div>` : btnComentarios;
 
-        // Exibição da Prova de Envio (Tabela)
         const displayAssunto = contextoFiltro === 'HISTORICO' ? '' : 'd-none';
         const provaEnvioTexto = item.provaEnvio ? `<span class="text-truncate d-inline-block text-primary fw-bold" style="max-width: 150px;" title="${item.provaEnvio}"><i class="bi bi-link-45deg"></i> ${item.provaEnvio}</span>` : '-';
 
@@ -268,10 +258,9 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
             <tr>
                 <td class="align-middle text-center">${botoesFinal}</td>
                 <td class="align-middle text-center">${htmlStatus}</td>
-                <td class="align-middle">
-                    <span class="fw-medium d-block text-dark">${nomeSolicitante}</span>
-                    <span class="small text-muted"><i class="bi bi-tag-fill me-1"></i>${osNomeStr}</span>
-                </td>
+                <td class="align-middle fw-bold text-primary">${osCodigo}</td>
+                <td class="align-middle text-secondary" style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${projetoNome}">${projetoNome}</td>
+                <td class="align-middle"><span class="fw-medium text-dark">${nomeSolicitante}</span></td>
                 <td class="align-middle fw-medium text-wrap" style="max-width:200px;">${tipoDoc}</td>
                 <td class="align-middle text-center">${htmlPrazo}</td>
                 <td class="align-middle text-success fw-bold">${valorFormatado}</td>
