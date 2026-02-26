@@ -171,12 +171,19 @@ const RegistrosApi = {
         if(container) container.innerHTML = '';
 
         try {
-            const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os/dashboard-stats`);
-            if (!response.ok) throw new Error('Erro ao carregar dashboard');
+            // 1. Busca todos os segmentos disponíveis
+            const segmentos = await RegistrosApi.fetchSegmentos();
             
-            const statsAgrupados = await response.json();
+            // 2. Objeto para guardar os dados finais
+            const statsAgrupados = {};
+
+            // 3. Busca as informações de TODOS os segmentos simultaneamente (Mito mais rápido)
+            await Promise.all(segmentos.map(async (segmento) => {
+                const statsDoSegmento = await RegistrosApi.fetchValoresParaSegmento(segmento.id);
+                statsAgrupados[segmento.nome] = statsDoSegmento;
+            }));
             
-            // Chama o renderizador passando o JSON direto
+            // 4. Manda renderizar a tela
             RegistrosRender.renderizarCardsDoBackend(statsAgrupados);
 
         } catch (error) {
@@ -185,6 +192,49 @@ const RegistrosApi = {
         } finally {
             if(loader) loader.classList.add('d-none');
         }
+    },
+
+    fetchValoresParaSegmento: async (segmentoId) => {
+        
+        // Função interna auxiliar para disparar o GET para a API
+        const fetchValor = async (endpoint, filtroPo) => {
+            try {
+                const url = `${RegistrosState.API_BASE_URL}${endpoint}?segmentoId=${segmentoId}&filtroPo=${filtroPo}`;
+                const response = await fetchComAuth(url); // Função do seu global.js
+                if(response.ok) {
+                    const data = await response.json();
+                    return data.total || 0; // Pega o record 'total' que o Spring está devolvendo
+                }
+            } catch (e) {
+                console.error(`Erro ao buscar ${endpoint}:`, e);
+            }
+            return 0;
+        };
+
+        // Caminhos das nossas 5 novas APIs
+        const endpoints = [
+            { key: 'finalizado', url: '/lancamentos/aprovados/finalizados' },
+            { key: 'emAndamento', url: '/lancamentos/aprovados/em-andamento' },
+            { key: 'paralisado', url: '/lancamentos/aprovados/paralisados' },
+            { key: 'aguardandoDoc', url: '/lancamentos/aprovados/aguardando-documentacao' },
+            { key: 'naoIniciado', url: '/os/detalhes/nao-iniciados' }
+        ];
+
+        const stats = {};
+        
+        // Dispara as requisições para cada status
+        for (const ep of endpoints) {
+            // Promise.all aqui busca TODOS, COM_PO e SEM_PO ao mesmo tempo!
+            const [total, comPo, semPo] = await Promise.all([
+                fetchValor(ep.url, 'TODOS'),
+                fetchValor(ep.url, 'COM_PO'),
+                fetchValor(ep.url, 'SEM_PO')
+            ]);
+            
+            stats[ep.key] = { total, comPo, semPo };
+        }
+
+        return stats;
     },
 
     preencherDashboard: (stats) => {

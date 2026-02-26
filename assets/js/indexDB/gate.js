@@ -1,10 +1,3 @@
-// =========================================================================
-// LÓGICA PARA GERENCIAMENTO DE GATES NA TELA DE ÍNDICES (indexDB.html)
-// =========================================================================
-
-// Esta função já deve existir em etapas.js ou global.js
-// function mostrarToast(mensagem, tipo = 'success') { ... }
-
 // Função para formatar a data (YYYY-MM-DD -> DD/MM/YYYY)
 function formatarDataSimples(dataStr) {
     if (!dataStr) return 'N/A';
@@ -20,7 +13,8 @@ async function carregarTabelaGates() {
     tbody.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
 
     try {
-        const response = await fetchComAuth("/api/gates");
+        // CORREÇÃO 1: Roteamento Nginx (Adicionado /faturamento)
+        const response = await fetchComAuth("/api/faturamento/gates");
         if (!response.ok) throw new Error("Falha ao carregar GATEs.");
 
         const gates = await response.json();
@@ -87,7 +81,8 @@ function configurarModalCriarGate() {
         };
 
         try {
-            const response = await fetchComAuth("/api/gates", {
+            // CORREÇÃO 2: Roteamento Nginx (Adicionado /faturamento)
+            const response = await fetchComAuth("/api/faturamento/gates", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -139,7 +134,8 @@ function configurarModalExcluirGate() {
         btnConfirmar.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Excluindo...`;
 
         try {
-            const response = await fetchComAuth(`/api/gates/${gateIdParaExcluir}`, {
+            // CORREÇÃO 3: Roteamento Nginx (Adicionado /faturamento)
+            const response = await fetchComAuth(`/api/faturamento/gates/${gateIdParaExcluir}`, {
                 method: 'DELETE'
             });
 

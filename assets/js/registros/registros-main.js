@@ -53,8 +53,8 @@ function configurarVisibilidadeAbas() {
     const listaTabBtn = document.getElementById('lista-tab');
     const listaPane = document.getElementById('lista-pane');
 
-    // Se NÃO for ADMIN e NÃO for CONTROLLER, removemos/escondemos o dashboard e ativamos a lista
-    if (role !== 'ADMIN' && role !== 'CONTROLLER') {
+    // Se NÃO for ADMIN, NÃO for CONTROLLER e NÃO for ASSISTANT, removemos/escondemos o dashboard e ativamos a lista
+    if (role !== 'ADMIN' && role !== 'CONTROLLER' && role !== 'ASSISTANT') {
         // Esconde o botão da aba Dashboard
         if (dashboardTabBtn) {
             dashboardTabBtn.parentElement.style.display = 'none'; // Esconde o <li> inteiro

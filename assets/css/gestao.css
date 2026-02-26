@@ -529,7 +529,7 @@ body {
     margin-right: 10px !important; 
 }
 
-    .badge-flutuante {
+.badge-flutuante {
     position: absolute;
     top: -8px;    /* Sobe a bolinha para fora do botão */
     right: -8px;  /* Joga para a direita, fora do texto */

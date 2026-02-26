@@ -398,169 +398,50 @@ const RegistrosRender = {
     renderizarCardsDoBackend: (dadosAgrupados) => {
         const container = document.getElementById('dashboard-analise-container');
         const loader = document.getElementById('dashboard-loader');
-        
+
         if (!container) return;
         if (loader) loader.classList.add('d-none');
         container.innerHTML = '';
 
         if (!dadosAgrupados || Object.keys(dadosAgrupados).length === 0) {
-            container.innerHTML = '<div class="col-12 text-center text-muted p-5">Nenhum dado encontrado para o Gate atual.</div>';
+            container.innerHTML = '<div class="col-12 text-center text-muted p-5">Nenhum dado encontrado.</div>';
             return;
         }
 
+        // Renderiza cada Segmento utilizando a nova estrutura da API
         const html = Object.keys(dadosAgrupados).sort().map(segmentoNome => {
-            const dto = dadosAgrupados[segmentoNome];
-            if (!dto) return '';
-
-            // --- ADAPTADOR ROBUSTO ---
-            // Cria objetos para todas as variações possíveis de nomes que o criarCardSegmento possa usar
-            
-            const objNaoIniciado = { 
-                total: dto.valorNaoIniciado || 0, 
-                comPo: 0, 
-                semPo: 0 
-            };
-
-            const objParalisado = { 
-                total: dto.valorParalisado || 0, 
-                comPo: 0, 
-                semPo: 0 
-            };
-
-            const objAguardando = {
-                total: dto.valorAguardandoDoc || 0,
-                comPo: 0,
-                semPo: 0
-            };
-
-            const objCancelado = {
-                total: 0,
-                comPo: 0,
-                semPo: 0
-            };
-
-            const statsAdaptado = {
-                // 1. Apto a Faturar (Finalizado)
-                aptoFaturar: { 
-                    total: dto.finalizado ? (dto.finalizado.valorTotal || 0) : 0, 
-                    comPo: dto.finalizado ? (dto.finalizado.valorComPo || 0) : 0, 
-                    semPo: dto.finalizado ? (dto.finalizado.valorSemPo || 0) : 0 
-                },
-
-                // 2. Em Andamento
-                emAndamento: { 
-                    total: dto.emAndamento ? (dto.emAndamento.valorTotal || 0) : 0, 
-                    comPo: dto.emAndamento ? (dto.emAndamento.valorComPo || 0) : 0, 
-                    semPo: dto.emAndamento ? (dto.emAndamento.valorSemPo || 0) : 0 
-                },
-
-                // 3. Paralisado
-                paralisado: objParalisado,
-
-                // 4. Não Iniciado (Várias possibilidades de nome)
-                naoIniciado: objNaoIniciado,
-                nao_iniciado: objNaoIniciado, // Alias caso use snake_case
-
-                // 5. Aguardando Documentação (Várias possibilidades de nome)
-                aguardandoDoc: objAguardando,
-                aguardandoDocumentacao: objAguardando, // Alias comum
-                aguardando_documentacao: objAguardando, // Alias snake_case
-
-                // 6. Cancelado
-                cancelado: objCancelado
-            };
-
-            return RegistrosRender.criarCardSegmento(segmentoNome, statsAdaptado);
+            const stats = dadosAgrupados[segmentoNome];
+            return RegistrosRender.criarCardSegmento(segmentoNome, stats);
         }).join('');
 
         container.innerHTML = html;
-        
-        // Atualiza título do Gate se houver
-        const keys = Object.keys(dadosAgrupados);
-        for(let key of keys) {
-            const d = dadosAgrupados[key];
-            if(d && d.gateAtual && d.gateAtual.nomeGate) {
-                 const labelGate = document.getElementById('label-gate-atual');
-                 if(labelGate) labelGate.innerText = d.gateAtual.nomeGate;
-                 break;
-            }
-        }
-    },
-
-    calcularMetricasPorSegmento: (dados) => {
-        const resultado = {};
-
-        dados.forEach(linha => {
-            // Definições de acesso seguro aos dados
-            const detalhe = linha.detalhe || {};
-            const os = linha.os || {};
-            // Tenta pegar o nome do segmento de vários lugares possíveis
-            const segmentoNome = (os.segmento && os.segmento.nome)
-                ? os.segmento.nome
-                : (detalhe.segmentoNome || 'Sem Segmento');
-
-            // Inicializa estrutura do segmento
-            if (!resultado[segmentoNome]) {
-                resultado[segmentoNome] = {
-                    naoIniciado: 0,
-                    paralisado: { total: 0, comPo: 0, semPo: 0 },
-                    emAndamento: { total: 0, comPo: 0, semPo: 0 },
-                    finalizado: { total: 0, comPo: 0, semPo: 0 }
-                };
-            }
-
-            // Valores e Status
-            const valor = parseFloat(detalhe.valorTotal || 0);
-            // Pega situação do último lançamento OU 'NAO_INICIADO' se não houver lançamento
-            let situacao = (linha.ultimoLancamento && linha.ultimoLancamento.situacao)
-                ? String(linha.ultimoLancamento.situacao).toUpperCase().trim()
-                : 'NAO_INICIADO';
-
-            // Regra: Se statusRegistro for INATIVO, ignoramos no dashboard financeiro?
-            // Assumindo que sim, para não sujar a análise.
-            if (detalhe.statusRegistro === 'INATIVO') return;
-
-            // Regra PO: Verifica se tem PO válida
-            const poRaw = (detalhe.po || '').toString().trim();
-            const semPo = (!poRaw || poRaw === '-' || poRaw.toLowerCase() === 'pendente');
-
-            // Regra Faturamento: Verifica se já saiu da fila de operação
-            const faturamentoRaw = (detalhe.faturamento || '').toString().toUpperCase().trim();
-            const jaNoFaturamento = ['ID SOLICITADO', 'ID RECEBIDO', 'FATURADO', 'FATURADO EM ADIANTAMENTO'].includes(faturamentoRaw);
-
-            // --- APLICAÇÃO DAS REGRAS ---
-
-            // 1. NÃO INICIADO
-            if (situacao === 'NAO_INICIADO') {
-                resultado[segmentoNome].naoIniciado += valor;
-            }
-            // 2. PARALISADO
-            else if (situacao === 'PARALISADO') {
-                resultado[segmentoNome].paralisado.total += valor;
-                if (semPo) resultado[segmentoNome].paralisado.semPo += valor;
-                else resultado[segmentoNome].paralisado.comPo += valor;
-            }
-            // 3. EM ANDAMENTO
-            else if (situacao === 'EM_ANDAMENTO') {
-                resultado[segmentoNome].emAndamento.total += valor;
-                if (semPo) resultado[segmentoNome].emAndamento.semPo += valor;
-                else resultado[segmentoNome].emAndamento.comPo += valor;
-            }
-            // 4. FINALIZADO (Backlog de Faturamento)
-            // Só conta se está finalizado operacionalmente MAS ainda não foi solicitado faturamento
-            else if (situacao === 'FINALIZADO' && !jaNoFaturamento) {
-                resultado[segmentoNome].finalizado.total += valor;
-                if (semPo) resultado[segmentoNome].finalizado.semPo += valor;
-                else resultado[segmentoNome].finalizado.comPo += valor;
-            }
-        });
-
-        return resultado;
     },
 
     criarCardSegmento: (nome, stats) => {
         const format = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const calcPct = (parcial, total) => total > 0 ? (parcial / total) * 100 : 0;
+
+        // Bloco construtor interno para não repetir HTML 4 vezes
+        const buildStatBlock = (title, icon, colorClass, data) => {
+            return `
+            <div class="stat-block">
+                <div class="stat-title ${colorClass}">
+                    <span><i class="bi ${icon} me-1"></i> ${title}</span>
+                </div>
+                <div class="stat-value">${format(data.total)}</div>
+                ${data.total > 0 ? `
+                    <div class="po-progress" title="Verde: Com PO | Laranja: Sem PO">
+                        <div class="po-bar-ok" style="width: ${calcPct(data.comPo, data.total)}%"></div>
+                        <div class="po-bar-warn" style="width: ${calcPct(data.semPo, data.total)}%"></div>
+                    </div>
+                    <div class="sub-info">
+                        <span>Com PO: ${format(data.comPo)}</span>
+                        <span class="${data.semPo > 0 ? 'text-danger fw-bold' : ''}">Sem PO: ${format(data.semPo)}</span>
+                    </div>
+                ` : ''}
+            </div>
+            `;
+        };
 
         return `
         <div class="segmento-card">
@@ -570,62 +451,22 @@ const RegistrosRender = {
             </div>
             <div class="segmento-body">
                 
-                <div class="stat-block">
-                    <div class="stat-title text-finalizado">
-                        <span><i class="bi bi-check-circle-fill me-1"></i> Apto a Faturar</span>
-                    </div>
-                    <div class="stat-value">${format(stats.finalizado.total)}</div>
-                    ${stats.finalizado.total > 0 ? `
-                        <div class="po-progress" title="Verde: Com PO | Laranja: Sem PO">
-                            <div class="po-bar-ok" style="width: ${calcPct(stats.finalizado.comPo, stats.finalizado.total)}%"></div>
-                            <div class="po-bar-warn" style="width: ${calcPct(stats.finalizado.semPo, stats.finalizado.total)}%"></div>
-                        </div>
-                        <div class="sub-info">
-                            <span>Com PO: ${format(stats.finalizado.comPo)}</span>
-                            <span class="${stats.finalizado.semPo > 0 ? 'text-danger fw-bold' : ''}">Sem PO: ${format(stats.finalizado.semPo)}</span>
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div class="stat-block">
-                    <div class="stat-title text-andamento">
-                        <span><i class="bi bi-play-circle me-1"></i> Em Andamento</span>
-                    </div>
-                    <div class="stat-value">${format(stats.emAndamento.total)}</div>
-                    ${stats.emAndamento.total > 0 ? `
-                        <div class="po-progress">
-                            <div class="po-bar-ok" style="width: ${calcPct(stats.emAndamento.comPo, stats.emAndamento.total)}%"></div>
-                            <div class="po-bar-warn" style="width: ${calcPct(stats.emAndamento.semPo, stats.emAndamento.total)}%"></div>
-                        </div>
-                        <div class="sub-info">
-                            <span>Com PO: ${format(stats.emAndamento.comPo)}</span>
-                            <span>Sem PO: ${format(stats.emAndamento.semPo)}</span>
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div class="stat-block">
-                    <div class="stat-title text-paralisado">
-                        <span><i class="bi bi-pause-circle me-1"></i> Paralisado</span>
-                    </div>
-                    <div class="stat-value">${format(stats.paralisado.total)}</div>
-                    ${stats.paralisado.total > 0 ? `
-                        <div class="po-progress">
-                            <div class="po-bar-ok" style="width: ${calcPct(stats.paralisado.comPo, stats.paralisado.total)}%"></div>
-                            <div class="po-bar-warn" style="width: ${calcPct(stats.paralisado.semPo, stats.paralisado.total)}%"></div>
-                        </div>
-                        <div class="sub-info">
-                            <span>Com PO: ${format(stats.paralisado.comPo)}</span>
-                            <span class="${stats.paralisado.semPo > 0 ? 'text-danger' : ''}">Sem PO: ${format(stats.paralisado.semPo)}</span>
-                        </div>
-                    ` : ''}
-                </div>
+                ${buildStatBlock('Apto a Faturar', 'bi-check-circle-fill', 'text-finalizado', stats.finalizado)}
+                ${buildStatBlock('Em Andamento', 'bi-play-circle', 'text-andamento', stats.emAndamento)}
+                ${buildStatBlock('Paralisado', 'bi-pause-circle', 'text-paralisado', stats.paralisado)}
+                ${buildStatBlock('Aguard. Doc', 'bi-file-earmark-text', 'text-warning', stats.aguardandoDoc)}
 
                 <div class="stat-block" style="border:none; padding-top:12px;">
                     <div class="stat-title text-nao-iniciado">
                         <span><i class="bi bi-circle me-1"></i> Não Iniciado</span>
                     </div>
-                    <div class="stat-value fs-6 text-muted">${format(stats.naoIniciado)}</div>
+                    <div class="stat-value fs-6 text-muted">${format(stats.naoIniciado.total)}</div>
+                    ${stats.naoIniciado.total > 0 ? `
+                        <div class="sub-info mt-1">
+                            <span class="text-muted">Com PO: ${format(stats.naoIniciado.comPo)}</span>
+                            <span class="text-muted ms-2">Sem PO: ${format(stats.naoIniciado.semPo)}</span>
+                        </div>
+                    ` : ''}
                 </div>
 
             </div>
