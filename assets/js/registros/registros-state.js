@@ -20,7 +20,10 @@ window.RegistrosState = {
     termoBusca: '',
     osSortDirection: 'desc',
     
-    isLoading: false
+    isLoading: false,
+
+    // Dados do dashboard (para exportação)
+    dashboardData: null
 };
 
 window.RegistrosUtils = {

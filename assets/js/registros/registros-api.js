@@ -163,6 +163,17 @@ const RegistrosApi = {
         }
     },
 
+    fetchGates: async () => {
+        try {
+            const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/faturamento/gates`);
+            if (response.ok) return await response.json();
+            return [];
+        } catch (e) {
+            console.error('Erro ao buscar gates:', e);
+            return [];
+        }
+    },
+
     carregarDashboard: async () => {
         const loader = document.getElementById('dashboard-loader');
         const container = document.getElementById('dashboard-analise-container');
@@ -171,39 +182,54 @@ const RegistrosApi = {
         if(container) container.innerHTML = '';
 
         try {
-            // 1. Busca todos os segmentos disponíveis
+            // 1. Lê as datas dos filtros (se existirem)
+            const inputInicio = document.getElementById('dashboard-data-inicio');
+            const inputFim = document.getElementById('dashboard-data-fim');
+            const dataInicio = inputInicio ? inputInicio.value : null;
+            const dataFim = inputFim ? inputFim.value : null;
+
+            // 2. Busca todos os segmentos disponíveis
             const segmentos = await RegistrosApi.fetchSegmentos();
-            
-            // 2. Objeto para guardar os dados finais
+
+            // 3. Objeto para guardar os dados finais
             const statsAgrupados = {};
 
-            // 3. Busca as informações de TODOS os segmentos simultaneamente (Mito mais rápido)
+            // 4. Busca as informações de TODOS os segmentos simultaneamente
             await Promise.all(segmentos.map(async (segmento) => {
-                const statsDoSegmento = await RegistrosApi.fetchValoresParaSegmento(segmento.id);
+                const statsDoSegmento = await RegistrosApi.fetchValoresParaSegmento(segmento.id, dataInicio, dataFim);
                 statsAgrupados[segmento.nome] = statsDoSegmento;
             }));
-            
-            // 4. Manda renderizar a tela
+
+            // 5. Salva no state (para exportação) e manda renderizar
+            RegistrosState.dashboardData = statsAgrupados;
             RegistrosRender.renderizarCardsDoBackend(statsAgrupados);
 
         } catch (error) {
             console.error(error);
-            if(container) container.innerHTML = `<div class="alert alert-danger">Erro ao carregar dados do dashboard: ${error.message}</div>`;
+            const totaisContainer = document.getElementById('dashboard-totais-container');
+            if (totaisContainer) totaisContainer.innerHTML = '';
+            if(container) container.innerHTML = `
+                <div class="alert alert-danger text-center">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Erro: ${error.message}
+                    <br><button class="btn btn-sm btn-outline-danger mt-2" onclick="RegistrosApi.carregarDashboard()">Tentar Novamente</button>
+                </div>`;
         } finally {
             if(loader) loader.classList.add('d-none');
         }
     },
 
-    fetchValoresParaSegmento: async (segmentoId) => {
-        
+    fetchValoresParaSegmento: async (segmentoId, dataInicio, dataFim) => {
+
         // Função interna auxiliar para disparar o GET para a API
-        const fetchValor = async (endpoint, filtroPo) => {
+        const fetchValor = async (endpoint, filtroPo, usarDatas = true) => {
             try {
-                const url = `${RegistrosState.API_BASE_URL}${endpoint}?segmentoId=${segmentoId}&filtroPo=${filtroPo}`;
-                const response = await fetchComAuth(url); // Função do seu global.js
+                let url = `${RegistrosState.API_BASE_URL}${endpoint}?segmentoId=${segmentoId}&filtroPo=${filtroPo}`;
+                if (usarDatas && dataInicio) url += `&dataInicio=${dataInicio}`;
+                if (usarDatas && dataFim) url += `&dataFim=${dataFim}`;
+                const response = await fetchComAuth(url);
                 if(response.ok) {
                     const data = await response.json();
-                    return data.total || 0; // Pega o record 'total' que o Spring está devolvendo
+                    return data.total || 0;
                 }
             } catch (e) {
                 console.error(`Erro ao buscar ${endpoint}:`, e);
@@ -211,65 +237,43 @@ const RegistrosApi = {
             return 0;
         };
 
-        // Caminhos das nossas 5 novas APIs
-        const endpoints = [
+        // Endpoints com suporte a datas
+        const endpointsComData = [
             { key: 'finalizado', url: '/lancamentos/aprovados/finalizados' },
             { key: 'emAndamento', url: '/lancamentos/aprovados/em-andamento' },
             { key: 'paralisado', url: '/lancamentos/aprovados/paralisados' },
             { key: 'aguardandoDoc', url: '/lancamentos/aprovados/aguardando-documentacao' },
+            { key: 'aptoAFaturar', url: '/os/detalhes/apto-a-faturar' },
+            { key: 'faturados', url: '/os/detalhes/faturados' }
+        ];
+
+        // Endpoint sem suporte a datas
+        const endpointsSemData = [
             { key: 'naoIniciado', url: '/os/detalhes/nao-iniciados' }
         ];
 
         const stats = {};
-        
-        // Dispara as requisições para cada status
-        for (const ep of endpoints) {
-            // Promise.all aqui busca TODOS, COM_PO e SEM_PO ao mesmo tempo!
-            const [total, comPo, semPo] = await Promise.all([
-                fetchValor(ep.url, 'TODOS'),
-                fetchValor(ep.url, 'COM_PO'),
-                fetchValor(ep.url, 'SEM_PO')
-            ]);
-            
-            stats[ep.key] = { total, comPo, semPo };
-        }
+
+        // Dispara TODAS as requisições em paralelo (muito mais rápido)
+        await Promise.all([
+            ...endpointsComData.map(async (ep) => {
+                const [total, comPo, semPo] = await Promise.all([
+                    fetchValor(ep.url, 'TODOS', true),
+                    fetchValor(ep.url, 'COM_PO', true),
+                    fetchValor(ep.url, 'SEM_PO', true)
+                ]);
+                stats[ep.key] = { total, comPo, semPo };
+            }),
+            ...endpointsSemData.map(async (ep) => {
+                const [total, comPo, semPo] = await Promise.all([
+                    fetchValor(ep.url, 'TODOS', false),
+                    fetchValor(ep.url, 'COM_PO', false),
+                    fetchValor(ep.url, 'SEM_PO', false)
+                ]);
+                stats[ep.key] = { total, comPo, semPo };
+            })
+        ]);
 
         return stats;
-    },
-
-    preencherDashboard: (stats) => {
-        const setText = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val || 0; };
-        const setMoney = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = RegistrosUtils.formatarMoeda(val || 0); };
-
-        setText('dash-nao-iniciado', stats.naoIniciado);
-        setText('dash-paralisado', stats.paralisado);
-        setText('dash-aguardando-doc', stats.aguardandoDoc);
-        setMoney('dash-valor-nao-iniciado', stats.valorNaoIniciado);
-        setMoney('dash-valor-paralisado', stats.valorParalisado);
-        setMoney('dash-valor-aguardando-doc', stats.valorAguardandoDoc);
-
-        if (stats.emAndamento) {
-            setText('dash-andamento-total', stats.emAndamento.total);
-            setText('dash-andamento-com-po', stats.emAndamento.comPo);
-            setText('dash-andamento-sem-po', stats.emAndamento.semPo);
-            setMoney('dash-valor-andamento-total', stats.emAndamento.valorTotal);
-        }
-
-        if (stats.finalizado) {
-            setText('dash-finalizado-total', stats.finalizado.total);
-            setText('dash-finalizado-com-po', stats.finalizado.comPo);
-            setText('dash-finalizado-sem-po', stats.finalizado.semPo);
-            setMoney('dash-valor-finalizado-total', stats.finalizado.valorTotal);
-        }
-
-        if (stats.gateAtual) {
-            document.getElementById('dash-gate-nome').innerText = stats.gateAtual.nomeGate;
-            const dataFim = stats.gateAtual.previsao ? stats.gateAtual.previsao.split('-').reverse().join('/') : '--';
-            document.getElementById('dash-gate-previsao').innerText = dataFim;
-            setText('dash-gate-solicitado', stats.gateAtual.idSolicitado);
-            setText('dash-gate-ok', stats.gateAtual.idOk);
-        } else {
-            document.getElementById('dash-gate-nome').innerText = "Nenhum Gate Vigente";
-        }
     }
 };

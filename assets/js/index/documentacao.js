@@ -110,7 +110,7 @@ const DocumentacaoModule = (function () {
         });
     }
 
-    async function criarSolicitacao({ osId, documentoId, documentistaId, lancamentoIds, acao }) {
+    async function criarSolicitacao({ osId, documentoId, documentistaId, lancamentoIds, acao, site, jaRecebido }) {
         let idsLimpos = [];
         if (Array.isArray(lancamentoIds)) {
             idsLimpos = lancamentoIds
@@ -144,7 +144,9 @@ const DocumentacaoModule = (function () {
             lancamentoIds: idsLimpos,
             osNome: osNomeStr,
             segmentoNome: segmentoNomeStr,
-            solicitanteNome: nomeUsuarioStr
+            solicitanteNome: nomeUsuarioStr,
+            site: site || null,
+            jaRecebido: jaRecebido === true ? true : null
         };
 
         try {
@@ -241,27 +243,19 @@ const DocumentacaoModule = (function () {
 
         try {
             const usuarioLogadoId = localStorage.getItem('usuarioId') || '';
-            const response = await fetchComAuth(`/api/docs/solicitacoes?usuarioId=${usuarioLogadoId}`);
+            const response = await fetchComAuth(`/api/docs/solicitacoes?size=1000&usuarioId=${usuarioLogadoId}`);
             const data = await response.json();
 
             let solicitacoes = Array.isArray(data) ? data : (data.content || []);
             solicitacoes = solicitacoes.filter(sol => sol.status === 'AGUARDANDO_RECEBIMENTO');
 
-            const role = (localStorage.getItem("role") || "").trim().toUpperCase();
-
-            // MANAGER e COORDINATOR veem apenas as de suas OSs
-            if (['MANAGER', 'COORDINATOR'].includes(role)) {
-                // Usa o cache de OS que o Monolito devolveu para esse usuário
-                if (osCache && osCache.length > 0) {
-                    const osPermitidas = osCache.map(o => parseInt(o.id));
-                    solicitacoes = solicitacoes.filter(sol => osPermitidas.includes(sol.osId));
-                }
-            }
+            // Filtragem por segmento é feita pelo backend (SolicitacaoDocumentoController.listar)
+            // O frontend NÃO precisa filtrar novamente
 
             tbody.innerHTML = '';
 
             if (solicitacoes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">Nenhuma pendência de documento encontrada.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-check-circle fs-1 d-block mb-2"></i>Nenhuma pendência de documento encontrada.</td></tr>';
             }
 
             solicitacoes.forEach(sol => {

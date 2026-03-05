@@ -4,12 +4,23 @@
 
 let filtroDocAtual = 'TODOS';
 let solicitacoesDocCache = [];
+let graficoEvolucaoInstance = null;
+let ultimosFiltradosDocs = [];
+const LIMITE_HISTORICO = 50;
+
+// ==========================================================
+// 1. CARREGAMENTO DE DADOS (COM FILTRO POR PERFIL)
+// ==========================================================
 
 async function carregarDadosDocumentacao() {
     try {
         const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
         const userId = localStorage.getItem("usuarioId");
 
+        // O backend já filtra:
+        // - MANAGER/COORDINATOR: por segmento (via usuarioId)
+        // - DOCUMENTIST: por documentistaId
+        // - ADMIN/CONTROLLER/ASSISTANT: vê tudo
         let url = `/api/docs/solicitacoes?size=1000&usuarioId=${userId}`;
         if (userRole === 'DOCUMENTIST') {
             url += `&documentistaId=${userId}`;
@@ -18,71 +29,72 @@ async function carregarDadosDocumentacao() {
         const response = await fetchComAuth(url);
         const data = await response.json();
 
-        let todasSolicitacoes = Array.isArray(data) ? data : (data.content || []);
+        solicitacoesDocCache = Array.isArray(data) ? data : (data.content || []);
 
-        // FILTRO CLIENT-SIDE RIGOROSO DE SEGMENTO PARA MANAGER E COORDINATOR
-        if (['MANAGER', 'COORDINATOR'].includes(userRole)) {
-            const segmentosStr = localStorage.getItem('segmentos');
-            if (segmentosStr) {
-                try {
-                    const meusSegmentos = JSON.parse(segmentosStr).map(s => s.nome.toUpperCase());
-                    todasSolicitacoes = todasSolicitacoes.filter(sol => {
-                        // Se existir segmento, bloqueia os que não pertencem ao Gestor
-                        if (sol.segmentoNome && sol.segmentoNome !== '-') {
-                            return meusSegmentos.includes(sol.segmentoNome.toUpperCase());
-                        }
-                        // Deixa passar documentos antigos (legados) que não tinham segmento
-                        return true;
-                    });
-                } catch (e) { console.error("Erro ao filtrar segmentos no frontend", e); }
-            }
-        }
-
-        solicitacoesDocCache = todasSolicitacoes;
         atualizarBadgeDocumentacao();
+        popularFiltrosSelect();
         aplicarFiltroDocumentacao(filtroDocAtual);
+        carregarGraficoEvolucao();
     } catch (error) {
         console.error("Erro ao carregar solicitações de documentação:", error);
     }
 }
 
-function atualizarBadgeDocumentacao() {
-    // Pendência = tudo que NÃO é status de histórico/final
-    const pendentes = (solicitacoesDocCache || []).filter(item => {
-        const st = (item.status || '').toUpperCase();
-        return ![
-            'FINALIZADO',
-            'FINALIZADO_FORA_PRAZO',
-            'DEVOLVIDO',
-            'REPROVADO'
-        ].includes(st);
-    });
+// ==========================================================
+// 2. BADGE (Apenas ADMIN e DOCUMENTIST — conta "Em Análise")
+// ==========================================================
 
-    // Usa a mesma regra do menu (id do seu HTML)
+function atualizarBadgeDocumentacao() {
+    const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
     const badge = document.getElementById('badge-documentacao');
     if (!badge) return;
 
-    const n = pendentes.length;
-    if (n <= 0) {
+    // Badge visível apenas para ADMIN e DOCUMENTIST
+    if (userRole !== 'ADMIN' && userRole !== 'DOCUMENTIST') {
         badge.textContent = '0';
         badge.classList.add('d-none');
+        window.minhasDocsPendentes = [];
         return;
     }
 
-    badge.textContent = n > 99 ? '99+' : String(n);
-    badge.classList.remove('d-none');
+    // Conta apenas RECEBIDO (Em Análise) — são os que requerem ação
+    const emAnalise = (solicitacoesDocCache || []).filter(item =>
+        item.status === 'RECEBIDO'
+    );
 
-    // (Opcional) se você quiser também salvar para outras telas:
-    window.minhasDocsPendentes = pendentes;
+    const n = emAnalise.length;
+    if (n <= 0) {
+        badge.textContent = '0';
+        badge.classList.add('d-none');
+    } else {
+        badge.textContent = n > 99 ? '99+' : String(n);
+        badge.classList.remove('d-none');
+    }
+
+    window.minhasDocsPendentes = emAnalise;
 }
+
+// ==========================================================
+// 3. INICIALIZAÇÃO (ABA PADRÃO POR PERFIL)
+// ==========================================================
 
 function initDocumentacaoTab() {
     console.log("Iniciando aba de documentação (Nova API)...");
 
-    // REMOVER QUADRO DE EVOLUÇÃO (Esconde qualquer card/div que mencione evolucao)
-    const quadroEvolucao = document.querySelector('[id*="evolucao"], [class*="evolucao"]');
-    if (quadroEvolucao) quadroEvolucao.style.display = 'none';
+    const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
 
+    // Aba padrão: DOCUMENTIST → Em Análise; demais → Todos
+    if (userRole === 'DOCUMENTIST') {
+        filtroDocAtual = 'EM_ANALISE';
+        const radioAnalise = document.getElementById('filtroDocAnalise');
+        if (radioAnalise) radioAnalise.checked = true;
+    } else {
+        filtroDocAtual = 'TODOS';
+        const radioTodos = document.getElementById('filtroDocTodos');
+        if (radioTodos) radioTodos.checked = true;
+    }
+
+    // Listeners nos radios de status
     const radiosFiltro = document.querySelectorAll('input[name="filtroDocStatus"]');
     radiosFiltro.forEach(radio => {
         radio.addEventListener('change', (e) => {
@@ -91,6 +103,31 @@ function initDocumentacaoTab() {
         });
     });
 
+    // Busca texto
+    const inputBusca = document.getElementById('doc-busca-texto');
+    if (inputBusca) {
+        inputBusca.addEventListener('input', () => aplicarFiltroDocumentacao(filtroDocAtual));
+    }
+
+    // Filtro Tipo Documento
+    const selectTipoDoc = document.getElementById('doc-filtro-tipo-documento');
+    if (selectTipoDoc) {
+        selectTipoDoc.addEventListener('change', () => aplicarFiltroDocumentacao(filtroDocAtual));
+    }
+
+    // Filtro Documentista
+    const selectDocumentista = document.getElementById('doc-filtro-documentista');
+    if (selectDocumentista) {
+        selectDocumentista.addEventListener('change', () => aplicarFiltroDocumentacao(filtroDocAtual));
+    }
+
+    // Ordenação
+    const selectOrdenacao = document.getElementById('doc-ordenacao');
+    if (selectOrdenacao) {
+        selectOrdenacao.addEventListener('change', () => aplicarFiltroDocumentacao(filtroDocAtual));
+    }
+
+    // Botão atualizar
     const btnAtualizar = document.getElementById('btn-atualizar-docs');
     if (btnAtualizar) {
         btnAtualizar.onclick = async function () {
@@ -103,13 +140,61 @@ function initDocumentacaoTab() {
         };
     }
 
-    const filtroMarcado = document.querySelector('input[name="filtroDocStatus"]:checked');
-    if (filtroMarcado) filtroDocAtual = filtroMarcado.value;
+    // Botão exportar
+    const btnExportar = document.getElementById('btn-exportar-docs');
+    if (btnExportar) {
+        btnExportar.addEventListener('click', () => exportarDocumentacao());
+    }
 
     carregarDadosDocumentacao();
 }
 
+// ==========================================================
+// 4. POPULAR SELECTS DE FILTRO (Dinâmico a partir do cache)
+// ==========================================================
+
+function popularFiltrosSelect() {
+    const selectTipoDoc = document.getElementById('doc-filtro-tipo-documento');
+    const selectDocumentista = document.getElementById('doc-filtro-documentista');
+
+    if (selectTipoDoc) {
+        const valorAtual = selectTipoDoc.value;
+        const tiposUnicos = [...new Set(
+            solicitacoesDocCache
+                .map(s => s.documento ? s.documento.nome : null)
+                .filter(Boolean)
+        )].sort();
+
+        selectTipoDoc.innerHTML = '<option value="">Todos os Documentos</option>';
+        tiposUnicos.forEach(tipo => {
+            selectTipoDoc.innerHTML += `<option value="${tipo}" ${tipo === valorAtual ? 'selected' : ''}>${tipo}</option>`;
+        });
+    }
+
+    if (selectDocumentista) {
+        const valorAtual = selectDocumentista.value;
+        const documentistasMap = {};
+        solicitacoesDocCache.forEach(s => {
+            if (s.documentistaId && s.documentistaNome) {
+                documentistasMap[s.documentistaId] = s.documentistaNome;
+            }
+        });
+
+        selectDocumentista.innerHTML = '<option value="">Todos os Documentistas</option>';
+        Object.entries(documentistasMap)
+            .sort((a, b) => a[1].localeCompare(b[1]))
+            .forEach(([id, nome]) => {
+                selectDocumentista.innerHTML += `<option value="${id}" ${id === valorAtual ? 'selected' : ''}>${nome}</option>`;
+            });
+    }
+}
+
+// ==========================================================
+// 5. APLICAR FILTRO + BUSCA + ORDENAÇÃO
+// ==========================================================
+
 function aplicarFiltroDocumentacao(tipoFiltro) {
+    // 5a. Filtro de Status (abas)
     let dadosFiltrados = [];
 
     const thAssunto = document.getElementById('th-assunto-email');
@@ -118,10 +203,12 @@ function aplicarFiltroDocumentacao(tipoFiltro) {
         else thAssunto.classList.add('d-none');
     }
 
+    const HISTORICO_STATUSES = ['FINALIZADO', 'FINALIZADO_FORA_PRAZO', 'DEVOLVIDO', 'REPROVADO', 'RECUSADO'];
+
     switch (tipoFiltro) {
         case 'HISTORICO':
             dadosFiltrados = solicitacoesDocCache.filter(item =>
-                item.status === 'FINALIZADO' || item.status === 'FINALIZADO_FORA_PRAZO' || item.status === 'DEVOLVIDO' || item.status === 'REPROVADO'
+                HISTORICO_STATUSES.includes(item.status)
             );
             break;
         case 'PENDENTE_RECEBIMENTO':
@@ -133,25 +220,113 @@ function aplicarFiltroDocumentacao(tipoFiltro) {
         case 'TODOS':
         default:
             dadosFiltrados = solicitacoesDocCache.filter(item =>
-                item.status !== 'FINALIZADO' && item.status !== 'FINALIZADO_FORA_PRAZO' && item.status !== 'DEVOLVIDO' && item.status !== 'REPROVADO'
+                !HISTORICO_STATUSES.includes(item.status)
             );
             break;
     }
 
-    renderizarTabelaDocsAgrupada(dadosFiltrados, tipoFiltro);
+    // 5b. Filtro por texto de busca
+    const textoBusca = (document.getElementById('doc-busca-texto')?.value || '').trim().toLowerCase();
+    if (textoBusca) {
+        dadosFiltrados = dadosFiltrados.filter(item => {
+            const os = (item.os || '').toLowerCase();
+            const projeto = (item.projeto || item.osNome || '').toLowerCase();
+            const tipoDoc = (item.documento?.nome || '').toLowerCase();
+            const documentista = (item.documentistaNome || '').toLowerCase();
+            const solicitante = (item.solicitanteNome || '').toLowerCase();
+            return os.includes(textoBusca) || projeto.includes(textoBusca) ||
+                tipoDoc.includes(textoBusca) || documentista.includes(textoBusca) ||
+                solicitante.includes(textoBusca);
+        });
+    }
+
+    // 5c. Filtro por Tipo Documento (select)
+    const tipoDocFiltro = document.getElementById('doc-filtro-tipo-documento')?.value || '';
+    if (tipoDocFiltro) {
+        dadosFiltrados = dadosFiltrados.filter(item =>
+            item.documento && item.documento.nome === tipoDocFiltro
+        );
+    }
+
+    // 5d. Filtro por Documentista (select)
+    const documentistaFiltro = document.getElementById('doc-filtro-documentista')?.value || '';
+    if (documentistaFiltro) {
+        dadosFiltrados = dadosFiltrados.filter(item =>
+            String(item.documentistaId) === documentistaFiltro
+        );
+    }
+
+    // 5e. Ordenação
+    const ordenacao = document.getElementById('doc-ordenacao')?.value || 'prazo-asc';
+    dadosFiltrados = ordenarDocs(dadosFiltrados, ordenacao, tipoFiltro);
+
+    // Guardar todos os filtrados para export (antes de limitar)
+    ultimosFiltradosDocs = dadosFiltrados;
+
+    // Limitar histórico a 50 itens na tela
+    let dadosParaTabela = dadosFiltrados;
+    if (tipoFiltro === 'HISTORICO' && dadosFiltrados.length > LIMITE_HISTORICO) {
+        dadosParaTabela = dadosFiltrados.slice(0, LIMITE_HISTORICO);
+    }
+
+    renderizarTabelaDocsAgrupada(dadosParaTabela, tipoFiltro, dadosFiltrados.length);
 }
 
-function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
+function ordenarDocs(lista, ordenacao, contextoFiltro) {
+    const [campo, direcao] = ordenacao.split('-');
+    const mult = direcao === 'desc' ? -1 : 1;
+
+    return [...lista].sort((a, b) => {
+        let valA, valB;
+
+        switch (campo) {
+            case 'prazo':
+                // Para histórico: ordenar por finalizadoEm
+                if (contextoFiltro === 'HISTORICO') {
+                    valA = a.finalizadoEm ? new Date(a.finalizadoEm).getTime() : 0;
+                    valB = b.finalizadoEm ? new Date(b.finalizadoEm).getTime() : 0;
+                } else {
+                    // Para pendentes: ordenar por deadline (recebidoEm + 48h)
+                    valA = a.recebidoEm ? new Date(a.recebidoEm).getTime() : Number.MAX_SAFE_INTEGER;
+                    valB = b.recebidoEm ? new Date(b.recebidoEm).getTime() : Number.MAX_SAFE_INTEGER;
+                }
+                break;
+            case 'os':
+                valA = (a.os || '').toLowerCase();
+                valB = (b.os || '').toLowerCase();
+                return mult * valA.localeCompare(valB);
+            case 'valor':
+                valA = a.valor || 0;
+                valB = b.valor || 0;
+                break;
+            case 'criadoEm':
+                valA = a.criadoEm ? new Date(a.criadoEm).getTime() : 0;
+                valB = b.criadoEm ? new Date(b.criadoEm).getTime() : 0;
+                break;
+            default:
+                return 0;
+        }
+
+        if (valA < valB) return -1 * mult;
+        if (valA > valB) return 1 * mult;
+        return 0;
+    });
+}
+
+// ==========================================================
+// 6. RENDERIZAÇÃO DA TABELA
+// ==========================================================
+
+function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro, totalSemLimite = null) {
     const tbody = document.getElementById('tbody-minhas-docs');
     const msgVazio = document.getElementById('msg-sem-docs');
 
-    // --- NOVA LÓGICA: FORÇAR O CABEÇALHO VIA JS (Bypassa o cache do HTML) ---
+    // Reconstruir thead dinamicamente para controlar coluna Assunto Email
     if (tbody) {
         const table = tbody.closest('table');
         if (table) {
             const thead = table.querySelector('thead');
             if (thead) {
-                // Mantém a regra do Assunto Email aparecer apenas no histórico
                 const displayAssunto = contextoFiltro === 'HISTORICO' ? '' : 'd-none';
                 thead.innerHTML = `
                     <tr>
@@ -170,14 +345,14 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
             }
         }
     }
-    // -------------------------------------------------------------------------
 
     const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
     const userId = String(localStorage.getItem('usuarioId') || "0");
 
-    // KPIs Dashboard - Somando Valores Monetários
-    const docsPendentes = solicitacoesDocCache.filter(i => i.status !== 'FINALIZADO' && i.status !== 'FINALIZADO_FORA_PRAZO' && i.status !== 'DEVOLVIDO' && i.status !== 'REPROVADO');
-    const docsHistorico = solicitacoesDocCache.filter(i => i.status === 'FINALIZADO' || i.status === 'FINALIZADO_FORA_PRAZO' || i.status === 'DEVOLVIDO' || i.status === 'REPROVADO');
+    // KPIs Dashboard — calculados do cache completo (não dos filtrados)
+    const HIST = ['FINALIZADO', 'FINALIZADO_FORA_PRAZO', 'DEVOLVIDO', 'REPROVADO', 'RECUSADO'];
+    const docsPendentes = solicitacoesDocCache.filter(i => !HIST.includes(i.status));
+    const docsHistorico = solicitacoesDocCache.filter(i => HIST.includes(i.status));
 
     const valorPendente = docsPendentes.reduce((acc, curr) => acc + (curr.valor || 0), 0);
     const valorHistorico = docsHistorico.reduce((acc, curr) => acc + (curr.valor || 0), 0);
@@ -197,11 +372,7 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
     tbody.innerHTML = '';
 
     if (!listaDeSolicitacoes || listaDeSolicitacoes.length === 0) {
-        if (msgVazio) {
-            msgVazio.classList.remove('d-none');
-            const span = msgVazio.querySelector('span');
-            if (span) span.textContent = contextoFiltro === 'HISTORICO' ? "Nenhum histórico encontrado." : "Nenhuma pendência encontrada.";
-        }
+        if (msgVazio) msgVazio.classList.remove('d-none');
         return;
     } else {
         if (msgVazio) msgVazio.classList.add('d-none');
@@ -210,13 +381,9 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
     listaDeSolicitacoes.forEach(item => {
         const status = item.status || 'RASCUNHO';
         const tipoDoc = item.documento ? item.documento.nome : '-';
-
         const nomeSolicitante = item.solicitanteNome || 'Sistema (Legado)';
-        
-        // --- NOVA LÓGICA DE OS E PROJETO ---
         const osCodigo = item.os ? item.os : `OS Num. ${item.osId}`;
         const projetoNome = item.projeto ? item.projeto : (item.osNome || 'Projeto não informado');
-
         const responsavelNome = item.documentistaNome || (item.documentistaId ? `ID: ${item.documentistaId}` : 'Sem Responsável');
         const valorFormatado = (item.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -238,35 +405,36 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
                 const horaStr = dataRecebimento.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                 const isVencido = dataRecebimento < new Date();
-                const corPrazo = isVencido ? 'text-danger fw-bold' : 'text-muted';
-                htmlPrazo = `<span class="${corPrazo}">${dataStr} às ${horaStr}</span>`;
+                const corPrazo = isVencido ? 'text-danger fw-bold doc-prazo-vencido' : 'text-muted';
+                htmlPrazo = `<span class="${corPrazo}"><i class="bi bi-clock me-1"></i>${dataStr} ${horaStr}</span>`;
             } else {
                 htmlPrazo = '<span class="text-warning small"><i class="bi bi-clock"></i> Aguardando<br>Recebimento</span>';
             }
         }
 
-        // Badges de Status
-        let htmlStatus = `<span class="badge bg-secondary">${status}</span>`;
-        if (status === 'AGUARDANDO_RECEBIMENTO') htmlStatus = `<span class="badge bg-warning text-dark">Aguardando Envio</span>`;
-        else if (status === 'RECEBIDO') htmlStatus = `<span class="badge bg-primary">Em Análise</span>`;
-        else if (status === 'FINALIZADO' || status === 'FINALIZADO_FORA_PRAZO') htmlStatus = `<span class="badge bg-success">Finalizado</span>`;
-        else if (status === 'DEVOLVIDO' || status === 'REPROVADO') htmlStatus = `<span class="badge bg-danger">Recusado</span>`;
+        // Badges de Status (mais modernos)
+        let htmlStatus = `<span class="doc-badge-status badge bg-secondary">${status}</span>`;
+        if (status === 'AGUARDANDO_RECEBIMENTO') htmlStatus = `<span class="doc-badge-status badge bg-warning text-dark">Aguardando Envio</span>`;
+        else if (status === 'RECEBIDO') htmlStatus = `<span class="doc-badge-status badge bg-primary">Em Análise</span>`;
+        else if (status === 'FINALIZADO' || status === 'FINALIZADO_FORA_PRAZO') htmlStatus = `<span class="doc-badge-status badge bg-success">Finalizado</span>`;
+        else if (status === 'RECUSADO' || status === 'DEVOLVIDO' || status === 'REPROVADO') htmlStatus = `<span class="doc-badge-status badge bg-danger">Recusado</span>`;
 
-        // Lógica de Botões
+        // ==== LÓGICA DE AÇÕES — Apenas ADMIN e DOCUMENTIST responsável ====
         const isAdmin = userRole === 'ADMIN';
-        const isManager = userRole === 'MANAGER';
         const isDocResponsavel = (userRole === 'DOCUMENTIST' && String(item.documentistaId) === userId);
         const btnComentarios = `<button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico/Comentários"><i class="bi bi-clock-history"></i></button>`;
 
         let acoesHtml = '';
-        const isHistoricoOuFinalizado = contextoFiltro === 'HISTORICO' || status.includes('FINALIZADO') || status === 'DEVOLVIDO' || status === 'REPROVADO';
+        const isHistoricoOuFinalizado = contextoFiltro === 'HISTORICO' || status.includes('FINALIZADO') || status === 'DEVOLVIDO' || status === 'REPROVADO' || status === 'RECUSADO';
 
         if (!isHistoricoOuFinalizado) {
             if (status === 'AGUARDANDO_RECEBIMENTO') {
-                if (isAdmin || isManager) {
+                // Receber: apenas ADMIN
+                if (isAdmin) {
                     acoesHtml += `<button class="btn btn-sm btn-outline-primary me-1" onclick="receberDocumentacao(this, '${item.id}')" title="Confirmar Recebimento"><i class="bi bi-box-arrow-in-down"></i></button>`;
                 }
             } else if (status === 'RECEBIDO') {
+                // Aprovar/Recusar: apenas ADMIN ou DOCUMENTIST responsável
                 if (isAdmin || isDocResponsavel) {
                     acoesHtml += `
                         <button class="btn btn-sm btn-success btn-finalizar-doc me-1" data-id="${item.id}" title="Aprovar e Finalizar"><i class="bi bi-check-lg"></i></button>
@@ -297,10 +465,365 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro) {
         `;
         tbody.innerHTML += tr;
     });
+
+    // Mensagem de limite quando no histórico
+    if (contextoFiltro === 'HISTORICO' && totalSemLimite && totalSemLimite > listaDeSolicitacoes.length) {
+        const trAviso = `
+            <tr>
+                <td colspan="10" class="text-center py-3 text-muted bg-light">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Exibindo os ${listaDeSolicitacoes.length} registros mais recentes de ${totalSemLimite} no total.
+                    Use <strong>Exportar</strong> para obter o relatório completo.
+                </td>
+            </tr>`;
+        tbody.innerHTML += trAviso;
+    }
+}
+
+// ==========================================================
+// 7. EXPORTAÇÃO (SweetAlert2 + XLSX — mesmo padrão de registros)
+// ==========================================================
+
+async function exportarDocumentacao() {
+    const vistaAtual = ultimosFiltradosDocs || [];
+    const totalBase = solicitacoesDocCache.length;
+
+    const result = await Swal.fire({
+        title: '<span class="fw-bold text-dark">Exportar Documentação</span>',
+        width: 700,
+        padding: '2em',
+        html: `
+            <style>
+                .export-options-container {
+                    display: flex;
+                    gap: 15px;
+                    justify-content: center;
+                    margin-top: 20px;
+                    flex-wrap: wrap;
+                }
+                .export-card {
+                    flex: 1;
+                    min-width: 220px;
+                    border: 2px solid #e9ecef;
+                    border-radius: 16px;
+                    padding: 20px 10px;
+                    cursor: pointer;
+                    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+                    background: white;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .export-card:hover {
+                    border-color: #198754;
+                    transform: translateY(-5px);
+                    box-shadow: 0 10px 25px rgba(25, 135, 84, 0.15);
+                }
+                .export-card:hover .icon-box {
+                    background-color: #e8f5e9;
+                    color: #198754;
+                }
+                .icon-box {
+                    width: 50px;
+                    height: 50px;
+                    background-color: #f8f9fa;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 15px;
+                    font-size: 1.5rem;
+                    color: #6c757d;
+                    transition: all 0.3s;
+                }
+                .export-title {
+                    font-weight: 700;
+                    color: #343a40;
+                    margin-bottom: 8px;
+                    font-size: 1rem;
+                }
+                .export-desc {
+                    font-size: 0.8rem;
+                    color: #6c757d;
+                    margin-bottom: 15px;
+                    line-height: 1.4;
+                    min-height: 45px;
+                }
+                .export-badge {
+                    background-color: #f1f3f5;
+                    color: #495057;
+                    padding: 4px 10px;
+                    border-radius: 30px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                }
+            </style>
+
+            <p class="text-muted mb-4">Selecione o tipo de exportação desejada:</p>
+
+            <div class="export-options-container">
+                <div class="export-card" onclick="window._docExportTipo='VISTA_ATUAL'; Swal.clickConfirm()">
+                    <div class="icon-box"><i class="bi bi-funnel"></i></div>
+                    <h5 class="export-title">Vista Atual</h5>
+                    <p class="export-desc">Apenas os registros filtrados e visíveis na tela.</p>
+                    <span class="export-badge"><i class="bi bi-list-check"></i> ${vistaAtual.length} registros</span>
+                </div>
+
+                <div class="export-card" onclick="window._docExportTipo='COMPLETO'; Swal.clickConfirm()">
+                    <div class="icon-box"><i class="bi bi-database-down"></i></div>
+                    <h5 class="export-title">Base Completa</h5>
+                    <p class="export-desc">Todos os documentos carregados (todas as abas).</p>
+                    <span class="export-badge"><i class="bi bi-server"></i> ${totalBase} registros</span>
+                </div>
+            </div>
+        `,
+        showConfirmButton: false,
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar',
+        buttonsStyling: false,
+        customClass: {
+            cancelButton: 'btn btn-outline-secondary px-4 mt-4 rounded-pill'
+        },
+        didOpen: () => { window._docExportTipo = ''; }
+    });
+
+    if (!result.isConfirmed && !window._docExportTipo) return;
+
+    const tipo = window._docExportTipo;
+    delete window._docExportTipo;
+
+    const modalEl = document.getElementById('modalProgressoExportacaoDocs');
+    const modalProgresso = new bootstrap.Modal(modalEl);
+    modalProgresso.show();
+
+    const textoProgresso = document.getElementById('textoProgressoDocs');
+    const barraProgresso = document.getElementById('barraProgressoDocs');
+
+    const atualizarProgresso = (pct, texto) => {
+        barraProgresso.style.width = `${pct}%`;
+        barraProgresso.textContent = `${pct}%`;
+        if (texto) textoProgresso.textContent = texto;
+    };
+
+    atualizarProgresso(10, 'Iniciando exportação...');
+
+    setTimeout(async () => {
+        try {
+            const linhas = tipo === 'VISTA_ATUAL' ? vistaAtual : solicitacoesDocCache;
+
+            if (!linhas || linhas.length === 0) {
+                throw new Error("Nenhum dado encontrado para exportar.");
+            }
+
+            atualizarProgresso(40, 'Processando dados...');
+
+            const formataMoeda = (val) => (val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const formatData = (dt) => dt ? new Date(dt).toLocaleDateString('pt-BR') : '-';
+
+            // Cabeçalhos
+            const headers = ['OS', 'Projeto', 'Segmento', 'Solicitante', 'Tipo Documento', 'Responsável', 'Status', 'Valor (R$)', 'Data Solicitação', 'Data Recebimento', 'Data Finalização', 'Prova Envio'];
+
+            // Linhas
+            const rows = linhas.map(item => {
+                let statusLabel = item.status || '-';
+                if (statusLabel === 'AGUARDANDO_RECEBIMENTO') statusLabel = 'Aguardando Envio';
+                else if (statusLabel === 'RECEBIDO') statusLabel = 'Em Análise';
+                else if (statusLabel === 'FINALIZADO' || statusLabel === 'FINALIZADO_FORA_PRAZO') statusLabel = 'Finalizado';
+                else if (statusLabel === 'RECUSADO' || statusLabel === 'DEVOLVIDO' || statusLabel === 'REPROVADO') statusLabel = 'Recusado';
+
+                return [
+                    item.os || `OS ${item.osId}`,
+                    item.projeto || item.osNome || '-',
+                    item.segmentoNome || '-',
+                    item.solicitanteNome || '-',
+                    item.documento?.nome || '-',
+                    item.documentistaNome || '-',
+                    statusLabel,
+                    item.valor || 0,
+                    formatData(item.criadoEm),
+                    formatData(item.recebidoEm),
+                    formatData(item.finalizadoEm),
+                    item.provaEnvio || '-'
+                ];
+            });
+
+            atualizarProgresso(70, 'Gerando arquivo Excel...');
+
+            // Resumo por status
+            const statusCount = {};
+            let valorTotal = 0;
+            linhas.forEach(item => {
+                const st = item.status || 'DESCONHECIDO';
+                if (!statusCount[st]) statusCount[st] = { qtd: 0, valor: 0 };
+                statusCount[st].qtd++;
+                statusCount[st].valor += (item.valor || 0);
+                valorTotal += (item.valor || 0);
+            });
+
+            const resumoHeaders = ['Status', 'Quantidade', 'Valor (R$)'];
+            const resumoRows = Object.entries(statusCount).map(([st, dados]) => [st, dados.qtd, dados.valor]);
+            resumoRows.push(['TOTAL', linhas.length, valorTotal]);
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([resumoHeaders, ...resumoRows]), "Resumo");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([headers, ...rows]), "Detalhes");
+
+            const nomeArquivo = `Relatorio_Documentacao_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            _downloadXlsxDocs(wb, nomeArquivo);
+
+            atualizarProgresso(100, 'Concluído!');
+            mostrarToast('Exportação concluída com sucesso!', 'success');
+
+        } catch (e) {
+            console.error(e);
+            mostrarToast('Erro ao exportar: ' + e.message, 'error');
+        } finally {
+            setTimeout(() => modalProgresso.hide(), 1000);
+        }
+    }, 300);
+}
+
+function _downloadXlsxDocs(wb, filename) {
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
+}
+
+// ==========================================================
+// 8. GRÁFICO DE EVOLUÇÃO (Últimos 6 meses — client-side)
+// ==========================================================
+
+function carregarGraficoEvolucao() {
+    const canvas = document.getElementById('graficoCarteiraDoc');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const formataMoeda = (val) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    // Calcular dados dos últimos 6 meses a partir do cache (em VALOR R$)
+    const agora = new Date();
+    const mesesRaw = [];
+
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+        const ano = d.getFullYear();
+        const mes = d.getMonth();
+        const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+
+        const valorCriadas = solicitacoesDocCache
+            .filter(s => {
+                if (!s.criadoEm) return false;
+                const dt = new Date(s.criadoEm);
+                return dt.getFullYear() === ano && dt.getMonth() === mes;
+            })
+            .reduce((acc, s) => acc + (s.valor || 0), 0);
+
+        const valorFinalizadas = solicitacoesDocCache
+            .filter(s => {
+                if (!s.finalizadoEm) return false;
+                const dt = new Date(s.finalizadoEm);
+                return dt.getFullYear() === ano && dt.getMonth() === mes;
+            })
+            .reduce((acc, s) => acc + (s.valor || 0), 0);
+
+        mesesRaw.push({ label, valorCriadas, valorFinalizadas });
+    }
+
+    // Filtrar: só mostrar meses que tenham algum dado (não nulos)
+    const mesesComDados = mesesRaw.filter(m => m.valorCriadas > 0 || m.valorFinalizadas > 0);
+
+    // Se não houver dados, mostrar mensagem no canvas
+    if (mesesComDados.length === 0) {
+        const ctx = canvas.getContext('2d');
+        if (graficoEvolucaoInstance) { graficoEvolucaoInstance.destroy(); graficoEvolucaoInstance = null; }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '11px sans-serif';
+        ctx.fillStyle = '#adb5bd';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sem dados de evolução', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
+    const labels = mesesComDados.map(m => m.label);
+    const dataCriadas = mesesComDados.map(m => m.valorCriadas);
+    const dataFinalizadas = mesesComDados.map(m => m.valorFinalizadas);
+
+    // Destruir gráfico anterior se existir
+    if (graficoEvolucaoInstance) {
+        graficoEvolucaoInstance.destroy();
+        graficoEvolucaoInstance = null;
+    }
+
+    graficoEvolucaoInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Criadas (R$)',
+                    data: dataCriadas,
+                    backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                    borderColor: 'rgba(255, 193, 7, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barPercentage: 0.6
+                },
+                {
+                    label: 'Finalizadas (R$)',
+                    data: dataFinalizadas,
+                    backgroundColor: 'rgba(25, 135, 84, 0.7)',
+                    borderColor: 'rgba(25, 135, 84, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barPercentage: 0.6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: { font: { size: 10 }, boxWidth: 12, padding: 6 }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: (items) => items[0].label,
+                        label: (item) => `${item.dataset.label}: ${formataMoeda(item.raw)}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 9 } }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        font: { size: 9 },
+                        callback: (val) => 'R$ ' + val.toLocaleString('pt-BR')
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                }
+            }
+        }
+    });
 }
 
 // =====================================================================
-// FLUXO DE AÇÕES E INTEGRAÇÕES
+// 9. FLUXO DE AÇÕES E INTEGRAÇÕES
 // =====================================================================
 
 async function receberDocumentacao(btnElement, id) {
@@ -328,7 +851,7 @@ async function receberDocumentacao(btnElement, id) {
 }
 
 // =====================================================================
-// MODAL DE HISTÓRICO / COMENTÁRIOS E RECUSA
+// 10. MODAL DE HISTÓRICO / COMENTÁRIOS E RECUSA
 // =====================================================================
 
 function iniciarRecusa(id) {
@@ -363,7 +886,7 @@ async function carregarHistoricoNoModal(id) {
 
             htmlTimeline += `
                 <div class="mb-4 position-relative">
-                    <span class="position-absolute translate-middle rounded-circle border border-white border-2 ${iconClass}" 
+                    <span class="position-absolute translate-middle rounded-circle border border-white border-2 ${iconClass}"
                           style="width: 16px; height: 16px; left: -21px; top: 15px;"></span>
                     <div class="card border-0 shadow-sm bg-light">
                         <div class="card-body p-3">
@@ -470,7 +993,7 @@ async function processarRecusa(id, motivo, btnElement, modalInstance) {
 }
 
 // =====================================================================
-// FINALIZAR (Aprovar e inserir prova de envio)
+// 11. FINALIZAR (Aprovar e inserir prova de envio)
 // =====================================================================
 
 document.addEventListener('click', async function (e) {

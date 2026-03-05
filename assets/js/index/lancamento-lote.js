@@ -170,6 +170,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             </select>
                         </div>
                     </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="jaRecebido-lpu-${idSufixo}">
+                        <label class="form-check-label" for="jaRecebido-lpu-${idSufixo}">
+                            Já recebido pelo documentista
+                        </label>
+                    </div>
 
                     <h6 class="section-title">Execução</h6>
                     <div class="etapas-scroll mb-3">
@@ -324,7 +330,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Dados de doc separados para usarmos no momento de chamar a API de doc
             _documentoInfo: {
                 documentoId: documentoVal ? parseInt(documentoVal) : null,
-                documentistaId: documentistaVal ? parseInt(documentistaVal) : null
+                documentistaId: documentistaVal ? parseInt(documentistaVal) : null,
+                jaRecebido: document.getElementById(`jaRecebido-lpu-${idSufixo}`)?.checked || false
             }
         };
     }
@@ -407,6 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <input class="form-check-input lpu-checkbox" type="checkbox"
                             value="${lpu.id}"
                             data-os-lpu-detalhe-id="${item.id}"
+                            data-site="${item.site || ''}"
                             id="lpu-lote-${lpu.id}" data-nome="${label}">
                         <label class="form-check-label" for="lpu-lote-${lpu.id}">
                             <div class="lpu-label-container">
@@ -557,6 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const checkbox of lpusSelecionadas) {
                 const lpuId = checkbox.value;
                 const osLpuDetalheId = checkbox.dataset.osLpuDetalheId;
+                const site = checkbox.dataset.site || null;
 
                 const dadosFormulario = replicarDados ? dadosReplicados : lerDadosDeFormulario(lpuId);
 
@@ -576,7 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 // Guarda esse array pareado: A LPU selecionada e sua config de doc
-                infoDocsPorLpu.push({ lpuId, docInfo: _documentoInfo });
+                infoDocsPorLpu.push({ lpuId, site, docInfo: _documentoInfo });
                 lancamentosEmLote.push(dadosLpu);
             }
 
@@ -601,16 +610,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Se "Replicar Dados" estiver ativo
                 if (replicarDados && dadosReplicados._documentoInfo.documentoId) {
 
-                    // === CORREÇÃO: Garante que pegamos o ID corretamente ===
-                    const lancamentosIdsGerados = lancamentosSalvos.map(l => typeof l === 'object' ? l.id : l);
+                    // Agrupa lançamentos por site (constraint é OS+Site+Doc)
+                    const lancamentosPorSite = {};
+                    for (let i = 0; i < lancamentosSalvos.length; i++) {
+                        const site = infoDocsPorLpu[i]?.site || null;
+                        const lancID = typeof lancamentosSalvos[i] === 'object' ? lancamentosSalvos[i].id : lancamentosSalvos[i];
+                        const siteKey = site || '__sem_site__';
+                        if (!lancamentosPorSite[siteKey]) {
+                            lancamentosPorSite[siteKey] = { site, ids: [] };
+                        }
+                        lancamentosPorSite[siteKey].ids.push(lancID);
+                    }
 
-                    await DocumentacaoModule.criarSolicitacao({
-                        osId: osId,
-                        documentoId: dadosReplicados._documentoInfo.documentoId,
-                        documentistaId: dadosReplicados._documentoInfo.documentistaId,
-                        lancamentoIds: lancamentosIdsGerados,
-                        acao: acao
-                    });
+                    for (const siteKey in lancamentosPorSite) {
+                        const grupo = lancamentosPorSite[siteKey];
+                        await DocumentacaoModule.criarSolicitacao({
+                            osId: osId,
+                            documentoId: dadosReplicados._documentoInfo.documentoId,
+                            documentistaId: dadosReplicados._documentoInfo.documentistaId,
+                            lancamentoIds: grupo.ids,
+                            acao: acao,
+                            site: grupo.site,
+                            jaRecebido: dadosReplicados._documentoInfo.jaRecebido || false
+                        });
+                    }
                 }
                 // Se for Individual
                 else if (!replicarDados) {
@@ -620,33 +643,39 @@ document.addEventListener('DOMContentLoaded', () => {
                         const lpuIdDoLanc = lancamentoSalvo.detalhe ? lancamentoSalvo.detalhe.lpu.id : null;
                         const lancID = typeof lancamentoSalvo === 'object' ? lancamentoSalvo.id : lancamentoSalvo;
 
-                        const infoDoc = infoDocsPorLpu.find(i => i.lpuId == lpuIdDoLanc)?.docInfo;
+                        const infoEntry = infoDocsPorLpu.find(i => i.lpuId == lpuIdDoLanc);
+                        const infoDoc = infoEntry?.docInfo;
+                        const site = infoEntry?.site || null;
 
                         if (infoDoc && infoDoc.documentoId && lancID) {
-                            const docId = infoDoc.documentoId;
+                            const groupKey = `${infoDoc.documentoId}_${infoDoc.documentistaId || ''}_${site || ''}`;
 
-                            // Se ainda não existe esse doc no grupo, cria
-                            if (!docsAgrupados[docId]) {
-                                docsAgrupados[docId] = {
-                                    documentoId: docId,
+                            // Se ainda não existe esse grupo (doc+documentista+site), cria
+                            if (!docsAgrupados[groupKey]) {
+                                docsAgrupados[groupKey] = {
+                                    documentoId: infoDoc.documentoId,
                                     documentistaId: infoDoc.documentistaId,
+                                    site: site,
+                                    jaRecebido: infoDoc.jaRecebido || false,
                                     lancamentoIds: []
                                 };
                             }
                             // Adiciona o ID do lançamento na lista
-                            docsAgrupados[docId].lancamentoIds.push(lancID);
+                            docsAgrupados[groupKey].lancamentoIds.push(lancID);
                         }
                     }
 
-                    // Agora envia uma requisição por documento, contendo o array de lançamentos vinculados
-                    for (const docId in docsAgrupados) {
-                        const dadosDoc = docsAgrupados[docId];
+                    // Agora envia uma requisição por (documento + site), contendo o array de lançamentos vinculados
+                    for (const groupKey in docsAgrupados) {
+                        const dadosDoc = docsAgrupados[groupKey];
                         await DocumentacaoModule.criarSolicitacao({
                             osId: osId,
                             documentoId: dadosDoc.documentoId,
                             documentistaId: dadosDoc.documentistaId,
-                            lancamentoIds: dadosDoc.lancamentoIds, // Envia o Array inteiro agrupado!
-                            acao: acao
+                            lancamentoIds: dadosDoc.lancamentoIds,
+                            acao: acao,
+                            site: dadosDoc.site,
+                            jaRecebido: dadosDoc.jaRecebido
                         });
                     }
                 }

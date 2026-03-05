@@ -134,8 +134,13 @@ body {
 .modern-table tbody tr:nth-child(even) { background-color: #f9f9f9; }
 .modern-table tbody tr:hover { background-color: #e6f3ec; }
 
-.tab-pane .table-responsive,
+.tab-pane .table-responsive {
+    width: 100%;
+    min-width: 100% !important;
+    max-width: none !important;
+}
 .tab-pane .modern-table {
+    width: 100% !important;
     min-width: 100% !important;
     max-width: none !important;
 }
@@ -549,4 +554,84 @@ body {
 }
 #tabsScrollContainer::-webkit-scrollbar {
     display: none; /* Chrome/Safari */
+}
+
+/* =================================================================== */
+/* DOCUMENTAÇÃO - KPI CARDS                                             */
+/* =================================================================== */
+.doc-kpi-card {
+    border-radius: 0.75rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.doc-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+}
+.doc-kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+.doc-kpi-card h4 {
+    font-size: 1.25rem;
+    line-height: 1.2;
+}
+.doc-kpi-card p {
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+}
+
+/* =================================================================== */
+/* DOCUMENTAÇÃO - BARRA DE FILTROS                                      */
+/* =================================================================== */
+#doc-busca-texto:focus {
+    box-shadow: none;
+    border-color: var(--accent-color, #7da78a);
+}
+#doc-busca-texto::placeholder {
+    color: #adb5bd;
+    font-size: 0.85rem;
+}
+
+/* =================================================================== */
+/* DOCUMENTAÇÃO - TABELA MODERNA                                        */
+/* =================================================================== */
+#minhas-docs-pane .table-responsive {
+    width: 100%;
+}
+#minhas-docs-pane .modern-table {
+    width: 100% !important;
+    table-layout: auto;
+}
+#minhas-docs-pane .modern-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+.doc-badge-status {
+    font-size: 0.75rem;
+    padding: 0.35em 0.75em;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+.doc-prazo-vencido {
+    animation: pulseRed 2s infinite;
+}
+@keyframes pulseRed {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* =================================================================== */
+/* DOCUMENTAÇÃO - EMPTY STATE                                           */
+/* =================================================================== */
+#msg-sem-docs {
+    padding: 3rem 1rem;
+}
+#msg-sem-docs .display-4 {
+    opacity: 0.4;
 }

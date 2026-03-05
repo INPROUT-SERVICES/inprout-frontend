@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="../assets/css/registros.css" />
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
 <body>
@@ -63,12 +64,47 @@
 
             <div class="tab-pane fade show active" id="dashboard-pane" role="tabpanel" aria-labelledby="dashboard-tab">
                 <div class="container-fluid py-4">
+
+                    <div class="dashboard-filtros mb-4">
+                        <div class="d-flex align-items-center flex-wrap gap-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <label for="dashboard-gate-select" class="form-label mb-0 text-muted small fw-bold">
+                                    <i class="bi bi-calendar-range me-1"></i>GATE:
+                                </label>
+                                <select class="form-select form-select-sm" id="dashboard-gate-select" style="width: 220px;">
+                                    <option value="">Carregando...</option>
+                                </select>
+                            </div>
+                            <div class="vr d-none d-md-block" style="height: 28px; opacity: 0.3;"></div>
+                            <div class="d-flex align-items-center gap-2">
+                                <label for="dashboard-data-inicio" class="form-label mb-0 text-muted small fw-bold">De:</label>
+                                <input type="date" class="form-control form-control-sm" id="dashboard-data-inicio" style="width: 160px;">
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <label for="dashboard-data-fim" class="form-label mb-0 text-muted small fw-bold">Até:</label>
+                                <input type="date" class="form-control form-control-sm" id="dashboard-data-fim" style="width: 160px;">
+                            </div>
+                            <button class="btn btn-sm btn-success" id="btnFiltrarDashboard">
+                                <i class="bi bi-funnel-fill me-1"></i> Filtrar
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" id="btnLimparFiltroDashboard">
+                                <i class="bi bi-x-circle me-1"></i> Limpar
+                            </button>
+                            <div class="vr d-none d-md-block" style="height: 28px; opacity: 0.3;"></div>
+                            <button class="btn btn-sm btn-outline-success" id="btnExportarDashboard">
+                                <i class="bi bi-download me-1"></i> Exportar
+                            </button>
+                        </div>
+                    </div>
+
                     <div id="dashboard-loader" class="text-center py-5 d-none">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Carregando...</span>
                         </div>
                         <p class="mt-2 text-muted">Processando dados...</p>
                     </div>
+
+                    <div id="dashboard-totais-container"></div>
 
                     <div id="dashboard-analise-container" class="dashboard-grid">
                     </div>
@@ -451,6 +487,8 @@
     <script src="../assets/js/general/sidebar.js?v=5.2"></script>
     <script src="../assets/js/general/global.js?v=5.2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
 
     <script src="../assets/js/registros/registros-state.js"></script>
     <script src="../assets/js/registros/registros-utils.js"></script>

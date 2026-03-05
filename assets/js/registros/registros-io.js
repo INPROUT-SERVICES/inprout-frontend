@@ -9,6 +9,7 @@ const RegistrosIO = {
         RegistrosIO.setupImportacao();
         RegistrosIO.setupExportacao();
         RegistrosIO.setupImportacaoFinanceiro();
+        RegistrosIO.setupExportacaoDashboard();
         RegistrosIO.aplicarPermissoes();
     },
 
@@ -52,7 +53,7 @@ const RegistrosIO = {
                 XLSX.utils.book_append_sheet(wb, ws, "Template");
 
                 // Baixa o arquivo
-                XLSX.writeFile(wb, "template_importacao_os.xlsx");
+                RegistrosIO._downloadXlsx(wb, "template_importacao_os.xlsx");
             });
         }
     },
@@ -407,7 +408,7 @@ const RegistrosIO = {
                             nomeArquivo = `Relatorio_Faturados_Nao_Finalizados_${new Date().toISOString().slice(0, 10)}.xlsx`;
                         }
 
-                        XLSX.writeFile(wb, nomeArquivo);
+                        RegistrosIO._downloadXlsx(wb, nomeArquivo);
 
                         atualizarProgresso(100, 'Concluído!');
                         RegistrosUtils.mostrarToast('Exportação concluída com sucesso!', 'success');
@@ -435,6 +436,9 @@ const RegistrosIO = {
             }
 
             if (os.detalhes && os.detalhes.length > 0) {
+                // CORREÇÃO: Não filtramos mais os inativos. Pegamos todos.
+                // const detalhesAtivos = os.detalhes.filter(d => d.statusRegistro !== 'INATIVO'); (REMOVIDO)
+
                 os.detalhes.forEach(detalhe => {
                     let lancamentoParaExibir = detalhe.ultimoLancamento;
 
@@ -442,18 +446,11 @@ const RegistrosIO = {
                     const isInativo = detalhe.statusRegistro === 'INATIVO';
 
                     if (!isInativo && !lancamentoParaExibir && detalhe.lancamentos && detalhe.lancamentos.length > 0) {
-                        
-                        // CORREÇÃO: Filtra APENAS os lançamentos com status APROVADO ou APROVADO_LEGADO
-                        const historicoAprovado = detalhe.lancamentos.filter(l => 
-                            l.situacaoAprovacao === 'APROVADO' || 
-                            l.situacaoAprovacao === 'APROVADO_LEGADO'
-                        );
-
-                        // Se houver algum aprovado no histórico, pegamos o mais recente (Maior ID)
-                        if (historicoAprovado.length > 0) {
-                            lancamentoParaExibir = historicoAprovado.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
+                        const operacionais = detalhe.lancamentos.filter(l => l.situacaoAprovacao !== 'APROVADO_LEGADO');
+                        if (operacionais.length > 0) {
+                            lancamentoParaExibir = operacionais.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
                         } else {
-                            lancamentoParaExibir = null; // Se não houver aprovado, o Excel ficará em branco nas colunas de lançamento
+                            lancamentoParaExibir = detalhe.lancamentos.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
                         }
                     }
 
@@ -466,7 +463,9 @@ const RegistrosIO = {
 
                     // Se estiver inativo, forçamos a situação para CANCELADO visualmente
                     if (isInativo) {
+                        // Criamos uma propriedade virtual para o renderizador usar
                         if (!linhaObj.detalhe) linhaObj.detalhe = {};
+                        // Sobrescrevemos a situação atual apenas para o Excel
                         linhaObj.detalhe.situacaoAtualVirtual = 'CANCELADO';
                     }
 
@@ -533,5 +532,258 @@ const RegistrosIO = {
                 }
             });
         }
+    },
+
+    setupExportacaoDashboard: () => {
+        const btn = document.getElementById('btnExportarDashboard');
+        if (!btn) return;
+
+        btn.addEventListener('click', async () => {
+            const dadosAgrupados = RegistrosState.dashboardData;
+            if (!dadosAgrupados || Object.keys(dadosAgrupados).length === 0) {
+                RegistrosUtils.mostrarToast('Nenhum dado carregado no dashboard para exportar.', 'warning');
+                return;
+            }
+
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = 'auto';
+
+            const dataInicio = document.getElementById('dashboard-data-inicio')?.value || '';
+            const dataFim = document.getElementById('dashboard-data-fim')?.value || '';
+            const periodoTexto = (dataInicio && dataFim)
+                ? `De ${dataInicio.split('-').reverse().join('/')} até ${dataFim.split('-').reverse().join('/')}`
+                : 'Sem filtro de período definido';
+
+            const nSegmentos = Object.keys(dadosAgrupados).length;
+
+            const result = await Swal.fire({
+                title: '<span class="fw-bold text-dark">Exportar Dashboard</span>',
+                width: 750,
+                padding: '2em',
+                html: `
+                    <style>
+                        .export-options-container { display: flex; gap: 15px; justify-content: center; margin-top: 15px; flex-wrap: wrap; }
+                        .export-card { flex: 1; min-width: 200px; border: 2px solid #e9ecef; border-radius: 16px; padding: 20px 15px; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); background: white; }
+                        .export-card:hover { border-color: #198754; transform: translateY(-5px); box-shadow: 0 10px 25px rgba(25, 135, 84, 0.15); }
+                        .export-card:hover .icon-box { background-color: #e8f5e9; color: #198754; }
+                        .icon-box { width: 50px; height: 50px; background-color: #f8f9fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-size: 1.5rem; color: #6c757d; transition: all 0.3s; }
+                        .export-title { font-weight: 700; color: #343a40; margin-bottom: 8px; font-size: 1rem; }
+                        .export-desc { font-size: 0.8rem; color: #6c757d; margin-bottom: 15px; line-height: 1.4; min-height: 50px; }
+                        .export-badge { background-color: #f1f3f5; color: #495057; padding: 4px 10px; border-radius: 30px; font-size: 0.75rem; font-weight: 600; }
+                    </style>
+                    <p class="text-muted mb-1 small"><i class="bi bi-calendar-range me-1"></i>${periodoTexto}</p>
+                    <p class="text-muted mb-4">Selecione o tipo de exportação desejada:</p>
+                    <div class="export-options-container">
+                        <div class="export-card" onclick="window._dashExportType='RESUMO'; Swal.clickConfirm()">
+                            <div class="icon-box"><i class="bi bi-bar-chart-line"></i></div>
+                            <h5 class="export-title">Resumo Dashboard</h5>
+                            <p class="export-desc">Totais agrupados por segmento e status, com detalhamento Com/Sem PO.</p>
+                            <span class="export-badge"><i class="bi bi-table me-1"></i>${nSegmentos} segmento(s)</span>
+                        </div>
+                        <div class="export-card" onclick="window._dashExportType='DETALHADO'; Swal.clickConfirm()">
+                            <div class="icon-box"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+                            <h5 class="export-title">Dados Detalhados</h5>
+                            <p class="export-desc">Registros completos de cada lançamento no período, com as mesmas colunas da aba Registros.</p>
+                            <span class="export-badge"><i class="bi bi-database-down me-1"></i>Por período</span>
+                        </div>
+                    </div>
+                `,
+                showConfirmButton: false,
+                showCancelButton: true,
+                cancelButtonText: 'Cancelar',
+                buttonsStyling: false,
+                customClass: {
+                    cancelButton: 'btn btn-outline-secondary px-4 mt-4 rounded-pill'
+                },
+                didOpen: () => { window._dashExportType = ''; }
+            });
+
+            if (!result.isConfirmed || !window._dashExportType) {
+                delete window._dashExportType;
+                return;
+            }
+
+            const tipoExport = window._dashExportType;
+            delete window._dashExportType;
+
+            if (tipoExport === 'RESUMO') {
+                RegistrosIO._exportarResumoDashboard(dadosAgrupados, dataInicio, dataFim);
+            } else if (tipoExport === 'DETALHADO') {
+                await RegistrosIO._exportarDetalhadoDashboard(dataInicio, dataFim);
+            }
+        });
+    },
+
+    _exportarResumoDashboard: (dadosAgrupados, dataInicio, dataFim) => {
+        try {
+            const statusLabels = [
+                { key: 'naoIniciado', label: 'Não Iniciado' },
+                { key: 'emAndamento', label: 'Em Andamento' },
+                { key: 'paralisado', label: 'Paralisado' },
+                { key: 'aguardandoDoc', label: 'Aguard. Documentação' },
+                { key: 'finalizado', label: 'Finalizado' },
+                { key: 'aptoAFaturar', label: 'Apto a Faturar' },
+                { key: 'faturados', label: 'Faturados' }
+            ];
+
+            const headers = ['Segmento'];
+            statusLabels.forEach(s => {
+                headers.push(`${s.label} - Total`, `${s.label} - Com PO`, `${s.label} - Sem PO`);
+            });
+            headers.push('Total Geral');
+
+            const rows = [];
+            Object.keys(dadosAgrupados).sort().forEach(segmentoNome => {
+                const stats = dadosAgrupados[segmentoNome];
+                const row = [segmentoNome];
+                let totalSegmento = 0;
+                statusLabels.forEach(s => {
+                    const d = stats[s.key] || { total: 0, comPo: 0, semPo: 0 };
+                    row.push(d.total || 0, d.comPo || 0, d.semPo || 0);
+                    totalSegmento += d.total || 0;
+                });
+                row.push(totalSegmento);
+                rows.push(row);
+            });
+
+            const totais = RegistrosRender.calcularTotaisGerais(dadosAgrupados);
+            const totaisRow = ['TOTAL'];
+            let totalGeral = 0;
+            statusLabels.forEach(s => {
+                const d = totais[s.key] || { total: 0, comPo: 0, semPo: 0 };
+                totaisRow.push(d.total || 0, d.comPo || 0, d.semPo || 0);
+                totalGeral += d.total || 0;
+            });
+            totaisRow.push(totalGeral);
+            rows.push(totaisRow);
+
+            const statusHeaders = ['Status', 'Total', 'Com PO', 'Sem PO'];
+            const statusRows = statusLabels.map(s => {
+                const d = totais[s.key] || { total: 0, comPo: 0, semPo: 0 };
+                return [s.label, d.total || 0, d.comPo || 0, d.semPo || 0];
+            });
+            statusRows.push(['TOTAL', totalGeral,
+                Object.values(totais).reduce((sum, s) => sum + (s.comPo || 0), 0),
+                Object.values(totais).reduce((sum, s) => sum + (s.semPo || 0), 0)
+            ]);
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([headers, ...rows]), 'Resumo por Segmento');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([statusHeaders, ...statusRows]), 'Resumo por Status');
+
+            let nomeArquivo = 'Dashboard_Resumo';
+            if (dataInicio && dataFim) nomeArquivo += `_${dataInicio}_a_${dataFim}`;
+            nomeArquivo += '.xlsx';
+
+            RegistrosIO._downloadXlsx(wb, nomeArquivo);
+            RegistrosUtils.mostrarToast('Dashboard exportado com sucesso!', 'success');
+        } catch (e) {
+            console.error('Erro ao exportar resumo do dashboard:', e);
+            RegistrosUtils.mostrarToast('Erro ao exportar: ' + e.message, 'error');
+        }
+    },
+
+    _exportarDetalhadoDashboard: async (dataInicio, dataFim) => {
+        const modalProgressoEl = document.getElementById('modalProgressoExportacao');
+        const modalProgresso = new bootstrap.Modal(modalProgressoEl);
+        modalProgresso.show();
+
+        const textoProgresso = document.getElementById('textoProgresso');
+        const barraProgresso = document.getElementById('barraProgresso');
+
+        const atualizarProgresso = (pct, txt) => {
+            barraProgresso.style.width = `${pct}%`;
+            barraProgresso.textContent = `${pct}%`;
+            if (txt) textoProgresso.textContent = txt;
+        };
+
+        atualizarProgresso(10, 'Buscando dados completos...');
+
+        setTimeout(async () => {
+            try {
+                const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os/export/completo`);
+                if (!response.ok) throw new Error('Erro ao buscar dados do servidor.');
+                const listaOS = await response.json();
+
+                atualizarProgresso(40, 'Processando registros...');
+
+                let linhas = RegistrosIO.processarListaParaExportacao(listaOS);
+
+                // Filtra por período se definido
+                if (dataInicio && dataFim) {
+                    const dtInicio = new Date(dataInicio + 'T00:00:00');
+                    const dtFim = new Date(dataFim + 'T23:59:59');
+                    linhas = linhas.filter(linha => {
+                        const dataAtividade = RegistrosUtils.get(linha, 'ultimoLancamento.dataAtividade', null);
+                        if (!dataAtividade || dataAtividade === '-') return false;
+                        const dtStr = String(dataAtividade).split('T')[0];
+                        const dt = new Date(dtStr + 'T00:00:00');
+                        return dt >= dtInicio && dt <= dtFim;
+                    });
+                }
+
+                if (linhas.length === 0) {
+                    throw new Error('Nenhum lançamento encontrado para o período selecionado.');
+                }
+
+                atualizarProgresso(70, `Gerando Excel com ${linhas.length} registros...`);
+
+                const headers = [...RegistrosRender.getHeaders(), 'VALOR CPS LEGADO'];
+                const detalhesRows = linhas.map(linha => {
+                    return headers.map(h => {
+                        if (h === 'SITUAÇÃO' && linha.detalhe?.statusRegistro === 'INATIVO') return 'CANCELADO';
+                        if (h === 'STATUS REGISTRO' && linha.detalhe?.statusRegistro === 'INATIVO') return 'INATIVO';
+                        const func = RegistrosRender.dataMapping[h];
+                        let val = func ? func(linha) : '-';
+                        if (h.includes('VALOR') || h === 'QUANTIDADE') {
+                            if (typeof val === 'string') val = val.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+                            return parseFloat(val) || 0;
+                        }
+                        return val;
+                    });
+                });
+
+                atualizarProgresso(90, 'Finalizando arquivo...');
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([headers, ...detalhesRows]), 'Detalhes');
+
+                let nomeArquivo = 'Dashboard_Detalhado';
+                if (dataInicio && dataFim) nomeArquivo += `_${dataInicio}_a_${dataFim}`;
+                nomeArquivo += '.xlsx';
+
+                RegistrosIO._downloadXlsx(wb, nomeArquivo);
+                atualizarProgresso(100, 'Concluído!');
+                RegistrosUtils.mostrarToast(`${linhas.length} registros exportados com sucesso!`, 'success');
+
+            } catch (e) {
+                console.error(e);
+                RegistrosUtils.mostrarToast('Erro ao exportar: ' + e.message, 'error');
+            } finally {
+                setTimeout(() => modalProgresso.hide(), 1000);
+            }
+        }, 300);
+    },
+
+    /**
+     * Download seguro de arquivo XLSX sem gerar aviso "não seguro" no navegador.
+     * Usa Blob com o MIME type correto em vez de XLSX.writeFile().
+     */
+    _downloadXlsx: (wb, filename) => {
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
     }
 };

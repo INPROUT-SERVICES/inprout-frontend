@@ -29,11 +29,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     if (tabDocumentacao) {
         if (userRole === 'DOCUMENTIST') {
-            // Documentista: Ícone + "Minhas documentações"
-            tabDocumentacao.innerHTML = '<i class="bi bi-folder2-open me-1"></i> Minhas documentações';
+            tabDocumentacao.innerHTML = '<i class="bi bi-folder2-open me-1"></i> Minhas documentações <span id="badge-documentacao" class="badge rounded-pill bg-danger badge-flutuante d-none">0</span>';
         } else {
-            // Outros: Ícone + "Documentação"
-            tabDocumentacao.innerHTML = '<i class="bi bi-folder2-open me-1"></i> Documentação';
+            tabDocumentacao.innerHTML = '<i class="bi bi-folder2-open me-1"></i> Documentação <span id="badge-documentacao" class="badge rounded-pill bg-danger badge-flutuante d-none">0</span>';
         }
     }
 
@@ -733,7 +731,7 @@ function configurarVisibilidadePorRole() {
 
         const docTab = document.getElementById('minhas-docs-tab');
         if (docTab) {
-            docTab.innerHTML = '<i class="bi bi-folder-check me-1"></i> Controle de documentação';
+            docTab.innerHTML = '<i class="bi bi-folder-check me-1"></i> Controle de documentação <span id="badge-documentacao" class="badge rounded-pill bg-danger badge-flutuante d-none">0</span>';
             const tabTrigger = new bootstrap.Tab(docTab);
             tabTrigger.show();
             document.getElementById('atividades-pane')?.classList.remove('show', 'active');
@@ -914,7 +912,7 @@ async function carregarDashboardEBadges() {
         );
 
         // 2. INTEGRAÇÃO DE DOCUMENTAÇÃO (MICROSSERVIÇO)
-        let urlDocs = `/api/docs/solicitacoes?size=1000`;
+        let urlDocs = `/api/docs/solicitacoes?size=1000&usuarioId=${encodeURIComponent(userId)}`;
         if (userRole === 'DOCUMENTIST') {
             urlDocs += `&documentistaId=${encodeURIComponent(userId)}`;
         }
@@ -925,11 +923,14 @@ async function carregarDashboardEBadges() {
                 const docsData = await resDocs.json();
                 const allDocs = Array.isArray(docsData) ? docsData : (docsData.content || []);
 
-                window.minhasDocsPendentes = allDocs.filter(
-                    d => d.status !== 'FINALIZADO' && d.status !== 'REPROVADO'
-                );
+                // Badge: apenas ADMIN e DOCUMENTIST veem, conta só RECEBIDO (Em Análise)
+                if (userRole === 'ADMIN' || userRole === 'DOCUMENTIST') {
+                    window.minhasDocsPendentes = allDocs.filter(d => d.status === 'RECEBIDO');
+                } else {
+                    window.minhasDocsPendentes = [];
+                }
                 window.minhasDocsHistorico = allDocs.filter(
-                    d => d.status === 'FINALIZADO' || d.status === 'REPROVADO'
+                    d => d.status === 'FINALIZADO' || d.status === 'FINALIZADO_FORA_PRAZO' || d.status === 'REPROVADO' || d.status === 'RECUSADO'
                 );
             } else {
                 window.minhasDocsPendentes = [];

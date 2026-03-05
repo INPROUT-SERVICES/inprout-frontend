@@ -1945,7 +1945,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderizarCabecalho(colunasHistorico, document.querySelector('#historico-pane thead'));
         renderizarCabecalho(colunasMinhasPendencias, document.querySelector('#minhasPendencias-pane thead'));
         renderizarCabecalho(colunasMinhasPendencias, document.querySelector('#paralisados-pane thead'));
-        renderizarCabecalho(colunasPendenteDoc, document.querySelector('#pendente-doc-pane thead'));
+        // Cabeçalho de pendente-doc é gerenciado exclusivamente por documentacao.js
     }
 
     const btnLogout = document.getElementById('logoutBtn');

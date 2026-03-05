@@ -395,20 +395,93 @@ const RegistrosRender = {
         RegistrosApi.carregarDashboard();
     },
 
+    calcularTotaisGerais: (dadosAgrupados) => {
+        const statusKeys = ['naoIniciado', 'emAndamento', 'paralisado', 'aguardandoDoc', 'finalizado', 'aptoAFaturar', 'faturados'];
+        const totais = {};
+        statusKeys.forEach(key => { totais[key] = { total: 0, comPo: 0, semPo: 0 }; });
+
+        Object.values(dadosAgrupados).forEach(stats => {
+            statusKeys.forEach(key => {
+                if (stats[key]) {
+                    totais[key].total += stats[key].total || 0;
+                    totais[key].comPo += stats[key].comPo || 0;
+                    totais[key].semPo += stats[key].semPo || 0;
+                }
+            });
+        });
+        return totais;
+    },
+
+    criarTotaisRow: (totais) => {
+        const format = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const totalGeral = Object.values(totais).reduce((sum, s) => sum + (s.total || 0), 0);
+
+        const buildCell = (label, icon, colorClass, data) => {
+            if (!data || data.total === 0) {
+                return `
+                <div class="totais-cell">
+                    <div class="totais-cell-label ${colorClass}"><i class="bi ${icon} me-1"></i>${label}</div>
+                    <div class="totais-cell-value text-muted">R$ 0,00</div>
+                </div>`;
+            }
+            return `
+            <div class="totais-cell">
+                <div class="totais-cell-label ${colorClass}"><i class="bi ${icon} me-1"></i>${label}</div>
+                <div class="totais-cell-value">${format(data.total)}</div>
+                <div class="totais-cell-sub">
+                    <span class="text-success">PO: ${format(data.comPo)}</span>
+                    <span class="${data.semPo > 0 ? 'text-danger fw-bold' : 'text-muted'}">S/PO: ${format(data.semPo)}</span>
+                </div>
+            </div>`;
+        };
+
+        return `
+        <div class="dashboard-totais-row">
+            <div class="totais-header">
+                <span><i class="bi bi-calculator me-2"></i>TOTAIS GERAIS</span>
+                <span class="badge-segmento-total">${format(totalGeral)}</span>
+            </div>
+            <div class="totais-body">
+                <div class="totais-group">
+                    <span class="totais-group-label">Operacional</span>
+                    ${buildCell('Não Iniciado', 'bi-circle', 'text-nao-iniciado', totais.naoIniciado)}
+                    ${buildCell('Em Andamento', 'bi-play-circle-fill', 'text-andamento', totais.emAndamento)}
+                    ${buildCell('Paralisado', 'bi-pause-circle-fill', 'text-paralisado', totais.paralisado)}
+                    ${buildCell('Aguard. Doc.', 'bi-file-earmark-text-fill', 'text-aguardando-doc', totais.aguardandoDoc)}
+                    ${buildCell('Finalizado', 'bi-check-circle-fill', 'text-finalizado', totais.finalizado)}
+                </div>
+                <div class="totais-divider"></div>
+                <div class="totais-group">
+                    <span class="totais-group-label">Faturamento</span>
+                    ${buildCell('Apto a Faturar', 'bi-receipt-cutoff', 'text-apto-faturar', totais.aptoAFaturar)}
+                    ${buildCell('Faturados', 'bi-cash-stack', 'text-faturados', totais.faturados)}
+                </div>
+            </div>
+        </div>`;
+    },
+
     renderizarCardsDoBackend: (dadosAgrupados) => {
         const container = document.getElementById('dashboard-analise-container');
+        const totaisContainer = document.getElementById('dashboard-totais-container');
         const loader = document.getElementById('dashboard-loader');
 
         if (!container) return;
         if (loader) loader.classList.add('d-none');
         container.innerHTML = '';
+        if (totaisContainer) totaisContainer.innerHTML = '';
 
         if (!dadosAgrupados || Object.keys(dadosAgrupados).length === 0) {
             container.innerHTML = '<div class="col-12 text-center text-muted p-5">Nenhum dado encontrado.</div>';
             return;
         }
 
-        // Renderiza cada Segmento utilizando a nova estrutura da API
+        // Calcula e renderiza totais gerais
+        const totais = RegistrosRender.calcularTotaisGerais(dadosAgrupados);
+        if (totaisContainer) {
+            totaisContainer.innerHTML = RegistrosRender.criarTotaisRow(totais);
+        }
+
+        // Renderiza cada Segmento
         const html = Object.keys(dadosAgrupados).sort().map(segmentoNome => {
             const stats = dadosAgrupados[segmentoNome];
             return RegistrosRender.criarCardSegmento(segmentoNome, stats);
@@ -421,8 +494,15 @@ const RegistrosRender = {
         const format = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const calcPct = (parcial, total) => total > 0 ? (parcial / total) * 100 : 0;
 
-        // Bloco construtor interno para não repetir HTML 4 vezes
+        // Calcula o total geral (soma de todos os status)
+        const totalGeral = (stats.naoIniciado?.total || 0) + (stats.emAndamento?.total || 0)
+            + (stats.paralisado?.total || 0) + (stats.aguardandoDoc?.total || 0)
+            + (stats.finalizado?.total || 0) + (stats.aptoAFaturar?.total || 0)
+            + (stats.faturados?.total || 0);
+
+        // Bloco construtor interno para cada status
         const buildStatBlock = (title, icon, colorClass, data) => {
+            if (!data) return '';
             return `
             <div class="stat-block">
                 <div class="stat-title ${colorClass}">
@@ -447,16 +527,21 @@ const RegistrosRender = {
         <div class="segmento-card">
             <div class="segmento-header">
                 <span>${nome}</span>
-                <span class="badge-segmento">Segmento</span>
+                <span class="badge-segmento-total">${format(totalGeral)}</span>
             </div>
             <div class="segmento-body">
-                
-                ${buildStatBlock('Apto a Faturar', 'bi-check-circle-fill', 'text-finalizado', stats.finalizado)}
-                ${buildStatBlock('Em Andamento', 'bi-play-circle', 'text-andamento', stats.emAndamento)}
-                ${buildStatBlock('Paralisado', 'bi-pause-circle', 'text-paralisado', stats.paralisado)}
-                ${buildStatBlock('Aguard. Doc', 'bi-file-earmark-text', 'text-warning', stats.aguardandoDoc)}
 
-                <div class="stat-block" style="border:none; padding-top:12px;">
+                <div class="stat-group-label">Operacional</div>
+                ${buildStatBlock('Em Andamento', 'bi-play-circle-fill', 'text-andamento', stats.emAndamento)}
+                ${buildStatBlock('Paralisado', 'bi-pause-circle-fill', 'text-paralisado', stats.paralisado)}
+                ${buildStatBlock('Aguard. Documentação', 'bi-file-earmark-text-fill', 'text-aguardando-doc', stats.aguardandoDoc)}
+                ${buildStatBlock('Finalizado', 'bi-check-circle-fill', 'text-finalizado', stats.finalizado)}
+
+                <div class="stat-group-label" style="margin-top: 8px;">Faturamento</div>
+                ${buildStatBlock('Apto a Faturar', 'bi-receipt-cutoff', 'text-apto-faturar', stats.aptoAFaturar)}
+                ${buildStatBlock('Faturados', 'bi-cash-stack', 'text-faturados', stats.faturados)}
+
+                <div class="stat-block stat-block-muted" style="border:none; padding-top:8px;">
                     <div class="stat-title text-nao-iniciado">
                         <span><i class="bi bi-circle me-1"></i> Não Iniciado</span>
                     </div>
