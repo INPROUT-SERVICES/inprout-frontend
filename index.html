@@ -370,36 +370,67 @@
         </div>
         <div class="modal-body">
           <form id="formSolicitarComplementar">
-            <h6 class="section-title">Dados da Solicitação</h6>
-            <div class="row g-3">
-              <div class="col-md-6">
+            <h6 class="section-title">Dados da OS</h6>
+            <div class="row g-3 mb-3">
+              <div class="col-md-5">
                 <label for="projetoIdComplementar" class="form-label">Projeto</label>
                 <select class="form-select" id="projetoIdComplementar" required></select>
               </div>
-              <div class="col-md-6">
+              <div class="col-md-5">
                 <label for="osIdComplementar" class="form-label">Ordem de Serviço (OS)</label>
                 <select class="form-select" id="osIdComplementar" required></select>
               </div>
-              <div class="col-md-12">
-                <label for="lpuIdComplementar" class="form-label">Item LPU</label>
-                <select class="form-select" id="lpuIdComplementar" required disabled></select>
-              </div>
-              <div class="col-md-4">
+              <div class="col-md-2">
                 <label for="siteComplementar" class="form-label">Site</label>
                 <input type="text" class="form-control" id="siteComplementar" readonly disabled
                   style="background-color: #e9ecef;">
               </div>
+            </div>
 
-              <div class="col-md-8">
-                <label for="quantidadeComplementar" class="form-label">Quantidade</label>
-                <input type="number" class="form-control" id="quantidadeComplementar" min="1" value="1" required>
+            <h6 class="section-title">Adicionar Itens ao Lote</h6>
+            <div class="row g-2 mb-3 align-items-end">
+              <div class="col-md-7">
+                <label for="lpuItemComplementar" class="form-label">Item LPU</label>
+                <select class="form-select" id="lpuItemComplementar" disabled></select>
               </div>
-              <div class="col-12">
-                <label for="justificativaComplementar" class="form-label">Justificativa <small
-                    class="text-muted">(Opcional)</small></label>
-                <textarea class="form-control" id="justificativaComplementar" rows="3"
-                  placeholder="Ex: Necessidade de instalar um equipamento adicional não previsto no escopo original..."></textarea>
+              <div class="col-md-3">
+                <label for="quantidadeItemComplementar" class="form-label">Quantidade</label>
+                <input type="number" class="form-control" id="quantidadeItemComplementar" min="1" value="1">
               </div>
+              <div class="col-md-2">
+                <button type="button" class="btn btn-outline-success w-100" id="btnAdicionarItemLote" disabled>
+                  <i class="bi bi-plus-lg me-1"></i>Adicionar
+                </button>
+              </div>
+            </div>
+
+            <div id="containerTabelaItensLote" class="table-responsive mb-3" style="display: none;">
+              <table class="table table-sm table-hover mb-0 align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Item LPU</th>
+                    <th class="text-center" style="width: 80px;">Qtd</th>
+                    <th class="text-end" style="width: 110px;">Vlr. Unit.</th>
+                    <th class="text-end" style="width: 120px;">Total</th>
+                    <th class="text-center" style="width: 45px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyItensLote"></tbody>
+                <tfoot>
+                  <tr class="table-success">
+                    <td colspan="3" class="fw-bold text-end">Total do Lote:</td>
+                    <td class="text-end fw-bold" id="totalLoteDisplay">R$ 0,00</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div class="mb-0">
+              <label for="justificativaComplementar" class="form-label">Justificativa <small
+                  class="text-muted">(Opcional)</small></label>
+              <textarea class="form-control" id="justificativaComplementar" rows="2"
+                placeholder="Ex: Necessidade de instalar equipamentos adicionais..."></textarea>
             </div>
           </form>
         </div>
@@ -1164,15 +1195,15 @@
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/general/global.js?v=5.2"></script>
+  <script src="assets/js/general/global.js?v=5.5"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
-  <script src="assets/js/index/calendary.js?v=5.2" type="module"></script>
-  <script src="assets/js/index/editionfields.js?v=5.2"></script>
-  <script src="assets/js/general/sidebar.js?v=5.2"></script>
-  <script src="assets/js/index/auth-filter.js?v=5.2"></script>
-  <script src="assets/js/index/index.js?v=5.2"></script>
-  <script src="assets/js/index/lancamento-lote.js?v=5.2"></script>
+  <script src="assets/js/index/calendary.js?v=5.5" type="module"></script>
+  <script src="assets/js/index/editionfields.js?v=5.5"></script>
+  <script src="assets/js/general/sidebar.js?v=5.5"></script>
+  <script src="assets/js/index/auth-filter.js?v=5.5"></script>
+  <script src="assets/js/index/index.js?v=5.5"></script>
+  <script src="assets/js/index/lancamento-lote.js?v=5.5"></script>
   <script src="assets/js/index/documentacao.js?v=1.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>

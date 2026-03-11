@@ -558,3 +558,308 @@ const RegistrosActions = {
     }
 };
 window.abrirModalFinanceiro = RegistrosActions.abrirModalFinanceiro;
+
+// =====================================================================
+// CRIACAO MANUAL DE OS (Coordenador / Admin)
+// =====================================================================
+
+const NovaOsManager = {
+    itensLpu: [],
+    choicesInstance: null,
+    listaLpusCache: null,
+    modalInstance: null,
+
+    getModal: () => {
+        if (!NovaOsManager.modalInstance) {
+            const el = document.getElementById('modalNovaOs');
+            if (el) NovaOsManager.modalInstance = new bootstrap.Modal(el);
+        }
+        return NovaOsManager.modalInstance;
+    },
+
+    formatarMoeda: (valor) => {
+        if (valor === null || valor === undefined || isNaN(Number(valor))) return 'R$ 0,00';
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+    },
+
+    carregarLpus: async () => {
+        if (NovaOsManager.listaLpusCache) return NovaOsManager.listaLpusCache;
+        try {
+            const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/contrato`);
+            if (!response.ok) throw new Error('Erro ao buscar contratos');
+            const contratos = await response.json();
+            let lpus = [];
+            contratos.forEach(c => {
+                if (c.lpus) c.lpus.forEach(l => {
+                    if (l.ativo) lpus.push({
+                        id: l.id,
+                        nome: `${c.nome} | ${l.codigoLpu} - ${l.nomeLpu}`,
+                        valor: l.valorSemImposto || l.valor || 0
+                    });
+                });
+            });
+            lpus.sort((a, b) => a.nome.localeCompare(b.nome));
+            NovaOsManager.listaLpusCache = lpus;
+            return lpus;
+        } catch (error) {
+            console.error('Erro ao carregar LPUs:', error);
+            RegistrosUtils.mostrarToast('Erro ao carregar LPUs.', 'error');
+            return [];
+        }
+    },
+
+    carregarSegmentos: async () => {
+        const select = document.getElementById('novaOsSegmento');
+        if (!select) return;
+        select.innerHTML = '<option value="">Carregando...</option>';
+        try {
+            const segmentos = await RegistrosApi.fetchSegmentos();
+            select.innerHTML = '<option value="" disabled selected>Selecione o segmento...</option>';
+            segmentos.forEach(seg => {
+                const opt = document.createElement('option');
+                opt.value = seg.id;
+                opt.textContent = seg.nome;
+                select.appendChild(opt);
+            });
+        } catch (err) {
+            select.innerHTML = '<option value="">Erro ao carregar</option>';
+        }
+    },
+
+    inicializarChoicesLpu: async () => {
+        const selectEl = document.getElementById('novaOsSelectLpu');
+        if (!selectEl) return;
+
+        // Destroi instancia anterior se existir
+        if (NovaOsManager.choicesInstance) {
+            NovaOsManager.choicesInstance.destroy();
+            NovaOsManager.choicesInstance = null;
+        }
+
+        // Reset do select
+        selectEl.innerHTML = '<option value="">Busque pela LPU...</option>';
+
+        const lpus = await NovaOsManager.carregarLpus();
+
+        NovaOsManager.choicesInstance = new Choices(selectEl, {
+            searchEnabled: true,
+            placeholder: true,
+            placeholderValue: 'Busque pela LPU...',
+            itemSelectText: '',
+            noResultsText: 'Nenhuma LPU encontrada',
+            shouldSort: false,
+            searchPlaceholderValue: 'Digite para buscar...'
+        });
+
+        const choicesData = lpus.map(l => ({
+            value: String(l.id),
+            label: `${l.nome} (${NovaOsManager.formatarMoeda(l.valor)})`,
+            selected: false,
+            disabled: false
+        }));
+
+        NovaOsManager.choicesInstance.clearChoices();
+        NovaOsManager.choicesInstance.setChoices(
+            [{ value: '', label: 'Selecione uma LPU...', placeholder: true }, ...choicesData],
+            'value', 'label', true
+        );
+    },
+
+    abrirModal: async () => {
+        // Limpa estado
+        NovaOsManager.itensLpu = [];
+        const form = document.getElementById('formNovaOs');
+        if (form) form.reset();
+        NovaOsManager.renderizarTabela();
+
+        // Carrega dados em paralelo
+        await Promise.all([
+            NovaOsManager.carregarSegmentos(),
+            NovaOsManager.inicializarChoicesLpu()
+        ]);
+
+        const modal = NovaOsManager.getModal();
+        if (modal) modal.show();
+    },
+
+    adicionarLpu: () => {
+        const selectEl = document.getElementById('novaOsSelectLpu');
+        const qtdEl = document.getElementById('novaOsQuantidade');
+        const lpuId = parseInt(selectEl?.value);
+        const quantidade = parseInt(qtdEl?.value);
+
+        if (!lpuId || isNaN(lpuId)) {
+            RegistrosUtils.mostrarToast('Selecione uma LPU.', 'warning');
+            return;
+        }
+        if (!quantidade || quantidade <= 0) {
+            RegistrosUtils.mostrarToast('Informe uma quantidade valida.', 'warning');
+            return;
+        }
+
+        // Verifica duplicata
+        if (NovaOsManager.itensLpu.find(i => i.lpuId === lpuId)) {
+            RegistrosUtils.mostrarToast('Esta LPU ja foi adicionada.', 'warning');
+            return;
+        }
+
+        const lpuInfo = NovaOsManager.listaLpusCache?.find(l => l.id === lpuId);
+        if (!lpuInfo) {
+            RegistrosUtils.mostrarToast('LPU nao encontrada.', 'error');
+            return;
+        }
+
+        NovaOsManager.itensLpu.push({
+            lpuId: lpuInfo.id,
+            lpuNome: lpuInfo.nome,
+            valor: lpuInfo.valor,
+            quantidade: quantidade
+        });
+
+        NovaOsManager.renderizarTabela();
+
+        // Limpa selecao
+        if (NovaOsManager.choicesInstance) {
+            NovaOsManager.choicesInstance.setChoiceByValue('');
+        }
+        if (qtdEl) qtdEl.value = '';
+    },
+
+    removerLpu: (index) => {
+        NovaOsManager.itensLpu.splice(index, 1);
+        NovaOsManager.renderizarTabela();
+    },
+
+    renderizarTabela: () => {
+        const tbody = document.getElementById('tbodyLpusNovaOs');
+        const tfoot = document.getElementById('tfootLpusNovaOs');
+        const semItens = document.getElementById('novaOsSemItens');
+        if (!tbody) return;
+
+        if (NovaOsManager.itensLpu.length === 0) {
+            tbody.innerHTML = `
+                <tr id="novaOsSemItens">
+                    <td colspan="5" class="text-center text-muted py-3">
+                        <i class="bi bi-info-circle me-1"></i> Adicione pelo menos uma LPU
+                    </td>
+                </tr>`;
+            if (tfoot) tfoot.style.display = 'none';
+            return;
+        }
+
+        let totalGeral = 0;
+        tbody.innerHTML = NovaOsManager.itensLpu.map((item, idx) => {
+            const total = item.valor * item.quantidade;
+            totalGeral += total;
+            return `
+                <tr>
+                    <td><small>${item.lpuNome}</small></td>
+                    <td class="text-center">${item.quantidade}</td>
+                    <td class="text-end">${NovaOsManager.formatarMoeda(item.valor)}</td>
+                    <td class="text-end fw-bold">${NovaOsManager.formatarMoeda(total)}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remover-lpu-nova-os" data-index="${idx}" title="Remover">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </td>
+                </tr>`;
+        }).join('');
+
+        if (tfoot) {
+            tfoot.style.display = '';
+            document.getElementById('novaOsTotalGeral').textContent = NovaOsManager.formatarMoeda(totalGeral);
+        }
+    },
+
+    submeter: async () => {
+        // Validacao
+        const os = document.getElementById('novaOsNumero')?.value.trim();
+        const projeto = document.getElementById('novaOsProjeto')?.value.trim();
+        const segmentoId = document.getElementById('novaOsSegmento')?.value;
+
+        if (!os) { RegistrosUtils.mostrarToast('Informe o numero da OS.', 'warning'); return; }
+        if (!projeto) { RegistrosUtils.mostrarToast('Informe o projeto.', 'warning'); return; }
+        if (!segmentoId) { RegistrosUtils.mostrarToast('Selecione o segmento.', 'warning'); return; }
+        if (NovaOsManager.itensLpu.length === 0) {
+            RegistrosUtils.mostrarToast('Adicione pelo menos uma LPU.', 'warning');
+            return;
+        }
+
+        const btnSubmeter = document.getElementById('btnSubmeterNovaOs');
+        const originalHtml = btnSubmeter.innerHTML;
+        btnSubmeter.disabled = true;
+        btnSubmeter.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Criando...';
+
+        const base = {
+            os: os,
+            projeto: projeto,
+            gestorTim: document.getElementById('novaOsGestorTim')?.value.trim() || '',
+            segmentoId: parseInt(segmentoId),
+            site: document.getElementById('novaOsSite')?.value.trim() || '',
+            contrato: document.getElementById('novaOsContrato')?.value.trim() || '',
+            regional: document.getElementById('novaOsRegional')?.value.trim() || '',
+            lote: document.getElementById('novaOsLote')?.value.trim() || '',
+            boq: document.getElementById('novaOsBoq')?.value.trim() || '',
+            po: document.getElementById('novaOsPo')?.value.trim() || '',
+            item: document.getElementById('novaOsItem')?.value.trim() || '',
+            unidade: document.getElementById('novaOsUnidade')?.value.trim() || '',
+            observacoes: document.getElementById('novaOsObservacoes')?.value.trim() || ''
+        };
+
+        let sucesso = 0;
+        let erros = 0;
+        let erroMsg = '';
+
+        for (const lpu of NovaOsManager.itensLpu) {
+            const payload = {
+                ...base,
+                lpuIds: [lpu.lpuId],
+                quantidade: lpu.quantidade
+            };
+
+            try {
+                const resp = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (resp.ok) {
+                    sucesso++;
+                } else {
+                    erros++;
+                    try { const err = await resp.json(); erroMsg = err.message || ''; } catch(e) {}
+                }
+            } catch (e) {
+                erros++;
+                erroMsg = e.message;
+            }
+        }
+
+        btnSubmeter.disabled = false;
+        btnSubmeter.innerHTML = originalHtml;
+
+        const modal = NovaOsManager.getModal();
+        if (modal) modal.hide();
+
+        if (erros === 0) {
+            Swal.fire({
+                icon: 'success',
+                title: 'OS Criada!',
+                text: `${sucesso} item(ns) de LPU criado(s) com sucesso.`,
+                confirmButtonColor: '#198754'
+            });
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Criacao parcial',
+                html: `<p>${sucesso} criado(s), ${erros} erro(s).</p>${erroMsg ? '<p class="text-muted small">' + erroMsg + '</p>' : ''}`,
+                confirmButtonColor: '#198754'
+            });
+        }
+
+        // Recarrega tabela
+        RegistrosApi.carregarDados(0, RegistrosState.termoBusca);
+    }
+};
+
+window.NovaOsManager = NovaOsManager;

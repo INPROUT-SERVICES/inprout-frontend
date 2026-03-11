@@ -581,6 +581,52 @@
 
 
 /* =================================================================
+   8.5. SEMÁFORO E LINHAS INATIVAS (ETAPAS)
+   ================================================================= */
+
+/* Semáforo de status ativo/inativo */
+.semaforo-etapa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.semaforo-etapa i {
+  font-size: 0.85rem;
+}
+
+.semaforo-ativo i {
+  filter: drop-shadow(0 0 3px rgba(40, 167, 69, 0.5));
+}
+
+.semaforo-inativo i {
+  filter: drop-shadow(0 0 3px rgba(220, 53, 69, 0.4));
+}
+
+/* Linha de etapa inativa (opacidade reduzida) */
+.etapa-inativa {
+  opacity: 0.6;
+}
+
+.etapa-inativa:hover {
+  opacity: 0.85;
+}
+
+/* Botões de ação na tabela de etapas */
+.btn-editar-etapa,
+.btn-toggle-etapa {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+
+/* =================================================================
    9. RESPONSIVIDADE (MEDIA QUERIES)
    ================================================================= */
 @media (max-width: 992px) {

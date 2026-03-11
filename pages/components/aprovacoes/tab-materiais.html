@@ -24,9 +24,15 @@
         </div>
     </div>
 
-    <button class="btn-refresh-glass" onclick="carregarDadosMateriais()" title="Atualizar Lista">
-        <i class="bi bi-arrow-clockwise"></i>
-    </button>
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-success btn-sm d-none" id="btn-exportar-pendentes-materiais"
+            onclick="exportarPendentesMateriaisExcel()" title="Exportar Fila de Aprovação">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar
+        </button>
+        <button class="btn-refresh-glass" onclick="carregarDadosMateriais()" title="Atualizar Lista">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
 </div>
 
 <div id="container-pedidos-materiais" class="accordion custom-accordion-modern">

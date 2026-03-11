@@ -37,6 +37,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
     window.confirmarRejeicao = confirmarRejeicao;
 
     window.exportarHistoricoMateriaisExcel = exportarHistoricoMateriaisExcel;
+    window.exportarPendentesMateriaisExcel = exportarPendentesMateriaisExcel;
 
     // =================================================================
     // 1. INICIALIZAÇÃO E LISTENERS
@@ -51,12 +52,34 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
             btnFiltrarHist.addEventListener('click', carregarDadosHistoricoMateriais);
         }
 
-        const btnExportar = document.getElementById('btn-exportar-historico-materiais');
-        const role = (typeof userRole !== 'undefined' ? userRole : '').toUpperCase();
-        if (btnExportar && (role.includes('ADMIN') || role.includes('CONTROLLER') || role.includes('COORDINATOR') || role.includes('MANAGER'))) {
-            btnExportar.classList.remove('d-none');
-        }
+        // Lê role direto do localStorage (variável global userRole pode não existir neste escopo)
+        let role = (localStorage.getItem('role') || localStorage.getItem('userRole') || '').trim().toUpperCase().replace('ROLE_', '');
+        mostrarBotoesExportar(role);
     }
+
+    /**
+     * Mostra os botões de exportar. Chamado no init e também após includes carregarem.
+     */
+    function mostrarBotoesExportar(role) {
+        if (!role) role = (localStorage.getItem('role') || localStorage.getItem('userRole') || '').trim().toUpperCase();
+        // Remove prefixo ROLE_ se existir (Spring Security pode armazenar com prefixo)
+        role = role.replace('ROLE_', '');
+        const podeExportar = ['ADMIN', 'CONTROLLER', 'COORDINATOR', 'MANAGER'].includes(role);
+        if (!podeExportar) return;
+
+        const btnExportarHist = document.getElementById('btn-exportar-historico-materiais');
+        const btnExportarPendentes = document.getElementById('btn-exportar-pendentes-materiais');
+        if (btnExportarHist) btnExportarHist.classList.remove('d-none');
+        if (btnExportarPendentes) btnExportarPendentes.classList.remove('d-none');
+    }
+
+    // Garante que botões sejam revelados mesmo se o HTML foi carregado via data-include (assíncrono)
+    window.addEventListener('load', () => mostrarBotoesExportar());
+    // Também tenta via MutationObserver para capturar includes dinâmicos
+    const _obsExport = new MutationObserver(() => mostrarBotoesExportar());
+    _obsExport.observe(document.body, { childList: true, subtree: true });
+    // Fallback: tenta novamente após 2s para garantir que data-include carregou
+    setTimeout(() => mostrarBotoesExportar(), 2000);
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', iniciarComponentes);
@@ -686,21 +709,20 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
     function formatarDataHora(iso) { if (!iso) return '-'; const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
     const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
-    function exportarHistoricoMateriaisExcel() {
-        if (!listaCompletaHistorico || listaCompletaHistorico.length === 0) {
-            if (window.mostrarToast) mostrarToast('Nenhum dado para exportar. Faça uma busca primeiro.', 'warning');
+    function gerarPlanilhaExcel(listaDeDados, nomeArquivo) {
+        if (!listaDeDados || listaDeDados.length === 0) {
+            if (window.mostrarToast) mostrarToast('Nenhum dado para exportar na tela atual.', 'warning');
             return;
         }
 
         const dadosExportacao = [];
 
-        // Varre todas as solicitações e seus itens para achatar os dados
-        listaCompletaHistorico.forEach(solicitacao => {
+        listaDeDados.forEach(solicitacao => {
             const osReal = getOsLabel(solicitacao);
             const solicitante = solicitacao.nomeSolicitante && solicitacao.nomeSolicitante !== 'null' ? solicitacao.nomeSolicitante : 'Desconhecido';
             const dataStr = formatarDataHora(solicitacao.dataSolicitacao);
             const segmento = getSegmentoLabel(solicitacao);
-            
+
             let site = 'Sem Site';
             if (solicitacao.lpu && solicitacao.lpu.site && solicitacao.lpu.site !== '-' && solicitacao.lpu.site !== 'Sem Site') site = solicitacao.lpu.site;
             else if (solicitacao.os && solicitacao.os.site && solicitacao.os.site !== '-' && solicitacao.os.site !== 'Sem Site') site = solicitacao.os.site;
@@ -708,7 +730,6 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
 
             const statusGeral = calcularStatusGeral(solicitacao);
 
-            // Cada item do pedido vai virar uma linha na planilha
             (solicitacao.itens || []).forEach(item => {
                 const mat = item.material || {};
                 const qtd = toNumber(item.quantidadeSolicitada);
@@ -734,20 +755,62 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
             });
         });
 
-        // Verifica se a biblioteca XLSX está injetada no index
         if (typeof XLSX === 'undefined') {
             if (window.mostrarToast) mostrarToast('Biblioteca de exportação não encontrada.', 'error');
-            console.error("A biblioteca XLSX (SheetJS) não está definida.");
             return;
         }
 
-        // Gera a planilha e faz o download
         const worksheet = XLSX.utils.json_to_sheet(dadosExportacao);
+
+        // Define a largura automática para cada coluna baseada no maior texto contido nela
+        const objectMaxLength = [];
+        for (let i = 0; i < dadosExportacao.length; i++) {
+            const row = Object.values(dadosExportacao[i]);
+            for (let j = 0; j < row.length; j++) {
+                const cellValue = row[j] !== null && row[j] !== undefined ? row[j].toString() : "";
+                objectMaxLength[j] = Math.max(objectMaxLength[j] || 0, cellValue.length);
+            }
+        }
+
+        const headers = Object.keys(dadosExportacao[0]);
+        const cols = headers.map((header, i) => ({
+            wch: Math.max(header.length, objectMaxLength[i] || 0) + 2 // +2 de margem
+        }));
+        worksheet['!cols'] = cols;
+
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Histórico Materiais");
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Materiais");
 
         const dataAtual = new Date().toISOString().slice(0, 10);
-        XLSX.writeFile(workbook, `Historico_Materiais_${dataAtual}.xlsx`);
+        _downloadXlsxMateriais(workbook, `${nomeArquivo}_${dataAtual}.xlsx`);
+    }
+
+    /**
+     * Download seguro via Blob (evita aviso "não seguro" em HTTP)
+     */
+    function _downloadXlsxMateriais(wb, filename) {
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+    }
+
+    function exportarHistoricoMateriaisExcel() {
+        gerarPlanilhaExcel(listaCompletaHistorico, "Historico_Materiais");
+    }
+
+    function exportarPendentesMateriaisExcel() {
+        gerarPlanilhaExcel(listaCompletaSolicitacoes, "Materiais_Aprovacao_Pendente");
     }
 
 })();

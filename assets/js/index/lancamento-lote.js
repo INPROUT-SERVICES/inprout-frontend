@@ -32,10 +32,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 dateFormat: 'd/m/Y', // Formato de data visível: 31/12/2025
                 allowInput: true, // Permite que o usuário digite a data
                 onOpen: function (selectedDates, dateStr, instance) {
-                    // Limpa a data selecionada toda vez que o calendário é aberto
-                    // se o campo de input estiver vazio.
                     if (instance.input.value === '') {
                         instance.clear();
+                    }
+                },
+                // --- BLOQUEIO DE DATA FUTURA (Lote) ---
+                onChange: function (selectedDates, dateStr, instance) {
+                    if (selector === '#dataAtividadeLote' && selectedDates.length > 0) {
+                        const btnEnviarLote = document.getElementById('btnSalvarEEnviarLote');
+                        if (btnEnviarLote) {
+                            const hoje = new Date();
+                            hoje.setHours(0, 0, 0, 0); // Zera as horas para comparar só a data
+
+                            const dataSelecionada = selectedDates[0];
+                            dataSelecionada.setHours(0, 0, 0, 0);
+
+                            if (dataSelecionada > hoje) {
+                                btnEnviarLote.disabled = true;
+                                btnEnviarLote.setAttribute('title', 'Não é possível enviar para aprovação com data futura.');
+                            } else {
+                                btnEnviarLote.disabled = false;
+                                btnEnviarLote.removeAttribute('title');
+                            }
+                        }
                     }
                 }
             });
@@ -173,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="jaRecebido-lpu-${idSufixo}">
                         <label class="form-check-label" for="jaRecebido-lpu-${idSufixo}">
-                            Já recebido pelo documentista
+                            Já recebido pelo técnico
                         </label>
                     </div>
 
@@ -557,6 +576,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!dataAtividade) throw new Error('A Data da Atividade é obrigatória.');
 
+            if (acao === 'enviar') {
+                const partesData = dataAtividade.split('/');
+                let dataSelecionada;
+
+                if (partesData.length === 3) {
+                    dataSelecionada = new Date(partesData[2], partesData[1] - 1, partesData[0]);
+                } else {
+                    dataSelecionada = new Date(dataAtividade + 'T00:00:00');
+                }
+                dataSelecionada.setHours(0, 0, 0, 0);
+
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+
+                if (dataSelecionada > hoje) {
+                    throw new Error('Não é possível enviar para aprovação com data futura. Salve como rascunho.');
+                }
+            }
+
             let dadosReplicados = {};
             if (replicarDados) {
                 dadosReplicados = lerDadosDeFormulario('unico');
@@ -589,6 +627,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 lancamentosEmLote.push(dadosLpu);
             }
 
+            // 0. PRÉ-VALIDAÇÃO: Verifica se documentos já existem antes de salvar qualquer coisa
+            if (typeof DocumentacaoModule !== 'undefined' && typeof DocumentacaoModule.verificarDuplicatas === 'function') {
+                const docsParaValidar = [];
+
+                if (replicarDados && dadosReplicados._documentoInfo.documentoId) {
+                    // Replicar dados: coleta combos únicos por site
+                    const sitesUnicos = new Set();
+                    for (const info of infoDocsPorLpu) {
+                        sitesUnicos.add(info.site || '');
+                    }
+                    for (const site of sitesUnicos) {
+                        docsParaValidar.push({
+                            documentoId: dadosReplicados._documentoInfo.documentoId,
+                            documentistaId: dadosReplicados._documentoInfo.documentistaId,
+                            site: site || null
+                        });
+                    }
+                } else if (!replicarDados) {
+                    // Individual: coleta combos únicos (doc+documentista+site)
+                    const combosVistos = new Set();
+                    for (const info of infoDocsPorLpu) {
+                        if (info.docInfo && info.docInfo.documentoId) {
+                            const chave = `${info.docInfo.documentoId}_${info.docInfo.documentistaId || ''}_${info.site || ''}`;
+                            if (!combosVistos.has(chave)) {
+                                combosVistos.add(chave);
+                                docsParaValidar.push({
+                                    documentoId: info.docInfo.documentoId,
+                                    documentistaId: info.docInfo.documentistaId,
+                                    site: info.site || null
+                                });
+                            }
+                        }
+                    }
+                }
+
+                if (docsParaValidar.length > 0) {
+                    const conflitos = await DocumentacaoModule.verificarDuplicatas(osId, docsParaValidar);
+                    if (conflitos.length > 0) {
+                        throw new Error('Já existem solicitações de documentação para esta OS: ' + conflitos.join(', ') + '. Remova os documentos duplicados antes de salvar.');
+                    }
+                }
+            }
+
             // 1. SALVAR LANÇAMENTOS
             const responseLancamento = await fetchComAuth('/api/lancamentos/lote', {
                 method: 'POST',
@@ -605,6 +686,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const lancamentosSalvos = await responseLancamento.json();
 
             // 2. DISPARAR CRIAÇÃO DE DOCUMENTAÇÃO (NOVA API)
+            const errosDoc = [];
+
             if (typeof DocumentacaoModule !== 'undefined') {
 
                 // Se "Replicar Dados" estiver ativo
@@ -624,7 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     for (const siteKey in lancamentosPorSite) {
                         const grupo = lancamentosPorSite[siteKey];
-                        await DocumentacaoModule.criarSolicitacao({
+                        const result = await DocumentacaoModule.criarSolicitacao({
                             osId: osId,
                             documentoId: dadosReplicados._documentoInfo.documentoId,
                             documentistaId: dadosReplicados._documentoInfo.documentistaId,
@@ -633,6 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             site: grupo.site,
                             jaRecebido: dadosReplicados._documentoInfo.jaRecebido || false
                         });
+                        if (result && !result.ok) errosDoc.push(result.message);
                     }
                 }
                 // Se for Individual
@@ -668,7 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Agora envia uma requisição por (documento + site), contendo o array de lançamentos vinculados
                     for (const groupKey in docsAgrupados) {
                         const dadosDoc = docsAgrupados[groupKey];
-                        await DocumentacaoModule.criarSolicitacao({
+                        const result = await DocumentacaoModule.criarSolicitacao({
                             osId: osId,
                             documentoId: dadosDoc.documentoId,
                             documentistaId: dadosDoc.documentistaId,
@@ -677,11 +761,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             site: dadosDoc.site,
                             jaRecebido: dadosDoc.jaRecebido
                         });
+                        if (result && !result.ok) errosDoc.push(result.message);
                     }
                 }
             }
 
-            if (typeof mostrarToast === 'function') mostrarToast('Lançamento(s) salvo(s) com sucesso!', 'success');
+            if (errosDoc.length > 0) {
+                // Lançamentos salvos, mas houve problema na documentação
+                if (typeof mostrarToast === 'function') {
+                    mostrarToast('Lançamento(s) salvo(s), porém alguns documentos não foram criados: ' + errosDoc.join(' | '), 'warning');
+                }
+            } else {
+                if (typeof mostrarToast === 'function') mostrarToast('Lançamento(s) salvo(s) com sucesso!', 'success');
+            }
             bootstrap.Modal.getInstance(modalAdicionarEmLote).hide();
             await carregarLancamentos(); // Função do index.js
 

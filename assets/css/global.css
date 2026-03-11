@@ -57,7 +57,7 @@ body {
   background-color: #f5fdf7;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  z-index: 1050;
+  z-index: 2000;
   border-radius: 0 12px 12px 0;
   padding: 1rem;
 }
@@ -99,6 +99,8 @@ body {
 
 /* Navbar Top */
 .navbar {
+  position: relative;
+  z-index: 2000;
   padding: 0.8rem 1.5rem;
   background-color: #f7fcfa;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);

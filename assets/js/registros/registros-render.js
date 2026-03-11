@@ -161,7 +161,12 @@ const RegistrosRender = {
         });
 
         const isTotalmenteFinalizada = RegistrosRender.verificarSeOsFinalizada(grupo);
-        const headerStyle = isTotalmenteFinalizada ? 'style="background-color: #fff3cd !important;"' : '';
+        const projetoVazio = !grupo.projeto || grupo.projeto === 'Sem Projeto';
+        const headerStyle = isTotalmenteFinalizada
+            ? 'style="background-color: #fff3cd !important;"'
+            : projetoVazio
+                ? 'style="background-color: #d6eaf8 !important;"'
+                : '';
 
         let btnFinalizarOsHTML = '';
         if (['ADMIN', 'COORDINATOR', 'MANAGER'].includes(role)) {
@@ -186,9 +191,18 @@ const RegistrosRender = {
         if (['ADMIN', 'ASSISTANT', 'MANAGER', 'COORDINATOR'].includes(role)) {
             headersVisiveis.push("AÇÕES");
         }
-        headersVisiveis.unshift("HISTÓRICO"); // Adiciona o histórico aqui
+        headersVisiveis.unshift("HISTÓRICO");
+        
+        const linhasOrdenadas = [...grupo.linhas].sort((a, b) => {
+            const statusA = RegistrosUtils.get(a, 'detalhe.statusRegistro', 'ATIVO');
+            const statusB = RegistrosUtils.get(b, 'detalhe.statusRegistro', 'ATIVO');
 
-        const bodyRowsHTML = grupo.linhas.map(linhaData => {
+            if (statusA === 'INATIVO' && statusB !== 'INATIVO') return 1;
+            if (statusA !== 'INATIVO' && statusB === 'INATIVO') return -1;
+            return 0; 
+        });
+
+        const bodyRowsHTML = linhasOrdenadas.map(linhaData => {
             const detalheId = RegistrosUtils.get(linhaData, 'detalhe.id', '');
 
             const statusRegistro = RegistrosUtils.get(linhaData, 'detalhe.statusRegistro', 'ATIVO');

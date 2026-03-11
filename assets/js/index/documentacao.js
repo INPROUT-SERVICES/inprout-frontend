@@ -182,6 +182,7 @@ const DocumentacaoModule = (function () {
 
             carregarAbaPendenteDoc();
             mostrarToast("Solicitação criada com sucesso!", "success");
+            return { ok: true };
 
         } catch (error) {
             console.error("Erro ao criar solicitação:", error);
@@ -189,6 +190,7 @@ const DocumentacaoModule = (function () {
                 error.message || "Erro ao criar solicitação de documento.",
                 "warning"
             );
+            return { ok: false, message: error.message };
         }
     }
 
@@ -568,10 +570,45 @@ const DocumentacaoModule = (function () {
 
     document.addEventListener('DOMContentLoaded', init);
 
+    /**
+     * Verifica se já existem solicitações de documentação para os combos informados.
+     * @param {number} osId - ID da OS
+     * @param {Array<{documentoId, documentistaId, site}>} docsSolicitados - combos a validar
+     * @returns {Array<string>} Lista de mensagens de conflito (vazia se OK)
+     */
+    async function verificarDuplicatas(osId, docsSolicitados) {
+        if (!docsSolicitados || docsSolicitados.length === 0) return [];
+
+        const response = await fetchComAuth(`/api/docs/solicitacoes?osId=${osId}&size=1000`);
+        if (!response.ok) {
+            throw new Error('Não foi possível verificar duplicatas. Tente novamente.');
+        }
+
+        const data = await response.json();
+        const existentes = Array.isArray(data) ? data : (data.content || []);
+
+        const conflitos = [];
+        for (const doc of docsSolicitados) {
+            const siteNorm = (doc.site || '').trim();
+            const existe = existentes.find(e =>
+                e.documento?.id == doc.documentoId &&
+                e.documentistaId == doc.documentistaId &&
+                ((e.site || '').trim()) === siteNorm
+            );
+            if (existe) {
+                const nomeDoc = existe.documento?.nome || 'Documento';
+                const siteLabel = siteNorm || 'Sem site';
+                conflitos.push(`"${nomeDoc}" (Site: ${siteLabel})`);
+            }
+        }
+        return conflitos;
+    }
+
     return {
         criarSolicitacao,
         carregarAbaPendenteDoc,
-        popularSelectDocumento
+        popularSelectDocumento,
+        verificarDuplicatas
     };
 
 })();

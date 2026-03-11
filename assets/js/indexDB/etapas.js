@@ -184,25 +184,20 @@ function gerarCabecalho(campos) {
 }
 
 async function carregarTabelaEtapas() {
-    // 1. Dicionário para os títulos da tabela de Etapas.
-    // Usei 'nome' como chave para combinar com a propriedade 'row.nome' que você usa abaixo.
-    const titulosEtapas = {
-        codigo: 'Código',
-        nome: 'Descrição', // Título amigável para a propriedade 'nome'
-    };
+    const role = (localStorage.getItem("role") || "").trim().toUpperCase();
+    const isAdmin = role === "ADMIN";
 
-    // 2. Selecionando os elementos da tabela pelos seus IDs
     const thead = document.getElementById("thead-etapas");
     const tbody = document.getElementById("table-body");
 
-    // Define os campos para criar as colunas. O último é para o botão.
-    const campos = ['codigo', 'nome', ''];
-
-    // 3. Gerando o cabeçalho diretamente, usando o dicionário.
-    // A chamada para gerarCabecalho() foi removida.
+    // Cabeçalho com coluna Status (semáforo) e Ações (ADMIN)
     thead.innerHTML = `
         <tr>
-            ${campos.map(campo => `<th>${titulosEtapas[campo] || ''}</th>`).join('')}
+            <th style="width:60px;">Status</th>
+            <th>Código</th>
+            <th>Descrição</th>
+            ${isAdmin ? '<th style="width:180px;">Ações</th>' : ''}
+            <th style="width:90px;"></th>
         </tr>
     `;
 
@@ -212,21 +207,43 @@ async function carregarTabelaEtapas() {
         const data = await res.json();
 
         etapasDisponiveis = data;
-        tbody.innerHTML = ""; // Limpa o corpo da tabela antes de adicionar novas linhas
+        tbody.innerHTML = "";
+
+        const colSpan = isAdmin ? 5 : 4;
 
         data.forEach(row => {
             const tr = document.createElement("tr");
             tr.classList.add("main-row");
 
-            // Note que aqui você usa 'row.nome', por isso a chave no dicionário foi ajustada.
+            const ativo = row.ativo !== false; // default true
+            const semaforoHtml = ativo
+                ? '<span class="semaforo-etapa semaforo-ativo" title="Ativa"><i class="bi bi-circle-fill text-success"></i></span>'
+                : '<span class="semaforo-etapa semaforo-inativo" title="Inativa"><i class="bi bi-circle-fill text-danger"></i></span>';
+
+            let acoesHtml = '';
+            if (isAdmin) {
+                const toggleBtn = ativo
+                    ? `<button class="btn btn-sm btn-outline-danger btn-toggle-etapa" data-id="${row.id}" data-acao="desativar" title="Desativar"><i class="bi bi-pause-circle"></i></button>`
+                    : `<button class="btn btn-sm btn-outline-success btn-toggle-etapa" data-id="${row.id}" data-acao="ativar" title="Ativar"><i class="bi bi-play-circle"></i></button>`;
+                acoesHtml = `
+                    <td>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-warning btn-editar-etapa" data-id="${row.id}" data-codigo="${row.codigo}" data-nome="${row.nome}" title="Editar"><i class="bi bi-pencil"></i></button>
+                            ${toggleBtn}
+                        </div>
+                    </td>`;
+            }
+
             tr.innerHTML = `
+                <td class="text-center">${semaforoHtml}</td>
                 <td>${row.codigo ?? ''}</td>
-                <td>${row.nome ?? ''}</td> 
-                <td><button class="btn btn-sm btn-outline-secondary">Ocultar</button></td>
+                <td>${row.nome ?? ''}${!ativo ? ' <span class="badge bg-secondary ms-1">Inativa</span>' : ''}</td>
+                ${acoesHtml}
+                <td><button class="btn btn-sm btn-outline-secondary btn-detalhe-toggle">Ocultar</button></td>
             `;
+            if (!ativo) tr.classList.add('etapa-inativa');
             tbody.appendChild(tr);
 
-            // O restante do seu código para criar a linha de detalhes está perfeito e permanece igual.
             const detalheTr = document.createElement("tr");
             detalheTr.classList.add("detalhe-row");
             if (row.codigo === '01') {
@@ -234,7 +251,7 @@ async function carregarTabelaEtapas() {
             }
 
             detalheTr.innerHTML = `
-                <td colspan="3">
+                <td colspan="${colSpan}">
                     <div class="lista-detalhes-cards">
                         ${row.etapasDetalhadas?.map(d => `
                             <div class="card-detalhe">
@@ -250,7 +267,7 @@ async function carregarTabelaEtapas() {
             `;
             tbody.appendChild(detalheTr);
 
-            const btn = tr.querySelector("button");
+            const btn = tr.querySelector(".btn-detalhe-toggle");
             if (row.codigo === '01') btn.textContent = "Mostrar";
 
             btn.addEventListener("click", () => {
@@ -258,10 +275,103 @@ async function carregarTabelaEtapas() {
                 detalheTr.style.display = ocultar ? "none" : "";
                 btn.textContent = ocultar ? "Mostrar" : "Ocultar";
             });
+
+            // Evento de editar etapa (ADMIN)
+            const btnEditar = tr.querySelector(".btn-editar-etapa");
+            if (btnEditar) {
+                btnEditar.addEventListener("click", () => {
+                    abrirModalEditarEtapaGeral(btnEditar.dataset.id, btnEditar.dataset.codigo, btnEditar.dataset.nome);
+                });
+            }
+
+            // Evento de ativar/desativar etapa (ADMIN)
+            const btnToggle = tr.querySelector(".btn-toggle-etapa");
+            if (btnToggle) {
+                btnToggle.addEventListener("click", () => {
+                    toggleAtivoEtapa(btnToggle.dataset.id, btnToggle.dataset.acao);
+                });
+            }
         });
     } catch (err) {
         console.error("Erro ao carregar tabela de etapas:", err);
         mostrarToast("Erro ao carregar tabela de etapas.", "error");
+    }
+}
+
+// ========== FUNÇÕES DE GERENCIAMENTO DE ETAPAS (ADMIN) ==========
+
+function abrirModalEditarEtapaGeral(id, codigo, nome) {
+    document.getElementById("editEtapaGeralId").value = id;
+    document.getElementById("editEtapaGeralCodigo").value = codigo;
+    document.getElementById("editEtapaGeralNome").value = nome;
+    const modal = new bootstrap.Modal(document.getElementById("modalEditarEtapaGeral"));
+    modal.show();
+}
+
+async function salvarEdicaoEtapaGeral() {
+    const id = document.getElementById("editEtapaGeralId").value;
+    const codigo = document.getElementById("editEtapaGeralCodigo").value.trim();
+    const nome = document.getElementById("editEtapaGeralNome").value.trim();
+
+    if (!codigo || !nome) {
+        return mostrarToast("Preencha todos os campos.", "error");
+    }
+
+    const descricao = codigo + " - " + nome;
+
+    try {
+        const res = await fetchComAuth(`${urlEtapas}/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ descricao })
+        });
+
+        if (!res.ok) throw new Error("Erro ao editar etapa.");
+
+        mostrarToast("Etapa atualizada com sucesso!", "success");
+        bootstrap.Modal.getInstance(document.getElementById("modalEditarEtapaGeral")).hide();
+
+        window.etapasDisponiveis = null;
+        await carregarTabelaEtapas();
+        await preencherSelectComEtapas(selectEtapa);
+        await preencherSelectComEtapas(selectEtapaEditar);
+    } catch (err) {
+        console.error("Erro ao editar etapa:", err);
+        mostrarToast("Erro ao editar etapa.", "error");
+    }
+}
+
+async function toggleAtivoEtapa(id, acao) {
+    const textoAcao = acao === "ativar" ? "ativar" : "desativar";
+    const result = await Swal.fire({
+        title: `${acao === "ativar" ? "Ativar" : "Desativar"} Etapa?`,
+        text: `Tem certeza que deseja ${textoAcao} esta etapa?`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: acao === "ativar" ? "#198754" : "#dc3545",
+        cancelButtonColor: "#6c757d",
+        confirmButtonText: `Sim, ${textoAcao}`,
+        cancelButtonText: "Cancelar"
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const res = await fetchComAuth(`${urlEtapas}/${id}/${acao}`, {
+            method: "PATCH"
+        });
+
+        if (!res.ok) throw new Error(`Erro ao ${textoAcao} etapa.`);
+
+        mostrarToast(`Etapa ${acao === "ativar" ? "ativada" : "desativada"} com sucesso!`, "success");
+
+        window.etapasDisponiveis = null;
+        await carregarTabelaEtapas();
+        await preencherSelectComEtapas(selectEtapa);
+        await preencherSelectComEtapas(selectEtapaEditar);
+    } catch (err) {
+        console.error(`Erro ao ${textoAcao} etapa:`, err);
+        mostrarToast(`Erro ao ${textoAcao} etapa.`, "error");
     }
 }
 

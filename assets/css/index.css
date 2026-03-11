@@ -1097,10 +1097,32 @@ label.form-label.d-flex {
 }
 
 /* ======== PENDENTE DOC - TABELA FULL-WIDTH ======== */
-#pendente-doc-pane .table-responsive {
-  width: 100%;
+#pendente-doc-pane {
+  width: 100% !important;
 }
-#pendente-doc-pane .table {
-  width: 100%;
+#pendente-doc-pane .table-responsive {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: none !important;
+  overflow-x: auto;
+}
+#pendente-doc-pane .table,
+#pendente-doc-pane .modern-table {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: none !important;
+  table-layout: fixed;
+}
+#pendente-doc-pane .modern-table thead th {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#pendente-doc-pane .modern-table thead th:first-child {
+  width: 120px;
+}
+/* Distribui as demais colunas igualmente */
+#pendente-doc-pane .modern-table thead th:not(:first-child) {
+  width: auto;
 }
 

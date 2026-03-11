@@ -454,3 +454,9 @@ html, body {
 .choices {
     overflow: visible !important;
 }
+
+@media (min-width: 1200px) {
+  .modal-super-wide {
+    max-width: 95%;
+  }
+}

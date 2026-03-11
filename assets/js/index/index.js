@@ -636,6 +636,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectEtapaDetalhada = document.getElementById('etapaDetalhadaId');
         const selectStatus = document.getElementById('status');
 
+        dataAtividadeInput.addEventListener('change', function() {
+            const dateVal = this.value;
+            const btnEnviar = document.getElementById('btnSalvarEEnviar');
+            const btnSubmitAdicionar = document.getElementById('btnSubmitAdicionar'); // Botão de salvar edição
+            
+            if (dateVal) {
+                // Adiciona o horário 00:00:00 para evitar erro de fuso horário
+                const dataSelecionada = new Date(dateVal + 'T00:00:00');
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0); // Zera as horas de hoje para comparar apenas a data
+
+                const isFuturo = dataSelecionada > hoje;
+                
+                if (btnEnviar) {
+                    btnEnviar.disabled = isFuturo;
+                    if (isFuturo) btnEnviar.setAttribute('title', 'Não é possível enviar para aprovação com data futura.');
+                    else btnEnviar.removeAttribute('title');
+                }
+
+                if (btnSubmitAdicionar && btnSubmitAdicionar.style.display !== 'none') {
+                    btnSubmitAdicionar.disabled = isFuturo;
+                    if (isFuturo) btnSubmitAdicionar.setAttribute('title', 'Não é possível salvar edição com data futura.');
+                    else btnSubmitAdicionar.removeAttribute('title');
+                }
+            }
+        });
+
         let todasAsOS = [];
         let todasAsEtapas = [];
         let todosOsPrestadores = [];
@@ -677,10 +704,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 toggleModalLoader(true);
                 const response = await fetchComAuth(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                
+
                 // NOVA LINHA: Valida erro e pega o retorno para usar o ID
                 if (!response.ok) throw new Error("Erro ao salvar o lançamento.");
-                const lancamentoSalvo = await response.json(); 
+                const lancamentoSalvo = await response.json();
 
                 if (document.getElementById('documentoId').value) {
                     await DocumentacaoModule.criarSolicitacao({
@@ -887,14 +914,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         btnSubmitPadrao.innerHTML = `<i class="bi bi-send-check"></i> Salvar e Reenviar`;
                     }
                 }
-                if (dataAtividadeInput) dataAtividadeInput.value = lancamento.dataAtividade ? lancamento.dataAtividade.split('/').reverse().join('-') : '';
+                if (dataAtividadeInput) {
+                    dataAtividadeInput.value = lancamento.dataAtividade ? lancamento.dataAtividade.split('/').reverse().join('-') : '';
+                    dataAtividadeInput.dispatchEvent(new Event('change')); // Dispara a verificação
+                }
             } else {
                 if (modalTitle) modalTitle.innerHTML = `<i class="bi bi-play-circle"></i> Retomar Lançamento (Novo)`;
                 if (btnSubmitPadrao) {
                     btnSubmitPadrao.style.display = 'inline-block';
                     btnSubmitPadrao.innerHTML = `<i class="bi bi-check-circle"></i> Criar Lançamento`;
                 }
-                if (dataAtividadeInput) dataAtividadeInput.value = new Date().toISOString().split('T')[0];
+                if (dataAtividadeInput) {
+                    dataAtividadeInput.value = new Date().toISOString().split('T')[0];
+                    dataAtividadeInput.dispatchEvent(new Event('change')); // Dispara a verificação
+                }
             }
 
             // 5. QUINTO: Preenchimento dos demais dados (OS, Valores, etc.)
@@ -1666,30 +1699,103 @@ document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('formSolicitarComplementar');
         const selectOSComplementar = document.getElementById('osIdComplementar');
         const selectProjetoComplementar = document.getElementById('projetoIdComplementar');
-        const selectLPUComplementar = document.getElementById('lpuIdComplementar');
+        const selectLPUItem = document.getElementById('lpuItemComplementar');
         let todasAsOSComplementar = [];
         let choicesLPU;
+        let choicesProjeto;
+        let choicesOS;
+        let itensLote = [];
+        let lpuCacheMap = {};
+
+        // --- Renderização da Tabela de Itens do Lote ---
+        function renderizarTabelaItensLote() {
+            const tbody = document.getElementById('tbodyItensLote');
+            const container = document.getElementById('containerTabelaItensLote');
+            const totalEl = document.getElementById('totalLoteDisplay');
+            if (itensLote.length === 0) {
+                container.style.display = 'none';
+                tbody.innerHTML = '';
+                totalEl.textContent = 'R$ 0,00';
+                return;
+            }
+            container.style.display = '';
+            let total = 0;
+            tbody.innerHTML = itensLote.map((item, idx) => {
+                const subtotal = item.valor * item.quantidade;
+                total += subtotal;
+                return `<tr>
+                    <td><small class="text-truncate d-inline-block" style="max-width:320px;" title="${item.label}">${item.label}</small></td>
+                    <td class="text-center">${item.quantidade}</td>
+                    <td class="text-end">${parseFloat(item.valor).toLocaleString('pt-BR', {style:'currency',currency:'BRL'})}</td>
+                    <td class="text-end fw-bold">${subtotal.toLocaleString('pt-BR', {style:'currency',currency:'BRL'})}</td>
+                    <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="window._removerItemLote(${idx})" title="Remover"><i class="bi bi-trash3"></i></button></td>
+                </tr>`;
+            }).join('');
+            totalEl.textContent = total.toLocaleString('pt-BR', {style:'currency',currency:'BRL'});
+        }
+
+        window._removerItemLote = function(idx) {
+            itensLote.splice(idx, 1);
+            renderizarTabelaItensLote();
+        };
+
+        // --- Botão Adicionar Item ao Lote ---
+        document.getElementById('btnAdicionarItemLote').addEventListener('click', () => {
+            const lpuId = selectLPUItem.value;
+            const qtdInput = document.getElementById('quantidadeItemComplementar');
+            const quantidade = parseInt(qtdInput.value) || 0;
+            if (!lpuId || quantidade < 1) {
+                mostrarToast('Selecione uma LPU e informe a quantidade.', 'warning');
+                return;
+            }
+            const lpuData = lpuCacheMap[lpuId];
+            if (!lpuData) {
+                mostrarToast('Dados da LPU não encontrados.', 'error');
+                return;
+            }
+            if (itensLote.some(i => i.lpuId == lpuId)) {
+                mostrarToast('Este item LPU já foi adicionado ao lote.', 'warning');
+                return;
+            }
+            itensLote.push({ lpuId: parseInt(lpuId), label: lpuData.label, valor: lpuData.valor, quantidade: quantidade });
+            renderizarTabelaItensLote();
+            if (choicesLPU) choicesLPU.setChoiceByValue('');
+            qtdInput.value = 1;
+        });
 
         // --- 1. Evento ao abrir o Modal ---
         modalSolicitarComplementarEl.addEventListener('show.bs.modal', async () => {
             form.reset();
             document.getElementById('siteComplementar').value = '';
+            itensLote = [];
+            lpuCacheMap = {};
+            renderizarTabelaItensLote();
 
-            // Inicializa ou limpa o Choices.js
             if (!choicesLPU) {
-                choicesLPU = new Choices(selectLPUComplementar, {
-                    searchEnabled: true,
-                    itemSelectText: '',
-                    noResultsText: 'Nenhuma LPU encontrada',
-                    placeholder: true,
-                    placeholderValue: 'Busque ou selecione uma LPU'
+                choicesLPU = new Choices(selectLPUItem, {
+                    searchEnabled: true, itemSelectText: '', noResultsText: 'Nenhuma LPU encontrada', placeholder: true, placeholderValue: 'Busque ou selecione uma LPU'
+                });
+            }
+            if (!choicesProjeto) {
+                choicesProjeto = new Choices(selectProjetoComplementar, {
+                    searchEnabled: true, itemSelectText: '', noResultsText: 'Nenhum projeto encontrado', placeholder: true, placeholderValue: 'Busque o projeto...'
+                });
+            }
+            if (!choicesOS) {
+                choicesOS = new Choices(selectOSComplementar, {
+                    searchEnabled: true, itemSelectText: '', noResultsText: 'Nenhuma OS encontrada', placeholder: true, placeholderValue: 'Busque a OS...'
                 });
             }
 
-            selectProjetoComplementar.innerHTML = '<option value="">Carregando...</option>';
-            selectOSComplementar.innerHTML = '<option value="">Carregando...</option>';
+            choicesProjeto.clearStore();
+            choicesProjeto.setChoices([{ value: '', label: 'Carregando...', disabled: true, selected: true }]);
+
+            choicesOS.clearStore();
+            choicesOS.setChoices([{ value: '', label: 'Carregando...', disabled: true, selected: true }]);
+
             choicesLPU.clearStore();
             choicesLPU.disable();
+            document.getElementById('btnAdicionarItemLote').disabled = true;
 
             try {
                 // Carrega OSs do usuário (Monólito)
@@ -1705,26 +1811,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Popula Projetos
                 const projetosUnicos = [...new Set(todasAsOSComplementar.map(os => os.projeto))];
-                selectProjetoComplementar.innerHTML = '<option value="" selected disabled>Selecione o projeto...</option>';
-                projetosUnicos.forEach(projeto => selectProjetoComplementar.add(new Option(projeto, projeto)));
+                const projetoChoicesData = [{ value: '', label: 'Selecione o projeto...', selected: true, disabled: true }];
+                projetosUnicos.forEach(projeto => {
+                    projetoChoicesData.push({ value: projeto, label: projeto });
+                });
+                choicesProjeto.setChoices(projetoChoicesData, 'value', 'label', true);
 
                 // Popula OSs
-                selectOSComplementar.innerHTML = '<option value="" selected disabled>Selecione a OS...</option>';
+                const osChoicesData = [{ value: '', label: 'Selecione a OS...', selected: true, disabled: true }];
                 todasAsOSComplementar.forEach(os => {
-                    const option = new Option(os.os, os.os);
-                    option.dataset.id = os.id;
-                    option.dataset.projeto = os.projeto;
-                    // Salva o primeiro detalhe para pegar o site
-                    if (os.detalhes && os.detalhes.length > 0) {
-                        option.dataset.site = os.detalhes[0].site;
-                    }
-                    selectOSComplementar.add(option);
+                    osChoicesData.push({ value: os.os, label: os.os });
                 });
+                choicesOS.setChoices(osChoicesData, 'value', 'label', true);
 
             } catch (error) {
                 mostrarToast(error.message, 'error');
-                selectProjetoComplementar.innerHTML = '<option value="">Erro ao carregar</option>';
-                selectOSComplementar.innerHTML = '<option value="">Erro ao carregar</option>';
+                choicesProjeto.setChoices([{ value: '', label: 'Erro ao carregar', disabled: true, selected: true }], 'value', 'label', true);
+                choicesOS.setChoices([{ value: '', label: 'Erro ao carregar', disabled: true, selected: true }], 'value', 'label', true);
             }
         });
 
@@ -1736,8 +1839,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Tenta selecionar automaticamente a primeira OS do projeto
             const osCorrespondente = todasAsOSComplementar.find(os => os.projeto === projetoSelecionado);
             if (osCorrespondente && selectOSComplementar.value !== osCorrespondente.os) {
-                selectOSComplementar.value = osCorrespondente.os;
-                selectOSComplementar.dispatchEvent(new Event('change'));
+                choicesOS.setChoiceByValue(osCorrespondente.os);
+                selectOSComplementar.dispatchEvent(new Event('change')); // Força execução do carregamento da LPU
             }
         });
 
@@ -1746,41 +1849,45 @@ document.addEventListener('DOMContentLoaded', () => {
             const osCodigo = selectOSComplementar.value;
             if (!osCodigo) return;
 
+            // Busca os detalhes direto da matriz para evitar problemas com dataset
+            const osCorrespondente = todasAsOSComplementar.find(os => os.os === osCodigo);
+            if (!osCorrespondente) return;
+
             const inputSite = document.getElementById('siteComplementar');
-            const selectedOption = selectOSComplementar.options[selectOSComplementar.selectedIndex];
 
             // Preenche Site
-            inputSite.value = selectedOption.dataset.site || '-';
+            inputSite.value = (osCorrespondente.detalhes && osCorrespondente.detalhes.length > 0) ? osCorrespondente.detalhes[0].site : '-';
 
             // Sincroniza Projeto
-            const projetoDaOS = selectedOption.dataset.projeto;
-            if (projetoDaOS && selectProjetoComplementar.value !== projetoDaOS) {
-                selectProjetoComplementar.value = projetoDaOS;
+            if (osCorrespondente.projeto && selectProjetoComplementar.value !== osCorrespondente.projeto) {
+                choicesProjeto.setChoiceByValue(osCorrespondente.projeto);
             }
+
+            // Limpa itens ao trocar de OS
+            itensLote = [];
+            renderizarTabelaItensLote();
 
             // Prepara Load de LPUs
             choicesLPU.clearStore();
             choicesLPU.disable();
+            document.getElementById('btnAdicionarItemLote').disabled = true;
             choicesLPU.setChoices([{ value: '', label: 'Carregando LPUs...', disabled: true }]);
 
             try {
-                // Busca Contratos/LPUs (Monólito)
                 const response = await fetchComAuth(`${API_BASE_URL}/contrato`);
                 if (!response.ok) throw new Error('Falha ao buscar LPUs.');
 
                 const contratos = await response.json();
+                lpuCacheMap = {};
                 const lpuChoices = [{ value: '', label: 'Selecione o item LPU...', selected: true, disabled: true }];
 
                 contratos.forEach(contrato => {
                     if (contrato.lpus && contrato.lpus.length > 0) {
                         contrato.lpus.forEach(lpu => {
                             if (lpu.ativo) {
-                                // Adiciona o valor unitário no customProperties para uso futuro se precisar
-                                lpuChoices.push({
-                                    value: lpu.id,
-                                    label: `Contrato: ${contrato.nome} | ${lpu.codigoLpu} - ${lpu.nomeLpu}`,
-                                    customProperties: { valor: lpu.valor }
-                                });
+                                const label = `Contrato: ${contrato.nome} | ${lpu.codigoLpu} - ${lpu.nomeLpu}`;
+                                lpuCacheMap[lpu.id] = { label: label, valor: lpu.valor || 0 };
+                                lpuChoices.push({ value: lpu.id, label: label });
                             }
                         });
                     }
@@ -1788,6 +1895,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 choicesLPU.setChoices(lpuChoices, 'value', 'label', false);
                 choicesLPU.enable();
+                document.getElementById('btnAdicionarItemLote').disabled = false;
 
             } catch (error) {
                 mostrarToast('Erro ao carregar a lista de LPUs.', 'error');
@@ -1795,45 +1903,45 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // --- 4. Enviar Solicitação (CORRIGIDO PARA MICROSSERVIÇO) ---
+        // --- 4. Enviar Solicitação em Lote ---
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            if (itensLote.length === 0) {
+                mostrarToast('Adicione pelo menos um item ao lote.', 'warning');
+                return;
+            }
+
             const btnSubmit = document.getElementById('btnEnviarSolicitacaoComplementar');
-            const selectedOption = selectOSComplementar.options[selectOSComplementar.selectedIndex];
-            const osIdParaApi = selectedOption ? selectedOption.dataset.id : null;
+            const osCodigo = selectOSComplementar.value;
+            const osCorrespondente = todasAsOSComplementar.find(os => os.os === osCodigo);
+            const osIdParaApi = osCorrespondente ? osCorrespondente.id : null;
 
             if (!osIdParaApi) {
                 mostrarToast('Erro: OS não identificada.', 'error');
                 return;
             }
 
-            // Monta o Payload
             const payload = {
                 osId: parseInt(osIdParaApi),
-                lpuId: parseInt(selectLPUComplementar.value),
-                quantidade: parseInt(document.getElementById('quantidadeComplementar').value),
-                justificativa: document.getElementById('justificativaComplementar').value,
                 solicitanteId: parseInt(localStorage.getItem('usuarioId')),
-                solicitanteNome: localStorage.getItem('usuarioNome') || 'Usuário'
+                solicitanteNome: localStorage.getItem('usuarioNome') || 'Usuário',
+                justificativa: document.getElementById('justificativaComplementar').value,
+                itens: itensLote.map(i => ({ lpuId: i.lpuId, valorUnitarioLpu: i.valor, quantidade: i.quantidade }))
             };
 
-            // UI Loading
             btnSubmit.disabled = true;
             btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Enviando...`;
 
-            // URL do Microsserviço (Porta 8082)
             let baseUrlComplementar = '';
             if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                 baseUrlComplementar = 'http://localhost:8082';
             } else {
-                // Produção: Usa o proxy /atividades
                 baseUrlComplementar = window.location.origin + '/atividades';
             }
 
-            const MS_URL = `${baseUrlComplementar}/v1/solicitacoes-complementares`;
+            const MS_URL = `${baseUrlComplementar}/v1/solicitacoes-complementares/lote`;
             try {
-                // Usa fetch nativo para garantir a URL absoluta (evita prefixo do fetchComAuth se houver)
                 const response = await fetch(MS_URL, {
                     method: 'POST',
                     headers: {
@@ -1848,9 +1956,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(errorText || 'Erro ao enviar solicitação.');
                 }
 
-                // Sucesso
-                const data = await response.json(); // Só pra consumir o body
-                mostrarToast('Solicitação de atividade complementar enviada com sucesso!', 'success');
+                const data = await response.json();
+                mostrarToast(`Lote criado com ${data.itens.length} item(ns)!`, 'success');
                 modalSolicitarComplementar.hide();
 
             } catch (error) {

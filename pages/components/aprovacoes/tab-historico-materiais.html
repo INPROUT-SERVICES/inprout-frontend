@@ -2,11 +2,11 @@
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body py-3">
             <div class="row g-2 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted mb-1">Data Início</label>
                     <input type="date" class="form-control form-control-sm" id="data-inicio-hist-material">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted mb-1">Data Fim</label>
                     <input type="date" class="form-control form-control-sm" id="data-fim-hist-material">
                 </div>
@@ -18,12 +18,13 @@
                             placeholder="OS, Solicitante..." onkeyup="filtrarHistoricoMateriaisNaTela()">
                     </div>
                 </div>
-                <button type="button" id="btn-exportar-historico-materiais" class="btn btn-success d-none"
-                    onclick="exportarHistoricoMateriaisExcel()">
-                    <i class="bi bi-file-earmark-excel"></i> Exportar Excel
-                </button>
-                <div class="col-md-2">
-                    <button class="btn btn-sm btn-primary w-100" id="btn-filtrar-historico-materiais"
+                <div class="col-md-4 d-flex gap-2 justify-content-end">
+                    <button type="button" id="btn-exportar-historico-materiais"
+                        class="btn btn-sm btn-success d-none"
+                        onclick="exportarHistoricoMateriaisExcel()">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar
+                    </button>
+                    <button class="btn btn-sm btn-primary" id="btn-filtrar-historico-materiais"
                         onclick="carregarDadosHistoricoMateriais()">
                         <i class="bi bi-funnel-fill me-1"></i> Filtrar
                     </button>

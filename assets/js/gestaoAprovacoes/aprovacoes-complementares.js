@@ -16,6 +16,10 @@ const AprovacoesComplementares = {
     listenersConfigurados: false,
     listaCompletaLpus: null,
     mapaDetalhesOs: {},
+    ultimaListaPendentes: [],
+    currentLoteKey: null,
+    currentLoteItens: null,
+    loteDecisoes: {},
 
     choicesMain: null,
     choicesEdit: null,
@@ -347,6 +351,7 @@ const AprovacoesComplementares = {
 
             if (!response.ok) throw new Error("Erro ao buscar pendências");
             const lista = await response.json();
+            AprovacoesComplementares.ultimaListaPendentes = lista;
 
             AprovacoesComplementares.atualizarBadge(lista.length);
             AprovacoesComplementares.renderizarTabelaPrincipal(lista);
@@ -380,111 +385,158 @@ const AprovacoesComplementares = {
         }
         if (msgVazio) { msgVazio.classList.add('d-none'); msgVazio.classList.remove('d-block'); }
 
+        // Agrupa por loteId
+        const loteMap = new Map();
         lista.forEach(item => {
-            const tr = document.createElement('tr');
+            const key = item.loteId || ('_single_' + item.id);
+            if (!loteMap.has(key)) loteMap.set(key, []);
+            loteMap.get(key).push(item);
+        });
 
-            const cache = AprovacoesComplementares.mapaDetalhesOs[item.osId];
-            const osDisplay = cache ? cache.osCodigo : `OS #${item.osId}`;
+        loteMap.forEach((itens, loteKey) => {
+            const tr = document.createElement('tr');
+            const firstItem = itens[0];
+            const osId = firstItem.osId;
+
+            const cache = AprovacoesComplementares.mapaDetalhesOs[osId];
+            const osDisplay = cache ? cache.osCodigo : 'OS #' + osId;
             const siteDisplay = cache ? cache.site : 'Carregando...';
             const projetoDisplay = cache ? cache.projeto : 'Carregando...';
             const segmentoDisplay = cache ? cache.segmento : 'Carregando...';
             const loadingClass = cache ? '' : 'loading-text';
 
-            const lpuInfo = AprovacoesComplementares.listaCompletaLpus.find(l => l.id === item.lpuOriginalId);
-            const nomeLpu = lpuInfo ? lpuInfo.nome.split('|')[1] || lpuInfo.nome : `LPU ID: ${item.lpuOriginalId}`;
-
-            let valorTotal = item.valorTotalEstimado;
-            if (!valorTotal || valorTotal === 0) {
-                const valorUnit = lpuInfo ? lpuInfo.valor : 0;
-                valorTotal = valorUnit * item.quantidadeOriginal;
+            let lpuDisplay;
+            if (itens.length === 1) {
+                const lpuInfo = AprovacoesComplementares.listaCompletaLpus.find(l => l.id === firstItem.lpuOriginalId);
+                const nomeLpu = lpuInfo ? (lpuInfo.nome.split('|')[1] || lpuInfo.nome) : 'LPU ID: ' + firstItem.lpuOriginalId;
+                lpuDisplay = '<small class="text-truncate d-inline-block" style="max-width: 250px;" title="' + nomeLpu + '">' + nomeLpu + '</small>';
+            } else {
+                lpuDisplay = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-collection me-1"></i>' + itens.length + ' itens</span>';
             }
 
-            // --- Lógica de Cores e Ícones dos Status ---
-            let badgeClass = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle'; // Padrão (Pendente Coord)
-            let iconeStatus = '<i class="bi bi-hourglass-split me-1"></i>';
-            let statusTexto = item.status;
+            let valorTotal = itens.reduce((sum, i) => {
+                let v = i.valorTotalEstimado;
+                if (!v || v === 0) {
+                    const lpuInfo = AprovacoesComplementares.listaCompletaLpus.find(l => l.id === i.lpuOriginalId);
+                    v = (lpuInfo ? lpuInfo.valor : 0) * i.quantidadeOriginal;
+                }
+                return sum + v;
+            }, 0);
 
-            if (item.status === 'APROVADO') {
+            const qtdTotal = itens.reduce((sum, i) => sum + (i.quantidadeOriginal || 0), 0);
+
+            const status = firstItem.status;
+            let badgeClass = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+            let iconeStatus = '<i class="bi bi-hourglass-split me-1"></i>';
+            let statusTexto = status;
+
+            if (status === 'APROVADO') {
                 badgeClass = 'badge bg-success-subtle text-success border border-success-subtle';
                 iconeStatus = '<i class="bi bi-check-circle-fill me-1"></i>';
-            } else if (item.status === 'DEVOLVIDO_CONTROLLER') {
+            } else if (status === 'DEVOLVIDO_CONTROLLER') {
                 badgeClass = 'badge bg-danger-subtle text-danger border border-danger-subtle';
                 iconeStatus = '<i class="bi bi-arrow-return-left me-1"></i>';
                 statusTexto = 'DEVOLVIDO';
-            } else if (item.status === 'PENDENTE_CONTROLLER') {
+            } else if (status === 'PENDENTE_CONTROLLER') {
                 badgeClass = 'badge bg-info-subtle text-info-emphasis border border-info-subtle';
                 iconeStatus = '<i class="bi bi-person-gear me-1"></i>';
                 statusTexto = 'EM ANÁLISE';
             }
 
-            // Define botão de ação
-            const isController = item.status === 'PENDENTE_CONTROLLER';
+            const isController = status === 'PENDENTE_CONTROLLER';
             const btnClass = isController ? 'btn-success' : 'btn-outline-success';
             const btnIcon = isController ? 'bi-check-lg' : 'bi-pencil-square';
-            const btnTitle = isController ? 'Aprovar Solicitação' : 'Analisar / Corrigir';
+            const btnTitle = isController ? 'Aprovar Lote' : 'Analisar Lote';
 
-            // CORREÇÃO AQUI: Adicionado '${item.status}' no onclick do botão de rejeição (último botão)
-            tr.innerHTML = `
-            <td><span class="os-placeholder-${item.osId} text-dark fw-bold">${osDisplay}</span></td>
-            <td><small class="segmento-placeholder-${item.osId} ${loadingClass}">${segmentoDisplay}</small></td>
-            <td><small class="site-placeholder-${item.osId} ${loadingClass}">${siteDisplay}</small></td>
-            <td><small class="projeto-placeholder-${item.osId} ${loadingClass}">${projetoDisplay}</small></td>
-            <td><small class="text-truncate d-inline-block" style="max-width: 250px;" title="${nomeLpu}">${nomeLpu}</small></td>
-            <td class="text-center"><span class="badge bg-light text-dark border">${item.quantidadeOriginal}</span></td>
-            <td class="text-end fw-bold text-success">${AprovacoesComplementares.formatarMoeda(valorTotal)}</td>
-            <td class="text-center"><span class="${badgeClass}">${iconeStatus} ${statusTexto}</span></td>
-            <td class="text-center">
-                <button class="btn btn-sm ${btnClass}" onclick="AprovacoesComplementares.abrirModalAnalise('${item.id}')" title="${btnTitle}"><i class="bi ${btnIcon}"></i></button>
-                <button class="btn btn-sm btn-outline-danger" onclick="AprovacoesComplementares.prepararRejeicaoInicial('${item.id}', '${item.status}')" title="Rejeitar"><i class="bi bi-x-lg"></i></button>
-            </td>
-        `;
+            const escapedKey = loteKey.replace(/'/g, "\\'");
+
+            tr.innerHTML = '<td><span class="os-placeholder-' + osId + ' text-dark fw-bold">' + osDisplay + '</span></td>'
+                + '<td><small class="segmento-placeholder-' + osId + ' ' + loadingClass + '">' + segmentoDisplay + '</small></td>'
+                + '<td><small class="site-placeholder-' + osId + ' ' + loadingClass + '">' + siteDisplay + '</small></td>'
+                + '<td><small class="projeto-placeholder-' + osId + ' ' + loadingClass + '">' + projetoDisplay + '</small></td>'
+                + '<td>' + lpuDisplay + '</td>'
+                + '<td class="text-center"><span class="badge bg-light text-dark border">' + qtdTotal + '</span></td>'
+                + '<td class="text-end fw-bold text-success">' + AprovacoesComplementares.formatarMoeda(valorTotal) + '</td>'
+                + '<td class="text-center"><span class="' + badgeClass + '">' + iconeStatus + ' ' + statusTexto + '</span></td>'
+                + '<td class="text-center">'
+                + '  <button class="btn btn-sm ' + btnClass + '" onclick="AprovacoesComplementares.abrirModalAnaliseLote(\'' + escapedKey + '\')" title="' + btnTitle + '"><i class="bi ' + btnIcon + '"></i></button>'
+                + '  <button class="btn btn-sm btn-outline-danger" onclick="AprovacoesComplementares.prepararRejeicaoLote(\'' + escapedKey + '\')" title="Rejeitar"><i class="bi bi-x-lg"></i></button>'
+                + '</td>';
+
             tbody.appendChild(tr);
         });
+
+        const osIdsFaltantes = [...new Set(lista.map(i => i.osId))].filter(id => !AprovacoesComplementares.mapaDetalhesOs[id]);
+        osIdsFaltantes.forEach(id => AprovacoesComplementares.fetchDetalhesOsESalvar(id));
     },
 
-    abrirModalAnalise: async (id) => {
+        abrirModalAnaliseLote: async (loteKey) => {
         try {
-            // Feedback de carregamento no botão
-            const btn = document.activeElement;
-            const originalIcon = btn ? btn.innerHTML : '';
-            if (btn && btn.tagName === 'BUTTON') {
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
-                btn.disabled = true;
-            }
+            AprovacoesComplementares.currentLoteKey = loteKey;
+            AprovacoesComplementares.loteDecisoes = {};
 
-            AprovacoesComplementares.alteracoesBuffer = {};
+            const itens = AprovacoesComplementares.ultimaListaPendentes.filter(i => {
+                const key = i.loteId || ('_single_' + i.id);
+                return key === loteKey;
+            });
 
-            // 1. Buscas de Dados
-            const respSol = await fetch(`${AprovacoesComplementares.MS_URL}/${id}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
-            const solicitacao = await respSol.json();
-            AprovacoesComplementares.currentSolicitacao = solicitacao;
+            if (itens.length === 0) return;
+            AprovacoesComplementares.currentLoteItens = itens;
 
-            // Carrega Buffer de alterações anteriores
-            if (solicitacao.alteracoesPropostasJson) {
-                try {
-                    const propostas = JSON.parse(solicitacao.alteracoesPropostasJson);
-                    propostas.forEach(p => {
-                        AprovacoesComplementares.alteracoesBuffer[p.itemId] = { novaQtd: p.novaQtd, novaLpuId: p.novaLpuId, novoBoq: p.novoBoq, novoStatus: p.novoStatus };
-                    });
-                } catch (errJson) { }
-            }
+            const firstItem = itens[0];
+            const osId = firstItem.osId;
+            const isController = firstItem.status === 'PENDENTE_CONTROLLER';
 
-            const respOs = await fetch(`${API_BASE_URL}/os/${solicitacao.osId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+            const respOs = await fetch(`${API_BASE_URL}/os/${osId}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
             const osCompleta = respOs.ok ? await respOs.json() : null;
             AprovacoesComplementares.currentOsCompleta = osCompleta;
 
-            // Restaura botão
-            if (btn && btn.tagName === 'BUTTON') {
-                btn.innerHTML = originalIcon;
-                btn.disabled = false;
+            // Inicializa decisões (padrão: aprovar)
+            itens.forEach(item => {
+                AprovacoesComplementares.loteDecisoes[item.id] = {
+                    decisao: 'aprovar',
+                    lpuId: isController ? item.lpuAprovadaId : (item.lpuAprovadaId || item.lpuOriginalId),
+                    quantidade: isController ? item.quantidadeAprovada : (item.quantidadeAprovada || item.quantidadeOriginal)
+                };
+            });
+
+            // Monta tabela de itens do lote
+            let itensHtml = '';
+            itens.forEach(item => {
+                const lpu = AprovacoesComplementares.listaCompletaLpus.find(l => l.id === item.lpuOriginalId);
+                const nomeLpu = lpu ? (lpu.nome.split('|')[1] || lpu.nome).trim() : ('LPU ' + item.lpuOriginalId);
+                let valor = item.valorTotalEstimado;
+                if (!valor) valor = (lpu ? lpu.valor : 0) * item.quantidadeOriginal;
+
+                itensHtml += `
+                    <tr id="lote-item-row-${item.id}">
+                        <td class="ps-3"><small class="text-truncate d-inline-block" style="max-width:280px;" title="${nomeLpu}">${nomeLpu}</small></td>
+                        <td class="text-center fw-bold">${item.quantidadeOriginal}</td>
+                        <td class="text-end text-muted small">${AprovacoesComplementares.formatarMoeda(lpu ? lpu.valor : 0)}</td>
+                        <td class="text-end fw-bold text-dark">${AprovacoesComplementares.formatarMoeda(valor)}</td>
+                        <td class="text-center pe-3">
+                            <select class="form-select form-select-sm decisao-item-select" data-item-id="${item.id}" ${isController ? 'disabled' : ''} style="width: 130px; display: inline-block;">
+                                <option value="aprovar" selected>✅ Aprovar</option>
+                                <option value="rejeitar">❌ Rejeitar</option>
+                            </select>
+                        </td>
+                    </tr>`;
+            });
+
+            const modalBody = document.querySelector('#modalAnaliseCoordenador .modal-body');
+            let alertaHtml = '';
+            if (firstItem.status === 'DEVOLVIDO_CONTROLLER' || firstItem.justificativaController) {
+                alertaHtml = `
+                    <div class="alert alert-danger border-0 border-start border-4 border-danger shadow-sm d-flex align-items-start p-3 mb-3" role="alert">
+                        <div class="me-3"><div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;"><i class="bi bi-arrow-return-left"></i></div></div>
+                        <div><h6 class="alert-heading fw-bold mb-1">Devolvido pelo Controller</h6><p class="mb-0 small text-danger-emphasis">"${firstItem.justificativaController || 'Motivo não especificado.'}"</p></div>
+                    </div>`;
             }
 
-            // 2. Prepara Layout Moderno (Injeção de HTML)
-            const modalBody = document.querySelector('#modalAnaliseCoordenador .modal-body');
-
             modalBody.innerHTML = `
-                <div id="container-alerta-controller" class="mb-3"></div>
-                
+                ${alertaHtml}
                 <div class="card border-0 shadow-sm bg-light mb-4">
                     <div class="card-body p-3">
                         <div id="osDetailsContainer" class="row g-3 align-items-center"></div>
@@ -492,213 +544,88 @@ const AprovacoesComplementares = {
                 </div>
 
                 <div class="d-flex align-items-center mb-2">
-                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
-                        <span class="small fw-bold">1</span>
+                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
+                        <span class="small fw-bold">${itens.length}</span>
                     </div>
-                    <h6 class="fw-bold text-dark mb-0">Itens Existentes na OS</h6>
-                    <small class="text-muted ms-2">(Analise e proponha alterações se necessário)</small>
+                    <h6 class="fw-bold text-dark mb-0">Itens do Lote</h6>
+                    <small class="text-muted ms-2 fst-italic">${firstItem.justificativa || 'Sem justificativa do gestor'}</small>
                 </div>
 
                 <div class="card border border-light shadow-sm mb-4 overflow-hidden">
-                    <div class="table-responsive" style="max-height: 250px;">
+                    <div class="table-responsive">
                         <table class="table table-hover table-sm mb-0 align-middle small">
-                            <thead class="table-light sticky-top">
+                            <thead class="table-light">
                                 <tr>
-                                    <th class="ps-3">Cód. LPU</th>
-                                    <th>Descrição LPU</th>
-                                    <th class="text-center">Qtd.</th>
+                                    <th class="ps-3">Item LPU Solicitado</th>
+                                    <th class="text-center">Qtd</th>
                                     <th class="text-end">Vlr. Unit.</th>
-                                    <th class="text-end">Total</th>
-                                    <th class="text-center">Status</th>
-                                    <th class="text-center pe-3">Ações</th>
+                                    <th class="text-end">Total Est.</th>
+                                    <th class="text-center pe-3" style="width: 150px;">Decisão</th>
                                 </tr>
                             </thead>
-                            <tbody id="tbodyItensExistentes" class="bg-white"></tbody>
+                            <tbody>${itensHtml}</tbody>
+                            <tfoot>
+                                <tr class="table-light">
+                                    <td colspan="3" class="text-end fw-bold">Total do Lote:</td>
+                                    <td class="text-end fw-bold text-success">${AprovacoesComplementares.formatarMoeda(itens.reduce((s, i) => { let v = i.valorTotalEstimado; if (!v) { const l = AprovacoesComplementares.listaCompletaLpus.find(x => x.id === i.lpuOriginalId); v = (l ? l.valor : 0) * i.quantidadeOriginal; } return s + v; }, 0))}</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
 
-                <div class="d-flex align-items-center mb-2">
-                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
-                        <span class="small fw-bold">2</span>
-                    </div>
-                    <h6 class="fw-bold text-dark mb-0">Decisão / Proposta do Novo Item</h6>
+                <div class="mb-0">
+                    <label class="form-label small text-secondary fw-bold">Justificativa da Decisão <span class="text-danger">*</span></label>
+                    <textarea class="form-control form-control-sm" id="editJustificativaCoordenador" rows="2" placeholder="Justificativa para as decisões do lote..." ${isController ? 'disabled' : ''}></textarea>
                 </div>
 
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white py-3 border-bottom-0">
-                        <div class="row g-2">
-                             <div class="col-12 mb-2">
-                                <div class="p-2 rounded bg-light border d-flex align-items-center gap-3">
-                                    <i class="bi bi-info-circle text-primary fs-5"></i>
-                                    <div class="flex-grow-1 border-end pe-3">
-                                        <label class="d-block text-muted" style="font-size: 0.7rem; margin-bottom: -2px;">SOLICITADO PELO GESTOR</label>
-                                        <span class="fw-bold text-dark" id="viewLpuOriginalText">Carregando...</span>
-                                    </div>
-                                    <div class="text-center border-end pe-3" style="min-width: 80px;">
-                                        <label class="d-block text-muted" style="font-size: 0.7rem; margin-bottom: -2px;">QTD</label>
-                                        <span class="fw-bold text-dark" id="viewQtdOriginalText">-</span>
-                                    </div>
-                                     <div class="flex-grow-1">
-                                        <label class="d-block text-muted" style="font-size: 0.7rem; margin-bottom: -2px;">JUSTIFICATIVA</label>
-                                        <span class="fst-italic text-secondary small" id="viewJustificativaManagerText">-</span>
-                                    </div>
-                                </div>
-                                <input type="hidden" id="viewLpuOriginal">
-                                <input type="hidden" id="viewQtdOriginal">
-                                <input type="hidden" id="viewJustificativaManager">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card-body pt-0 pb-4">
-                        <div class="row g-3">
-                            <input type="hidden" id="analiseSolicitacaoId">
-                            
-                            <div class="col-md-7">
-                                <label class="form-label fw-bold small text-secondary">LPU Aprovada / Proposta <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="editLpuSelect"></select>
-                            </div>
-
-                            <div class="col-md-2">
-                                <label class="form-label fw-bold small text-secondary">Qtd. <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control form-control-sm text-center fw-bold" id="editQuantidade">
-                            </div>
-
-                             <div class="col-md-3">
-                                <label class="form-label fw-bold small text-secondary">Valor deste Item</label>
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text bg-success text-white border-0">R$</span>
-                                    <input type="text" class="form-control bg-white fw-bold text-success border-success" id="displayValorItemProposto" disabled value="0,00">
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-3">
-                                <label class="form-label small text-muted">BOQ</label>
-                                <input type="text" class="form-control form-control-sm" id="editBoq" placeholder="Opcional">
-                            </div>
-                            
-                            <div class="col-md-3">
-                                <label class="form-label small text-muted">Status Registro</label>
-                                <select class="form-select form-select-sm" id="editStatusRegistro">
-                                    <option value="ATIVO">ATIVO</option>
-                                    <option value="INATIVO">INATIVO (Cancelado)</option>
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label class="form-label small text-muted">Justificativa da Decisão</label>
-                                <input type="text" class="form-control form-control-sm" id="editJustificativaCoordenador" placeholder="Escreva se houver alteração...">
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <input type="hidden" id="analiseSolicitacaoId" value="${firstItem.id}">
             `;
 
-            // 3. Injeta Alerta de Devolução
-            if (solicitacao.status === 'DEVOLVIDO_CONTROLLER' || solicitacao.justificativaController) {
-                const divAlerta = document.getElementById('container-alerta-controller');
-                if (divAlerta) {
-                    divAlerta.innerHTML = `
-                        <div class="alert alert-danger border-0 border-start border-4 border-danger shadow-sm d-flex align-items-start p-3" role="alert">
-                            <div class="me-3">
-                                 <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                    <i class="bi bi-arrow-return-left"></i>
-                                 </div>
-                            </div>
-                            <div>
-                                <h6 class="alert-heading fw-bold mb-1">Atenção: Devolvido pelo Controller</h6>
-                                <p class="mb-0 small text-danger-emphasis">
-                                    "${solicitacao.justificativaController || 'Motivo não especificado.'}"
-                                </p>
-                            </div>
-                        </div>
-                    `;
-                }
-            }
-
-            // 4. Preenche Dados Iniciais
-            const isController = solicitacao.status === 'PENDENTE_CONTROLLER';
-
-            // Dados ReadOnly
-            const lpuSolicitada = AprovacoesComplementares.listaCompletaLpus.find(l => l.id === solicitacao.lpuOriginalId);
-            const nomeLpuOrig = lpuSolicitada ? lpuSolicitada.nome : `ID: ${solicitacao.lpuOriginalId}`;
-
-            document.getElementById('viewLpuOriginalText').innerText = nomeLpuOrig.length > 50 ? nomeLpuOrig.substring(0, 50) + '...' : nomeLpuOrig;
-            document.getElementById('viewLpuOriginalText').title = nomeLpuOrig;
-            document.getElementById('viewQtdOriginalText').innerText = solicitacao.quantidadeOriginal;
-            document.getElementById('viewJustificativaManagerText').innerText = solicitacao.justificativa || "Nenhuma justificativa informada.";
-
-            document.getElementById('viewLpuOriginal').value = nomeLpuOrig;
-            document.getElementById('viewQtdOriginal').value = solicitacao.quantidadeOriginal;
-            document.getElementById('viewJustificativaManager').value = solicitacao.justificativa || '';
-            document.getElementById('analiseSolicitacaoId').value = solicitacao.id;
-
-            // Dados Editáveis (Decisão)
-            const qtd = isController ? solicitacao.quantidadeAprovada : (solicitacao.quantidadeAprovada || solicitacao.quantidadeOriginal);
-            const boq = isController ? solicitacao.boqAprovado : (solicitacao.boqAprovado || '');
-            const status = isController ? solicitacao.statusRegistroAprovado : (solicitacao.statusRegistroAprovado || 'ATIVO');
-            const just = solicitacao.justificativaCoordenador || '';
-
-            document.getElementById('editQuantidade').value = qtd;
-            document.getElementById('editBoq').value = boq;
-            document.getElementById('editStatusRegistro').value = status;
-            document.getElementById('editJustificativaCoordenador').value = just;
-
-            // Bloqueia campos se for Controller
-            ['editQuantidade', 'editBoq', 'editStatusRegistro', 'editJustificativaCoordenador'].forEach(fid => {
-                const el = document.getElementById(fid);
-                if (el) el.disabled = isController;
+            // Listeners de decisão por item
+            document.querySelectorAll('.decisao-item-select').forEach(sel => {
+                sel.addEventListener('change', (e) => {
+                    const itemId = e.target.dataset.itemId;
+                    AprovacoesComplementares.loteDecisoes[itemId].decisao = e.target.value;
+                    const row = document.getElementById('lote-item-row-' + itemId);
+                    if (e.target.value === 'rejeitar') {
+                        row.classList.add('table-danger');
+                        row.style.opacity = '0.6';
+                        row.style.textDecoration = 'line-through';
+                    } else {
+                        row.classList.remove('table-danger');
+                        row.style.opacity = '1';
+                        row.style.textDecoration = 'none';
+                    }
+                });
             });
 
-            // Configura Select LPU (Choices)
-            const lpuSelect = document.getElementById('editLpuSelect');
-            let htmlLpu = '<option value="">Selecione...</option>';
-            const selectedId = isController ? solicitacao.lpuAprovadaId : (solicitacao.lpuAprovadaId || solicitacao.lpuOriginalId);
-
-            AprovacoesComplementares.listaCompletaLpus.forEach(l => {
-                htmlLpu += `<option value="${l.id}" ${l.id == selectedId ? 'selected' : ''}>${l.nome}</option>`;
-            });
-            lpuSelect.innerHTML = htmlLpu;
-
-            if (AprovacoesComplementares.choicesMain) AprovacoesComplementares.choicesMain.destroy();
-            AprovacoesComplementares.choicesMain = new Choices(lpuSelect, { searchEnabled: true, itemSelectText: '', shouldSort: false });
-            if (isController) AprovacoesComplementares.choicesMain.disable();
-
-            // 5. Configura Listeners
-            const updateValores = () => AprovacoesComplementares.recalcularTotaisTela();
-            document.getElementById('editQuantidade').addEventListener('input', updateValores);
-            lpuSelect.addEventListener('change', updateValores);
-            document.getElementById('editStatusRegistro').addEventListener('change', updateValores);
-
-            // 6. Renderiza Widgets
+            // Renderiza detalhes da OS
             if (osCompleta) {
-                AprovacoesComplementares.renderizarItensExistentesComBuffer(isController);
-                AprovacoesComplementares.recalcularTotaisTela();
+                AprovacoesComplementares.renderizarDetalhesOsLote(osCompleta);
             }
 
-            // 7. Configura Botões do Modal
+            // Configura botões do footer
             const footerModal = document.querySelector('#modalAnaliseCoordenador .modal-footer');
             const btnSalvar = footerModal ? (footerModal.querySelector('.btn-success') || footerModal.querySelector('.btn-primary')) : null;
 
             if (btnSalvar) {
                 const novoBtn = btnSalvar.cloneNode(true);
                 btnSalvar.parentNode.replaceChild(novoBtn, btnSalvar);
-
                 if (isController) {
-                    novoBtn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Aprovar Definitivamente';
+                    novoBtn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Aprovar Lote';
                     novoBtn.className = 'btn btn-success fw-bold px-4';
                 } else {
-                    novoBtn.innerHTML = '<i class="bi bi-send-fill me-2"></i>Enviar Proposta';
+                    novoBtn.innerHTML = '<i class="bi bi-send-fill me-2"></i>Enviar Decisões';
                     novoBtn.className = 'btn btn-primary fw-bold px-4';
                 }
-                novoBtn.onclick = AprovacoesComplementares.salvarAprovacao;
+                novoBtn.onclick = AprovacoesComplementares.salvarAprovacaoLote;
             }
 
-            // Abre Modal
             const modalEl = document.getElementById('modalAnaliseCoordenador');
             let modalInstance = bootstrap.Modal.getInstance(modalEl);
-            if (!modalInstance) { modalInstance = new bootstrap.Modal(modalEl); }
+            if (!modalInstance) modalInstance = new bootstrap.Modal(modalEl);
             modalInstance.show();
 
         } catch (e) {
@@ -707,376 +634,134 @@ const AprovacoesComplementares = {
         }
     },
 
-    recalcularTotaisTela: () => {
-        // 1. Calcula Valor do Item Proposto
-        const lpuId = document.getElementById('editLpuSelect').value;
-        const qtdInput = document.getElementById('editQuantidade').value;
-        const qtd = qtdInput ? parseFloat(qtdInput) : 0;
-
-        let valorItemProposto = 0;
-        const lpu = AprovacoesComplementares.listaCompletaLpus.find(l => l.id == lpuId);
-        if (lpu) {
-            valorItemProposto = (lpu.valor || 0) * qtd;
-        }
-
-        const elDisplay = document.getElementById('displayValorItemProposto');
-        if (elDisplay) {
-            elDisplay.value = AprovacoesComplementares.formatarMoeda(valorItemProposto).replace('R$', '').trim();
-        }
-
-        // 2. Calcula Valor Total da OS (Atual e Projetado)
-        let valorAtualOS = 0;
-        let valorProjetadoOS = 0;
-
-        if (AprovacoesComplementares.currentOsCompleta && AprovacoesComplementares.currentOsCompleta.detalhes) {
-
-            // Itera itens existentes na OS
-            AprovacoesComplementares.currentOsCompleta.detalhes.forEach(item => {
-                const buffer = AprovacoesComplementares.alteracoesBuffer[item.id];
-
-                // Valor Original (Atual)
-                const valorOriginalItem = item.valorTotal || 0;
-                valorAtualOS += valorOriginalItem;
-
-                // Valor Projetado (Considerando edições no buffer)
-                if (buffer) {
-                    const statusFinal = buffer.novoStatus || (item.statusRegistro || 'ATIVO');
-                    if (statusFinal === 'ATIVO') {
-                        let lpuItem = item.lpu;
-                        if (buffer.novaLpuId) {
-                            lpuItem = AprovacoesComplementares.listaCompletaLpus.find(l => l.id == buffer.novaLpuId);
-                        }
-
-                        const qtdFinal = buffer.novaQtd !== undefined ? buffer.novaQtd : item.quantidade;
-                        const precoUnit = lpuItem ? (lpuItem.valorSemImposto || lpuItem.valor || 0) : 0;
-
-                        valorProjetadoOS += (qtdFinal * precoUnit);
-                    }
-                    // Se estiver INATIVO, não soma ao projetado
-                } else {
-                    // Sem alteração, soma o valor original ao projetado (se ativo)
-                    if ((item.statusRegistro || 'ATIVO') === 'ATIVO') {
-                        valorProjetadoOS += valorOriginalItem;
-                    }
-                }
-            });
-        }
-
-        // Soma o Novo Item ao Projetado (se o status proposto for ATIVO)
-        const statusNovoItem = document.getElementById('editStatusRegistro').value;
-        if (statusNovoItem === 'ATIVO') {
-            valorProjetadoOS += valorItemProposto;
-        }
-
-        // 3. Atualiza Widgets no Topo
-        AprovacoesComplementares.renderizarDetalhesOs(valorAtualOS, valorProjetadoOS);
-    },
-
-    renderizarDetalhesOs: (valorAtual = 0, valorProjetado = 0) => {
-        const os = AprovacoesComplementares.currentOsCompleta;
+    renderizarDetalhesOsLote: (os) => {
         if (!os) return;
-
         let regional = os.regional;
         let site = os.site;
         if (os.detalhes && os.detalhes.length > 0) {
             if (!regional || regional === 'null') regional = os.detalhes[0].regional;
             if (!site || site === 'null') site = os.detalhes[0].site;
         }
-
-        const fmtAtual = AprovacoesComplementares.formatarMoeda(valorAtual);
-        const fmtProj = AprovacoesComplementares.formatarMoeda(valorProjetado);
-
-        // Lógica de cores: Verde se o custo baixar ou mantiver, Laranja se aumentar
-        const isAumento = valorProjetado > valorAtual;
-        const corProj = isAumento ? 'text-warning-emphasis' : 'text-success';
-        const bgProj = isAumento ? 'bg-warning-subtle' : 'bg-success-subtle';
-        const iconeProj = isAumento ? 'bi-graph-up-arrow' : 'bi-check-lg';
-
         const html = `
-            <div class="col-md-5 border-end">
-                <div class="d-flex justify-content-between mb-2">
-                    <div>
-                        <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Código OS</small>
-                        <span class="fw-bold text-dark">${os.os || '-'}</span>
-                    </div>
-                     <div class="text-end px-3">
-                        <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Regional</small>
-                        <span class="fw-bold text-dark">${regional || '-'}</span>
-                    </div>
-                </div>
-                 <div>
-                    <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Site / Local</small>
-                    <span class="text-dark d-block text-truncate" title="${site}">${site || '-'}</span>
-                </div>
+            <div class="col-md-4">
+                <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Código OS</small>
+                <span class="fw-bold text-dark">${os.os || '-'}</span>
             </div>
-
-            <div class="col-md-7 ps-4">
-                <div class="row g-2">
-                    <div class="col-6">
-                        <div class="p-2 rounded border bg-white">
-                            <small class="text-secondary d-block fw-bold text-uppercase mb-1" style="font-size: 0.65rem;">Total Atual</small>
-                            <span class="fw-bold text-secondary d-block fs-5">${fmtAtual}</span>
-                        </div>
-                    </div>
-                     <div class="col-6">
-                        <div class="p-2 rounded border ${bgProj}">
-                            <small class="${corProj} d-block fw-bold text-uppercase mb-1" style="font-size: 0.65rem;">Projeção Final</small>
-                            <div class="d-flex align-items-center">
-                                <span class="fw-bold ${corProj} fs-5 me-2">${fmtProj}</span>
-                                <i class="bi ${iconeProj} ${corProj}"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="col-md-4">
+                <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Regional</small>
+                <span class="fw-bold text-dark">${regional || '-'}</span>
+            </div>
+            <div class="col-md-4">
+                <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Site / Local</small>
+                <span class="text-dark d-block text-truncate" title="${site}">${site || '-'}</span>
             </div>
         `;
-
         document.getElementById('osDetailsContainer').innerHTML = html;
     },
 
-    renderizarItensExistentesComBuffer: (isController = false) => {
-        const itens = AprovacoesComplementares.currentOsCompleta.detalhes || [];
-        const tbody = document.getElementById('tbodyItensExistentes');
-        tbody.innerHTML = '';
+    salvarAprovacaoLote: async () => {
+        const itens = AprovacoesComplementares.currentLoteItens;
+        const decisoes = AprovacoesComplementares.loteDecisoes;
+        if (!itens || itens.length === 0) return;
 
-        if (itens.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3 small">Nenhum item vinculado a esta OS.</td></tr>';
+        const isController = itens[0].status === 'PENDENTE_CONTROLLER';
+        const justificativa = document.getElementById('editJustificativaCoordenador')?.value || '';
+
+        if (!isController && (!justificativa || justificativa.trim() === '')) {
+            Swal.fire({ icon: 'warning', title: 'Justificativa Obrigatória', text: 'Por favor, insira uma justificativa para enviar as decisões.' });
             return;
         }
-
-        itens.forEach(item => {
-            const tr = document.createElement('tr');
-            const alteracao = AprovacoesComplementares.alteracoesBuffer[item.id];
-
-            // --- CORREÇÃO DO VALOR UNITÁRIO ---
-            // Tenta pegar de todas as propriedades possíveis que o Java possa estar a enviar
-            let rawValor = 0;
-            if (item.lpu) {
-                if (item.lpu.valor !== undefined && item.lpu.valor !== null) rawValor = item.lpu.valor;
-                else if (item.lpu.valorSemImposto !== undefined && item.lpu.valorSemImposto !== null) rawValor = item.lpu.valorSemImposto;
-            }
-            // Se ainda for zero, tenta calcular pelo total/quantidade (fallback)
-            if (rawValor === 0 && item.valorTotal && item.quantidade) {
-                rawValor = item.valorTotal / item.quantidade;
-            }
-
-            const statusOriginal = item.statusRegistro || 'ATIVO';
-            const qtdOriginal = item.quantidade;
-            const lpuNomeOriginal = item.lpu ? (item.lpu.nomeLpu || item.lpu.nome || '-') : '-';
-
-            const statusFinal = alteracao && alteracao.novoStatus ? alteracao.novoStatus : statusOriginal;
-            const qtdFinal = alteracao && alteracao.novaQtd ? alteracao.novaQtd : qtdOriginal;
-            const lpuAlterada = alteracao && alteracao.novaLpuId && alteracao.novaLpuId != (item.lpu?.id);
-
-            if (alteracao) tr.classList.add('item-modificado');
-            if (statusFinal === 'INATIVO') tr.classList.add('text-muted', 'bg-light');
-
-            // Formatação Visual das Células
-            const htmlQtd = (alteracao && alteracao.novaQtd != qtdOriginal)
-                ? `<span class="valor-antigo me-1">${qtdOriginal}</span><span class="valor-novo">${qtdFinal}</span>`
-                : qtdOriginal;
-
-            const htmlStatus = (alteracao && alteracao.novoStatus != statusOriginal)
-                ? `<span class="badge bg-secondary text-decoration-line-through me-1" style="font-size:0.65rem">${statusOriginal}</span><span class="badge ${statusFinal === 'ATIVO' ? 'bg-success' : 'bg-danger'}" style="font-size:0.65rem">${statusFinal} (Prop.)</span>`
-                : `<span class="badge ${statusOriginal === 'ATIVO' ? 'bg-success-subtle text-success border border-success' : 'bg-secondary-subtle text-secondary'} rounded-pill" style="font-size:0.65rem">${statusOriginal}</span>`;
-
-            let htmlLpu = `<span class="d-inline-block text-truncate" style="max-width:180px;" title="${lpuNomeOriginal}">${lpuNomeOriginal}</span>`;
-            if (lpuAlterada) {
-                const novaLpu = AprovacoesComplementares.listaCompletaLpus.find(l => l.id == alteracao.novaLpuId);
-                const novoNome = novaLpu ? novaLpu.nome.split('|')[1] || novaLpu.nome : '(Trocado)';
-                htmlLpu = `<div class="d-flex flex-column"><span class="text-decoration-line-through text-muted small" style="font-size:0.7em">${lpuNomeOriginal}</span><span class="valor-novo small text-truncate" style="max-width:180px;" title="${novoNome}"><i class="bi bi-arrow-return-right me-1"></i>${novoNome}</span></div>`;
-            }
-
-            // --- CORREÇÃO DOS BOTÕES (Conflito de ID/Submit) ---
-            const btnIcon = statusFinal === 'ATIVO' ? 'bi-slash-circle' : 'bi-arrow-counterclockwise';
-            const btnClass = statusFinal === 'ATIVO' ? 'btn-outline-danger' : 'btn-outline-success'; // Mudei para outline para não confundir com o botão principal
-            const btnTitle = statusFinal === 'ATIVO' ? 'Propor Inativação' : 'Restaurar / Ativar';
-
-            const acoesHtml = isController ?
-                `<span class="text-muted small"><i class="bi bi-lock-fill"></i></span>` :
-                `<div class="btn-group btn-group-sm">
-                    <button type="button" class="btn btn-outline-primary" onclick="AprovacoesComplementares.abrirModalEdicaoItem(${item.id})" title="Editar Item"><i class="bi bi-pencil-square"></i></button>
-                    <button type="button" class="btn ${btnClass}" onclick="AprovacoesComplementares.toggleStatusBuffer(${item.id}, '${statusFinal}')" title="${btnTitle}"><i class="bi ${btnIcon}"></i></button>
-                 </div>`;
-
-            tr.innerHTML = `
-                <td class="ps-3"><small class="font-monospace text-muted">${item.lpu ? item.lpu.codigoLpu : '-'}</small></td>
-                <td>${htmlLpu}</td>
-                <td class="text-center fw-bold">${htmlQtd}</td>
-                <td class="text-end text-muted small">${AprovacoesComplementares.formatarMoeda(rawValor)}</td>
-                <td class="text-end fw-bold text-dark">${AprovacoesComplementares.formatarMoeda(item.valorTotal)}</td>
-                <td class="text-center">${htmlStatus}</td>
-                <td class="text-center pe-3">${acoesHtml}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-    },
-
-    toggleStatusBuffer: (id, statusAtual) => {
-        const novoStatus = statusAtual === 'ATIVO' ? 'INATIVO' : 'ATIVO';
-        if (!AprovacoesComplementares.alteracoesBuffer[id]) {
-            AprovacoesComplementares.alteracoesBuffer[id] = {};
-        }
-        AprovacoesComplementares.alteracoesBuffer[id].novoStatus = novoStatus;
-        AprovacoesComplementares.renderizarItensExistentesComBuffer(false);
-    },
-
-    abrirModalEdicaoItem: async (itemId) => {
-        const item = AprovacoesComplementares.currentOsCompleta.detalhes.find(d => d.id === itemId);
-        if (!item) return;
-
-        const buffer = AprovacoesComplementares.alteracoesBuffer[itemId] || {};
-
-        document.getElementById('editItemIdHidden').value = itemId;
-        document.getElementById('modalEditQtd').value = buffer.novaQtd || item.quantidade;
-        document.getElementById('modalEditBoq').value = buffer.novoBoq || item.boq || '';
-
-        const select = document.getElementById('modalEditLpuSelect');
-
-        if (AprovacoesComplementares.choicesEdit) { AprovacoesComplementares.choicesEdit.destroy(); }
-
-        let html = '<option value="">Selecione...</option>';
-        const currentLpuId = buffer.novaLpuId || (item.lpu ? item.lpu.id : null);
-
-        AprovacoesComplementares.listaCompletaLpus.forEach(l => {
-            html += `<option value="${l.id}" ${l.id == currentLpuId ? 'selected' : ''}>${l.nome}</option>`;
-        });
-        select.innerHTML = html;
-
-        AprovacoesComplementares.choicesEdit = new Choices(select, { searchEnabled: true, itemSelectText: '', placeholderValue: 'Pesquisar...', shouldSort: false });
-
-        const modalEl = document.getElementById('modalEditarItemOs');
-        let modal = bootstrap.Modal.getInstance(modalEl);
-        if (!modal) modal = new bootstrap.Modal(modalEl);
-        modal.show();
-    },
-
-    salvarEdicaoBuffer: () => {
-        const id = document.getElementById('editItemIdHidden').value;
-        const lpuId = document.getElementById('modalEditLpuSelect').value;
-        const qtd = document.getElementById('modalEditQtd').value;
-        const boq = document.getElementById('modalEditBoq').value;
-
-        if (!lpuId || !qtd) { AprovacoesComplementares.mostrarAlerta("Preencha LPU e Quantidade."); return; }
-
-        if (!AprovacoesComplementares.alteracoesBuffer[id]) {
-            AprovacoesComplementares.alteracoesBuffer[id] = {};
-        }
-        AprovacoesComplementares.alteracoesBuffer[id].novaLpuId = parseInt(lpuId);
-        AprovacoesComplementares.alteracoesBuffer[id].novaQtd = parseInt(qtd);
-        AprovacoesComplementares.alteracoesBuffer[id].novoBoq = boq;
-
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarItemOs'));
-        if (modal) modal.hide();
-        AprovacoesComplementares.renderizarItensExistentesComBuffer(false);
-        AprovacoesComplementares.recalcularTotaisTela();
-    },
-
-    salvarAprovacao: async () => {
-        const id = AprovacoesComplementares.currentSolicitacao.id;
-        const usuarioId = localStorage.getItem('usuarioId');
-
-        // Verifica qual é o papel atual
-        const isController = AprovacoesComplementares.currentSolicitacao.status === 'PENDENTE_CONTROLLER';
-        const endpoint = isController ? 'controller/aprovar' : 'coordenador/aprovar';
-
-        const elLpu = document.getElementById('editLpuSelect');
-        const elQtd = document.getElementById('editQuantidade');
-        const elBoq = document.getElementById('editBoq');
-        const elStatus = document.getElementById('editStatusRegistro');
-        const elJust = document.getElementById('editJustificativaCoordenador');
-
-        if (!elLpu || !elQtd) {
-            Swal.fire('Erro', 'Campos obrigatórios não encontrados (LPU ou Quantidade).', 'error');
-            return;
-        }
-
-        // --- NOVA VALIDAÇÃO: Justificativa obrigatória para Coordenador ---
-        if (!isController) {
-            if (!elJust || !elJust.value || elJust.value.trim() === '') {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Justificativa Obrigatória',
-                    text: 'Por favor, insira uma justificativa para enviar a proposta.'
-                });
-                return; // Interrompe o envio
-            }
-        }
-        // ------------------------------------------------------------------
-
-        // O Java espera uma List<Map>, então transformamos { id: dados } em [ { itemId: id, ...dados } ]
-        let listaAlteracoes = [];
-        if (AprovacoesComplementares.alteracoesBuffer) {
-            listaAlteracoes = Object.entries(AprovacoesComplementares.alteracoesBuffer).map(([keyId, dados]) => {
-                return {
-                    itemId: Number(keyId),
-                    novaQtd: dados.novaQtd ? Number(dados.novaQtd) : null,
-                    novaLpuId: dados.novaLpuId ? Number(dados.novaLpuId) : null,
-                    novoBoq: dados.novoBoq || "",
-                    novoStatus: dados.novoStatus || "ATIVO"
-                };
-            });
-        }
-
-        const dto = {
-            aprovadorId: Number(usuarioId),
-            lpuId: elLpu.value ? Number(elLpu.value) : null,
-            quantidade: elQtd.value ? Number(elQtd.value) : null,
-            boq: elBoq ? elBoq.value : '',
-            statusRegistro: elStatus ? elStatus.value : 'ATIVO',
-            justificativa: elJust ? elJust.value : '',
-            alteracoesItensExistentesJson: listaAlteracoes.length > 0 ? JSON.stringify(listaAlteracoes) : null
-        };
 
         const modalEl = document.getElementById('modalAnaliseCoordenador');
         const modal = bootstrap.Modal.getInstance(modalEl);
         if (modal) modal.hide();
 
-        Swal.fire({
-            title: 'Processando...',
-            html: 'Salvando aprovação e aplicando alterações...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
+        Swal.fire({ title: 'Processando...', html: 'Salvando decisões do lote...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-        try {
-            const response = await fetch(`${AprovacoesComplementares.MS_URL}/${id}/${endpoint}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(dto)
-            });
+        const usuarioId = localStorage.getItem('usuarioId');
+        let erros = [];
+        let sucessos = 0;
 
-            if (!response.ok) {
-                const erroTexto = await response.text();
-                throw new Error(erroTexto || "Erro desconhecido no servidor.");
+        for (const item of itens) {
+            const decisao = decisoes[item.id];
+            try {
+                if (!decisao || decisao.decisao === 'aprovar') {
+                    const endpoint = isController ? 'controller/aprovar' : 'coordenador/aprovar';
+                    const dto = {
+                        aprovadorId: Number(usuarioId),
+                        lpuId: (decisao && decisao.lpuId) ? Number(decisao.lpuId) : item.lpuOriginalId,
+                        quantidade: (decisao && decisao.quantidade) ? Number(decisao.quantidade) : item.quantidadeOriginal,
+                        boq: '',
+                        statusRegistro: 'ATIVO',
+                        justificativa: justificativa,
+                        alteracoesItensExistentesJson: null
+                    };
+                    const resp = await fetch(`${AprovacoesComplementares.MS_URL}/${item.id}/${endpoint}`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dto)
+                    });
+                    if (!resp.ok) throw new Error(await resp.text());
+                    sucessos++;
+                } else {
+                    const endpoint = isController ? 'controller/devolver' : 'coordenador/rejeitar';
+                    const resp = await fetch(`${AprovacoesComplementares.MS_URL}/${item.id}/${endpoint}`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ aprovadorId: Number(usuarioId), motivo: justificativa })
+                    });
+                    if (!resp.ok) throw new Error(await resp.text());
+                    sucessos++;
+                }
+            } catch (e) {
+                erros.push('Item #' + item.id + ': ' + e.message);
             }
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Sucesso!',
-                text: 'Aprovação realizada e alterações aplicadas.',
-                timer: 2000,
-                showConfirmButton: false
-            });
-
-            AprovacoesComplementares.carregarPendencias();
-
-        } catch (error) {
-            console.error(error);
-            Swal.fire({ icon: 'error', title: 'Erro ao aprovar', text: error.message });
-            if (modal) modal.show();
         }
+
+        if (erros.length === 0) {
+            Swal.fire({ icon: 'success', title: 'Sucesso!', text: sucessos + ' item(ns) processado(s).', timer: 2000, showConfirmButton: false });
+        } else {
+            Swal.fire({ icon: 'warning', title: 'Parcialmente Processado', html: sucessos + ' sucesso(s), ' + erros.length + ' erro(s):<br>' + erros.join('<br>') });
+        }
+
+        AprovacoesComplementares.currentLoteItens = null;
+        AprovacoesComplementares.loteDecisoes = {};
+        AprovacoesComplementares.carregarPendencias();
     },
 
-    prepararRejeicaoInicial: (id, status) => {
-        document.getElementById('analiseSolicitacaoId').value = id;
+    prepararRejeicaoLote: (loteKey) => {
+        const itens = AprovacoesComplementares.ultimaListaPendentes.filter(i => {
+            const key = i.loteId || ('_single_' + i.id);
+            return key === loteKey;
+        });
+        if (itens.length === 0) return;
 
-        AprovacoesComplementares.statusRejeicaoTemp = status;
+        AprovacoesComplementares.currentLoteItens = itens;
+        AprovacoesComplementares.statusRejeicaoTemp = itens[0].status;
+        document.getElementById('analiseSolicitacaoId').value = itens[0].id;
 
-        AprovacoesComplementares.prepararRejeicao();
+        document.getElementById('textoMotivoRecusa').value = '';
+        const modalEl = document.getElementById('modalRejeitar');
+        let modal = bootstrap.Modal.getInstance(modalEl);
+        if (!modal) modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    },
+
+        prepararRejeicaoInicial: (id, status) => {
+        // Compat: chamado via botão de rejeição individual (se existir)
+        const item = AprovacoesComplementares.ultimaListaPendentes.find(i => i.id == id);
+        if (item) {
+            const loteKey = item.loteId || ('_single_' + item.id);
+            AprovacoesComplementares.prepararRejeicaoLote(loteKey);
+        } else {
+            document.getElementById('analiseSolicitacaoId').value = id;
+            AprovacoesComplementares.statusRejeicaoTemp = status;
+            document.getElementById('textoMotivoRecusa').value = '';
+            const modalEl = document.getElementById('modalRejeitar');
+            let modal = bootstrap.Modal.getInstance(modalEl);
+            if (!modal) modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
     },
 
     prepararRejeicao: () => {
@@ -1088,11 +773,9 @@ const AprovacoesComplementares = {
     },
 
     executarRejeicao: async () => {
-        const id = document.getElementById('analiseSolicitacaoId').value;
         const motivo = document.getElementById('textoMotivoRecusa').value;
-
         if (!motivo || motivo.trim().length < 3) {
-            alert("Digite o motivo."); return;
+            alert("Digite o motivo (mínimo 3 caracteres)."); return;
         }
 
         const modalRejeitar = bootstrap.Modal.getInstance(document.getElementById('modalRejeitar'));
@@ -1103,41 +786,56 @@ const AprovacoesComplementares = {
 
         Swal.fire({ title: 'Registrando recusa...', didOpen: () => Swal.showLoading() });
 
-        // --- CORREÇÃO: Verifica o status que veio da tabela OU do modal de análise ---
-        let statusRef = AprovacoesComplementares.statusRejeicaoTemp;
-
-        // Fallback: Se não veio da tabela, tenta pegar do objeto currentSolicitacao (caso o modal de análise esteja aberto)
-        if (!statusRef && AprovacoesComplementares.currentSolicitacao) {
-            statusRef = AprovacoesComplementares.currentSolicitacao.status;
-        }
+        const statusRef = AprovacoesComplementares.statusRejeicaoTemp
+            || (AprovacoesComplementares.currentLoteItens && AprovacoesComplementares.currentLoteItens[0] ? AprovacoesComplementares.currentLoteItens[0].status : null)
+            || (AprovacoesComplementares.currentSolicitacao ? AprovacoesComplementares.currentSolicitacao.status : null);
 
         const isController = statusRef === 'PENDENTE_CONTROLLER';
-        // -----------------------------------------------------------------------------
-
         const endpointAction = isController ? 'controller/devolver' : 'coordenador/rejeitar';
+        const usuarioId = localStorage.getItem('usuarioId');
 
-        try {
-            const usuarioId = localStorage.getItem('usuarioId');
-            await fetch(`${AprovacoesComplementares.MS_URL}/${id}/${endpointAction}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ aprovadorId: usuarioId, motivo: motivo })
-            });
+        const itens = AprovacoesComplementares.currentLoteItens || [];
 
-            await Swal.fire({
-                icon: 'success',
-                title: isController ? 'Devolvido!' : 'Rejeitado!',
-                text: isController ? 'Solicitação devolvida ao Coordenador.' : 'Solicitação rejeitada definitivamente.',
-                timer: 1500,
-                showConfirmButton: false
-            });
+        if (itens.length === 0) {
+            // Fallback: item único (compat)
+            const id = document.getElementById('analiseSolicitacaoId')?.value;
+            if (!id) { Swal.close(); return; }
+            try {
+                await fetch(`${AprovacoesComplementares.MS_URL}/${id}/${endpointAction}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ aprovadorId: usuarioId, motivo: motivo })
+                });
+                await Swal.fire({ icon: 'success', title: isController ? 'Devolvido!' : 'Rejeitado!', timer: 1500, showConfirmButton: false });
+            } catch (e) {
+                Swal.fire('Erro', 'Não foi possível rejeitar.', 'error');
+            }
+        } else {
+            // Rejeição em lote
+            let erros = [];
+            for (const item of itens) {
+                try {
+                    const resp = await fetch(`${AprovacoesComplementares.MS_URL}/${item.id}/${endpointAction}`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ aprovadorId: usuarioId, motivo: motivo })
+                    });
+                    if (!resp.ok) throw new Error(await resp.text());
+                } catch (e) {
+                    erros.push('Item #' + item.id + ': ' + e.message);
+                }
+            }
 
-            // Limpa a variável temporária
-            AprovacoesComplementares.statusRejeicaoTemp = null;
-            AprovacoesComplementares.carregarPendencias();
-        } catch (e) {
-            Swal.fire('Erro', 'Não foi possível rejeitar.', 'error');
+            if (erros.length === 0) {
+                await Swal.fire({ icon: 'success', title: isController ? 'Lote Devolvido!' : 'Lote Rejeitado!', text: itens.length + ' item(ns) processado(s).', timer: 2000, showConfirmButton: false });
+            } else {
+                Swal.fire({ icon: 'warning', title: 'Parcialmente Processado', html: erros.length + ' erro(s):<br>' + erros.join('<br>') });
+            }
         }
+
+        AprovacoesComplementares.statusRejeicaoTemp = null;
+        AprovacoesComplementares.currentLoteItens = null;
+        AprovacoesComplementares.carregarPendencias();
     },
 };
 

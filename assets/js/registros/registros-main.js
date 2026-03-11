@@ -7,9 +7,42 @@ document.addEventListener('DOMContentLoaded', async function () {
     // 1. Configura visibilidade das abas
     configurarVisibilidadeAbas();
 
+    // Mostra o loader do dashboard imediatamente para cobrir o tempo de busca dos Gates e Segmentos iniciais
+    const dashboardTabBtn = document.getElementById('dashboard-tab');
+    const dashboardLoader = document.getElementById('dashboard-loader');
+    if (dashboardTabBtn && dashboardTabBtn.classList.contains('active') && dashboardLoader) {
+        dashboardLoader.classList.remove('d-none');
+    }
+
     // 2. Inicializa módulos
     RegistrosActions.init();
     RegistrosIO.init();
+
+    // 2.1 Botao "Nova OS" — visivel para COORDINATOR, ADMIN, ASSISTANT
+    const btnNovaOs = document.getElementById('btnNovaOs');
+    if (btnNovaOs && ['COORDINATOR', 'ADMIN', 'ASSISTANT'].includes(RegistrosState.userRole)) {
+        btnNovaOs.style.display = 'inline-block';
+        btnNovaOs.addEventListener('click', () => NovaOsManager.abrirModal());
+    }
+
+    // 2.2 Listeners do modal Nova OS
+    const btnAdicionarLpu = document.getElementById('btnAdicionarLpuNovaOs');
+    if (btnAdicionarLpu) btnAdicionarLpu.addEventListener('click', () => NovaOsManager.adicionarLpu());
+
+    const btnSubmeterNovaOs = document.getElementById('btnSubmeterNovaOs');
+    if (btnSubmeterNovaOs) btnSubmeterNovaOs.addEventListener('click', () => NovaOsManager.submeter());
+
+    // Delegated click para remover LPU da tabela
+    const tabelaLpus = document.getElementById('tabelaLpusNovaOs');
+    if (tabelaLpus) {
+        tabelaLpus.addEventListener('click', (e) => {
+            const btnRemover = e.target.closest('.btn-remover-lpu-nova-os');
+            if (btnRemover) {
+                const idx = parseInt(btnRemover.dataset.index);
+                NovaOsManager.removerLpu(idx);
+            }
+        });
+    }
 
     if (RegistrosApi.inicializarPagina) {
         await RegistrosApi.inicializarPagina();
@@ -42,7 +75,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     await inicializarGateSeletor();
 
     // 6. Configuração do Dashboard de Análise
-    const dashboardTabBtn = document.getElementById('dashboard-tab');
     if (dashboardTabBtn) {
         // Inicializa o dashboard se a aba já estiver ativa (ex: ADMIN ou CONTROLLER)
         if (dashboardTabBtn.classList.contains('active')) {
