@@ -20,6 +20,7 @@ const AprovacoesComplementares = {
     currentLoteKey: null,
     currentLoteItens: null,
     loteDecisoes: {},
+    statusRejeicaoTemp: null,
 
     choicesMain: null,
     choicesEdit: null,
@@ -45,7 +46,7 @@ const AprovacoesComplementares = {
         style.innerHTML = `
             :root { --app-primary: #198754; --app-primary-light: #d1e7dd; --app-bg: #fff; }
             .swal2-container { z-index: 20000 !important; }
-            .item-modificado { background-color: #fff3cd !important; } 
+            .item-modificado { background-color: #fff3cd !important; }
             .valor-antigo { text-decoration: line-through; color: var(--bs-danger); margin-right: 6px; font-size: 0.85em; }
             .valor-novo { color: var(--app-primary); font-weight: bold; }
             .loading-text { font-style: italic; color: #adb5bd; font-size: 0.85rem; }
@@ -82,9 +83,8 @@ const AprovacoesComplementares = {
     carregarTodasLpus: async () => {
         if (AprovacoesComplementares.listaCompletaLpus) return AprovacoesComplementares.listaCompletaLpus;
         try {
-            const response = await fetch(`${API_BASE_URL}/contrato`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
+            const baseUrl = window.API_BASE_URL || '/api';
+            const response = await fetchComAuth(`${baseUrl}/contrato`);
             const contratos = await response.json();
             let lpus = [];
             contratos.forEach(c => {
@@ -112,15 +112,15 @@ const AprovacoesComplementares = {
 
                     const segmentoCache = (global.os.segmento && global.os.segmento.nome) ? global.os.segmento.nome : '-';
                     const siteCache = global.os.site || '-';
-                    
-                    const info = { 
-                        osCodigo: global.os.os || global.os.numero || `OS #${osId}`, 
-                        projeto: global.os.projeto || '-', 
-                        site: siteCache, 
-                        segmento: segmentoCache, // Adicionado
-                        loaded: true 
+
+                    const info = {
+                        osCodigo: global.os.os || global.os.numero || `OS #${osId}`,
+                        projeto: global.os.projeto || '-',
+                        site: siteCache,
+                        segmento: segmentoCache,
+                        loaded: true
                     };
-                    
+
                     AprovacoesComplementares.mapaDetalhesOs[osId] = info;
                     AprovacoesComplementares.atualizarLinhasTabela(osId, info);
                     return info;
@@ -148,7 +148,7 @@ const AprovacoesComplementares = {
                 return info;
             }
         } catch (e) { console.error("Erro fetch OS:", e); }
-        
+
         return { osCodigo: 'OS #' + osId, projeto: '-', site: '-', segmento: '-', loaded: false };
     },
 
@@ -156,23 +156,19 @@ const AprovacoesComplementares = {
         const spansSite = document.querySelectorAll(`.site-placeholder-${osId}`);
         const spansProjeto = document.querySelectorAll(`.projeto-placeholder-${osId}`);
         const spansOs = document.querySelectorAll(`.os-placeholder-${osId}`);
-        // --- NOVO: Seleciona os spans de segmento ---
         const spansSegmento = document.querySelectorAll(`.segmento-placeholder-${osId}`);
 
         spansSite.forEach(el => { el.innerText = info.site; el.classList.remove('loading-text'); });
         spansProjeto.forEach(el => { el.innerText = info.projeto; el.classList.remove('loading-text'); });
-
-        // --- NOVO: Atualiza o texto do segmento ---
         spansSegmento.forEach(el => {
             el.innerText = info.segmento || '-';
             el.classList.remove('loading-text');
         });
-
         spansOs.forEach(el => { el.innerText = info.osCodigo; el.classList.remove('fw-light'); el.classList.add('fw-bold'); });
     },
 
     // =========================================================================
-    // LÓGICA DE HISTÓRICO (CORRIGIDA)
+    // LÓGICA DE HISTÓRICO
     // =========================================================================
     carregarDadosHistoricoComplementares: async () => {
         AprovacoesComplementares.init();
@@ -190,33 +186,32 @@ const AprovacoesComplementares = {
             const userRole = localStorage.getItem('role') || '';
             const userId = localStorage.getItem('usuarioId');
 
-            // CORREÇÃO: Parâmetros enviados via HEADERS, não na URL
+            const segmentoIdsHistorico = localStorage.getItem('segmentos') || '[]';
             const headersExtras = {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 'X-User-Role': userRole,
-                'X-User-Id': userId
+                'X-User-Id': userId,
+                'X-Segmento-Ids': segmentoIdsHistorico
             };
 
             const url = `${AprovacoesComplementares.MS_URL}/historico`;
 
-            // Tenta fetch principal
             let lista = [];
             try {
-                const response = await fetch(url, { headers: headersExtras });
+                const response = await fetchComAuth(url, { headers: headersExtras });
+                console.log('[Complementares] Historico response status:', response.status);
                 if (response.ok) {
                     lista = await response.json();
                 } else {
                     throw new Error(`Status ${response.status}`);
                 }
             } catch (errMain) {
-                console.warn("Falha no endpoint principal de histórico, tentando fallback...", errMain);
-                // Fallback para endpoint específico do usuário se o geral falhar
+                console.warn("[Complementares] Falha no endpoint principal de historico, tentando fallback...", errMain);
                 const fallbackUrl = `${AprovacoesComplementares.MS_URL}/usuario/${userId}`;
-                const responseFallback = await fetch(fallbackUrl, { headers: headersExtras });
+                const responseFallback = await fetchComAuth(fallbackUrl, { headers: headersExtras });
                 if (responseFallback.ok) {
                     lista = await responseFallback.json();
                 } else {
-                    throw new Error("Não foi possível carregar o histórico.");
+                    throw new Error("Nao foi possivel carregar o historico.");
                 }
             }
 
@@ -271,9 +266,9 @@ const AprovacoesComplementares = {
                 tr.innerHTML = `
                     <td class="fw-bold text-muted small">#${item.id}</td>
                     <td><span class="os-placeholder-${item.osId} ${classOsLoading} fw-bold text-dark">${nomeOs}</span></td>
-                    
+
                     <td><small class="segmento-placeholder-${item.osId} ${classOsLoading}">${segmentoDisplay}</small></td>
-                    
+
                     <td><small class="text-secondary text-truncate d-inline-block" style="max-width: 200px;" title="${nomeLpu}">${nomeLpu}</small></td>
                     <td class="text-center">${item.quantidadeAprovada || item.quantidadeOriginal}</td>
                     <td class="text-end font-monospace text-dark small">${AprovacoesComplementares.formatarMoeda(valor)}</td>
@@ -322,7 +317,7 @@ const AprovacoesComplementares = {
     },
 
     // =========================================================================
-    // LÓGICA DE PENDÊNCIAS (MANTIDA)
+    // LÓGICA DE PENDÊNCIAS
     // =========================================================================
 
     carregarPendencias: async () => {
@@ -338,16 +333,17 @@ const AprovacoesComplementares = {
             await AprovacoesComplementares.carregarTodasLpus();
 
             const userRole = localStorage.getItem('role') || 'COORDINATOR';
-            const userId = localStorage.getItem('usuarioId'); // PEGANDO O ID DO USUÁRIO
+            const userId = localStorage.getItem('usuarioId');
 
-            // --- CORREÇÃO: Enviando X-User-Id e X-User-Role nos headers ---
-            const response = await fetch(`${AprovacoesComplementares.MS_URL}/pendentes`, {
+            const segmentoIds = localStorage.getItem('segmentos') || '[]';
+            const response = await fetchComAuth(`${AprovacoesComplementares.MS_URL}/pendentes`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
                     'X-User-Role': userRole,
-                    'X-User-Id': userId  // OBRIGATÓRIO PARA O FILTRO DE SEGMENTO
+                    'X-User-Id': userId,
+                    'X-Segmento-Ids': segmentoIds
                 }
             });
+            console.log('[Complementares] Pendencias response status:', response.status);
 
             if (!response.ok) throw new Error("Erro ao buscar pendências");
             const lista = await response.json();
@@ -360,9 +356,10 @@ const AprovacoesComplementares = {
             osIds.forEach(id => AprovacoesComplementares.fetchDetalhesOsESalvar(id));
 
         } catch (error) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Erro: ${error.message}</td></tr>`;
+            console.error('[Complementares] Erro ao carregar pendencias:', error);
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-2"></i>Erro ao carregar: ${error.message}</td></tr>`;
         } finally {
-            loader.classList.add('d-none');
+            if (loader) loader.classList.add('d-none');
         }
     },
 
@@ -470,10 +467,11 @@ const AprovacoesComplementares = {
         osIdsFaltantes.forEach(id => AprovacoesComplementares.fetchDetalhesOsESalvar(id));
     },
 
-        abrirModalAnaliseLote: async (loteKey) => {
+    abrirModalAnaliseLote: async (loteKey) => {
         try {
             AprovacoesComplementares.currentLoteKey = loteKey;
             AprovacoesComplementares.loteDecisoes = {};
+            AprovacoesComplementares.alteracoesBuffer = {};
 
             const itens = AprovacoesComplementares.ultimaListaPendentes.filter(i => {
                 const key = i.loteId || ('_single_' + i.id);
@@ -493,34 +491,101 @@ const AprovacoesComplementares = {
             const osCompleta = respOs.ok ? await respOs.json() : null;
             AprovacoesComplementares.currentOsCompleta = osCompleta;
 
-            // Inicializa decisões (padrão: aprovar)
+            // Inicializa decisões (padrão: aprovar) com todos os campos editáveis
             itens.forEach(item => {
                 AprovacoesComplementares.loteDecisoes[item.id] = {
                     decisao: 'aprovar',
                     lpuId: isController ? item.lpuAprovadaId : (item.lpuAprovadaId || item.lpuOriginalId),
-                    quantidade: isController ? item.quantidadeAprovada : (item.quantidadeAprovada || item.quantidadeOriginal)
+                    quantidade: isController ? item.quantidadeAprovada : (item.quantidadeAprovada || item.quantidadeOriginal),
+                    boq: item.boqAprovado || '',
+                    statusRegistro: item.statusRegistroAprovado || 'ATIVO'
                 };
             });
 
-            // Monta tabela de itens do lote
+            // Monta tabela de itens do lote (com campos de edição por item)
+            // Pré-constrói as options de LPU para cada item (evita repetir)
+            const todoLpusOptsCache = AprovacoesComplementares.listaCompletaLpus.map(l =>
+                ({ id: l.id, label: l.nome, valor: l.valor || 0 })
+            );
+
             let itensHtml = '';
             itens.forEach(item => {
                 const lpu = AprovacoesComplementares.listaCompletaLpus.find(l => l.id === item.lpuOriginalId);
                 const nomeLpu = lpu ? (lpu.nome.split('|')[1] || lpu.nome).trim() : ('LPU ' + item.lpuOriginalId);
+                const codigoLpu = lpu ? (lpu.nome.split('|')[0] || '').trim() : '';
                 let valor = item.valorTotalEstimado;
                 if (!valor) valor = (lpu ? lpu.valor : 0) * item.quantidadeOriginal;
 
+                const decInit = AprovacoesComplementares.loteDecisoes[item.id];
+                const lpuSelId = decInit.lpuId || item.lpuOriginalId;
+                const qtdInit = decInit.quantidade || item.quantidadeOriginal;
+                const boqInit = decInit.boq || '';
+                const statusInit = decInit.statusRegistro || 'ATIVO';
+
+                let lpuOpts = '';
+                todoLpusOptsCache.forEach(l => {
+                    const sel = l.id == lpuSelId ? 'selected' : '';
+                    lpuOpts += `<option value="${l.id}" ${sel}>${l.label}</option>`;
+                });
+
+                // Valor estimado inicial com base na LPU e Qtd pré-selecionadas
+                const lpuSelInit = AprovacoesComplementares.listaCompletaLpus.find(l => l.id == lpuSelId);
+                const valorEstInit = lpuSelInit ? (lpuSelInit.valor || 0) * qtdInit : 0;
+                const valorEstFmt = valorEstInit > 0
+                    ? AprovacoesComplementares.formatarMoeda(valorEstInit).replace('R$', '').trim()
+                    : '0,00';
+                const unitFmt = lpuSelInit && lpuSelInit.valor
+                    ? 'unit. ' + AprovacoesComplementares.formatarMoeda(lpuSelInit.valor)
+                    : '';
+
                 itensHtml += `
                     <tr id="lote-item-row-${item.id}">
-                        <td class="ps-3"><small class="text-truncate d-inline-block" style="max-width:280px;" title="${nomeLpu}">${nomeLpu}</small></td>
-                        <td class="text-center fw-bold">${item.quantidadeOriginal}</td>
-                        <td class="text-end text-muted small">${AprovacoesComplementares.formatarMoeda(lpu ? lpu.valor : 0)}</td>
-                        <td class="text-end fw-bold text-dark">${AprovacoesComplementares.formatarMoeda(valor)}</td>
-                        <td class="text-center pe-3">
-                            <select class="form-select form-select-sm decisao-item-select" data-item-id="${item.id}" ${isController ? 'disabled' : ''} style="width: 130px; display: inline-block;">
-                                <option value="aprovar" selected>✅ Aprovar</option>
-                                <option value="rejeitar">❌ Rejeitar</option>
-                            </select>
+                        <td class="ps-2 align-middle">
+                            <div class="text-truncate fw-semibold" style="max-width:220px" title="${nomeLpu}">${nomeLpu}</div>
+                            ${codigoLpu ? `<small class="text-muted font-monospace" style="font-size:0.7rem">${codigoLpu}</small>` : ''}
+                        </td>
+                        <td class="text-center align-middle fw-bold">${item.quantidadeOriginal}</td>
+                        <td class="text-end align-middle text-muted small">${AprovacoesComplementares.formatarMoeda(lpu ? lpu.valor : 0)}</td>
+                        <td class="text-end align-middle fw-bold text-dark">${AprovacoesComplementares.formatarMoeda(valor)}</td>
+                        <td class="text-center align-middle pe-2" style="white-space:nowrap">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-success btn-dec active" data-item-id="${item.id}" data-dec="aprovar" ${isController ? 'disabled' : ''}>Aprovar</button>
+                                <button type="button" class="btn btn-outline-danger btn-dec" data-item-id="${item.id}" data-dec="rejeitar" ${isController ? 'disabled' : ''}>Rejeitar</button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr id="lote-item-edit-${item.id}" class="bg-light">
+                        <td colspan="5" class="py-2 px-3 border-bottom border-2">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-5">
+                                    <label class="form-label small text-muted mb-1" style="font-size:0.72rem">LPU Aprovada / Proposta</label>
+                                    <input type="search" class="form-control form-control-sm mb-1 lote-lpu-search" id="lpu-search-${item.id}" data-item-id="${item.id}" placeholder="🔍 Filtrar LPU..." autocomplete="off" oninput="AprovacoesComplementares.filtrarLpuSelect('${item.id}', this.value)" ${isController ? 'disabled' : ''}>
+                                    <select class="form-select form-select-sm lote-lpu-sel" id="lpu-sel-${item.id}" data-item-id="${item.id}" size="1" ${isController ? 'disabled' : ''}>${lpuOpts}</select>
+                                    <small class="text-muted mt-1 d-block lote-lpu-unit" id="lpu-unit-${item.id}" style="font-size:0.7rem">${unitFmt}</small>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted mb-1" style="font-size:0.72rem">Qtd Aprovada</label>
+                                    <input type="number" class="form-control form-control-sm text-center lote-qtd-inp" id="qtd-inp-${item.id}" data-item-id="${item.id}" value="${qtdInit}" min="1" ${isController ? 'disabled' : ''}>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted mb-1" style="font-size:0.72rem">BOQ</label>
+                                    <input type="text" class="form-control form-control-sm lote-boq-inp" id="boq-inp-${item.id}" data-item-id="${item.id}" value="${boqInit}" placeholder="Opcional" ${isController ? 'disabled' : ''}>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted mb-1" style="font-size:0.72rem">Status do Registro</label>
+                                    <select class="form-select form-select-sm lote-status-sel" id="status-sel-${item.id}" data-item-id="${item.id}" ${isController ? 'disabled' : ''}>
+                                        <option value="ATIVO" ${statusInit === 'ATIVO' ? 'selected' : ''}>ATIVO</option>
+                                        <option value="INATIVO" ${statusInit === 'INATIVO' ? 'selected' : ''}>INATIVO (Cancelado)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label small text-muted mb-1" style="font-size:0.72rem">Vlr Est.</label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-success-subtle text-success border-0 px-1" style="font-size:0.7rem">R$</span>
+                                        <input type="text" class="form-control form-control-sm fw-bold text-success border-0 bg-success-subtle lote-valor-est" id="valor-est-${item.id}" data-item-id="${item.id}" disabled value="${valorEstFmt}">
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                     </tr>`;
             });
@@ -544,15 +609,88 @@ const AprovacoesComplementares = {
                 </div>
 
                 <div class="d-flex align-items-center mb-2">
-                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
-                        <span class="small fw-bold">${itens.length}</span>
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
+                        <span class="small fw-bold">1</span>
                     </div>
-                    <h6 class="fw-bold text-dark mb-0">Itens do Lote</h6>
-                    <small class="text-muted ms-2 fst-italic">${firstItem.justificativa || 'Sem justificativa do gestor'}</small>
+                    <h6 class="fw-bold text-dark mb-0">Itens Existentes na OS</h6>
+                    <small class="text-muted ms-2">(Analise e proponha alterações se necessário)</small>
                 </div>
 
                 <div class="card border border-light shadow-sm mb-4 overflow-hidden">
-                    <div class="table-responsive">
+                    <div class="table-responsive" style="max-height: 250px;">
+                        <table class="table table-hover table-sm mb-0 align-middle small">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-3">Cód. LPU</th>
+                                    <th>Descrição LPU</th>
+                                    <th class="text-center">Qtd.</th>
+                                    <th class="text-end">Vlr. Unit.</th>
+                                    <th class="text-end">Total</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center pe-3">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyItensExistentes" class="bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                ${(() => {
+                    let justHtml = '';
+                    // Justificativa do Manager (visível para coordenador e controller)
+                    if (firstItem.justificativa) {
+                        justHtml += `
+                        <div class="d-flex align-items-start gap-2 mb-2">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 28px; height: 28px;">
+                                <i class="bi bi-person-fill" style="font-size: 0.75rem;"></i>
+                            </div>
+                            <div>
+                                <small class="fw-bold text-dark">Justificativa do Gestor (Manager)</small>
+                                <p class="mb-0 small text-muted fst-italic">"${firstItem.justificativa}"</p>
+                            </div>
+                        </div>`;
+                    }
+                    // Justificativa do Coordenador (visível apenas para controller)
+                    if (isController && firstItem.justificativaCoordenador) {
+                        justHtml += `
+                        <div class="d-flex align-items-start gap-2 mb-2">
+                            <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 28px; height: 28px;">
+                                <i class="bi bi-person-check-fill" style="font-size: 0.75rem;"></i>
+                            </div>
+                            <div>
+                                <small class="fw-bold text-dark">Justificativa do Coordenador</small>
+                                <p class="mb-0 small text-muted fst-italic">"${firstItem.justificativaCoordenador}"</p>
+                            </div>
+                        </div>`;
+                    }
+                    // Motivo de recusa (se foi recusado)
+                    if (firstItem.motivoRecusa) {
+                        justHtml += `
+                        <div class="d-flex align-items-start gap-2 mb-2">
+                            <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 28px; height: 28px;">
+                                <i class="bi bi-x-circle-fill" style="font-size: 0.75rem;"></i>
+                            </div>
+                            <div>
+                                <small class="fw-bold text-danger">Motivo da Recusa</small>
+                                <p class="mb-0 small text-danger fst-italic">"${firstItem.motivoRecusa}"</p>
+                            </div>
+                        </div>`;
+                    }
+                    if (justHtml) {
+                        return `<div class="card border-0 shadow-sm mb-3"><div class="card-body p-3">${justHtml}</div></div>`;
+                    }
+                    return '';
+                })()}
+
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
+                        <span class="small fw-bold">2</span>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-0">Decisão / Proposta do Novo Item</h6>
+                </div>
+
+                <div class="card border border-light shadow-sm mb-4">
+                    <div class="table-responsive" style="overflow: visible;">
                         <table class="table table-hover table-sm mb-0 align-middle small">
                             <thead class="table-light">
                                 <tr>
@@ -566,8 +704,8 @@ const AprovacoesComplementares = {
                             <tbody>${itensHtml}</tbody>
                             <tfoot>
                                 <tr class="table-light">
-                                    <td colspan="3" class="text-end fw-bold">Total do Lote:</td>
-                                    <td class="text-end fw-bold text-success">${AprovacoesComplementares.formatarMoeda(itens.reduce((s, i) => { let v = i.valorTotalEstimado; if (!v) { const l = AprovacoesComplementares.listaCompletaLpus.find(x => x.id === i.lpuOriginalId); v = (l ? l.valor : 0) * i.quantidadeOriginal; } return s + v; }, 0))}</td>
+                                    <td colspan="3" class="text-end fw-bold small">Total aprovado do lote:</td>
+                                    <td class="text-end fw-bold text-success" id="lote-total-footer">${AprovacoesComplementares.formatarMoeda(itens.reduce((s, i) => { let v = i.valorTotalEstimado; if (!v) { const l = AprovacoesComplementares.listaCompletaLpus.find(x => x.id === i.lpuOriginalId); v = (l ? l.valor : 0) * i.quantidadeOriginal; } return s + v; }, 0))}</td>
                                     <td></td>
                                 </tr>
                             </tfoot>
@@ -583,27 +721,91 @@ const AprovacoesComplementares = {
                 <input type="hidden" id="analiseSolicitacaoId" value="${firstItem.id}">
             `;
 
-            // Listeners de decisão por item
-            document.querySelectorAll('.decisao-item-select').forEach(sel => {
-                sel.addEventListener('change', (e) => {
-                    const itemId = e.target.dataset.itemId;
-                    AprovacoesComplementares.loteDecisoes[itemId].decisao = e.target.value;
+            // Listeners de decisão por item (botões Aprovar/Rejeitar)
+            document.querySelectorAll('.btn-dec').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const bt = e.currentTarget;
+                    const itemId = bt.dataset.itemId;
+                    const dec = bt.dataset.dec;
+                    AprovacoesComplementares.loteDecisoes[itemId].decisao = dec;
+
+                    // Atualiza visual dos botões do grupo
+                    document.querySelectorAll(`.btn-dec[data-item-id="${itemId}"]`).forEach(b => {
+                        const isAprovar = b.dataset.dec === 'aprovar';
+                        b.classList.remove('active', 'btn-success', 'btn-outline-success', 'btn-danger', 'btn-outline-danger');
+                        if (isAprovar) {
+                            b.classList.add(dec === 'aprovar' ? 'btn-success' : 'btn-outline-success');
+                            if (dec === 'aprovar') b.classList.add('active');
+                        } else {
+                            b.classList.add(dec === 'rejeitar' ? 'btn-danger' : 'btn-outline-danger');
+                            if (dec === 'rejeitar') b.classList.add('active');
+                        }
+                    });
+
+                    // Efeito visual na linha e mostra/esconde campos de edição
                     const row = document.getElementById('lote-item-row-' + itemId);
-                    if (e.target.value === 'rejeitar') {
+                    const editRow = document.getElementById('lote-item-edit-' + itemId);
+                    if (dec === 'rejeitar') {
                         row.classList.add('table-danger');
                         row.style.opacity = '0.6';
                         row.style.textDecoration = 'line-through';
+                        if (editRow) editRow.style.display = 'none';
                     } else {
                         row.classList.remove('table-danger');
                         row.style.opacity = '1';
                         row.style.textDecoration = 'none';
+                        if (editRow) editRow.style.display = '';
                     }
+                    AprovacoesComplementares.recalcularTotaisTela();
                 });
             });
 
-            // Renderiza detalhes da OS
+            // Listener: LPU selecionada por item
+            document.querySelectorAll('.lote-lpu-sel').forEach(sel => {
+                sel.addEventListener('change', (e) => {
+                    const itemId = e.target.dataset.itemId;
+                    const lpuId = e.target.value ? parseInt(e.target.value) : null;
+                    AprovacoesComplementares.loteDecisoes[itemId].lpuId = lpuId;
+                    // Mostra valor unitário da LPU escolhida
+                    const lpuInfo = AprovacoesComplementares.listaCompletaLpus.find(l => l.id == lpuId);
+                    const unitEl = document.getElementById('lpu-unit-' + itemId);
+                    if (unitEl) unitEl.textContent = lpuInfo && lpuInfo.valor ? 'unit. ' + AprovacoesComplementares.formatarMoeda(lpuInfo.valor) : '';
+                    AprovacoesComplementares.atualizarValorEstimadoItem(itemId);
+                    AprovacoesComplementares.recalcularTotaisTela();
+                });
+            });
+
+            // Listener: Quantidade por item
+            document.querySelectorAll('.lote-qtd-inp').forEach(inp => {
+                inp.addEventListener('input', (e) => {
+                    const itemId = e.target.dataset.itemId;
+                    AprovacoesComplementares.loteDecisoes[itemId].quantidade = parseInt(e.target.value) || 1;
+                    AprovacoesComplementares.atualizarValorEstimadoItem(itemId);
+                    AprovacoesComplementares.recalcularTotaisTela();
+                });
+            });
+
+            // Listener: BOQ por item
+            document.querySelectorAll('.lote-boq-inp').forEach(inp => {
+                inp.addEventListener('input', (e) => {
+                    const itemId = e.target.dataset.itemId;
+                    AprovacoesComplementares.loteDecisoes[itemId].boq = e.target.value;
+                });
+            });
+
+            // Listener: Status do registro por item
+            document.querySelectorAll('.lote-status-sel').forEach(sel => {
+                sel.addEventListener('change', (e) => {
+                    const itemId = e.target.dataset.itemId;
+                    AprovacoesComplementares.loteDecisoes[itemId].statusRegistro = e.target.value;
+                    AprovacoesComplementares.recalcularTotaisTela();
+                });
+            });
+
+            // Renderiza detalhes da OS com valores (restaurado)
             if (osCompleta) {
-                AprovacoesComplementares.renderizarDetalhesOsLote(osCompleta);
+                AprovacoesComplementares.renderizarItensExistentesComBuffer(isController);
+                AprovacoesComplementares.recalcularTotaisTela();
             }
 
             // Configura botões do footer
@@ -634,29 +836,305 @@ const AprovacoesComplementares = {
         }
     },
 
-    renderizarDetalhesOsLote: (os) => {
+    recalcularTotaisTela: () => {
+        // Calcula valor total da OS (Atual e Projetado)
+        let valorAtualOS = 0;
+        let valorProjetadoOS = 0;
+
+        if (AprovacoesComplementares.currentOsCompleta && AprovacoesComplementares.currentOsCompleta.detalhes) {
+
+            // Itera itens existentes na OS
+            AprovacoesComplementares.currentOsCompleta.detalhes.forEach(item => {
+                const buffer = AprovacoesComplementares.alteracoesBuffer[item.id];
+
+                // Valor Original (Atual)
+                const valorOriginalItem = item.valorTotal || 0;
+                valorAtualOS += valorOriginalItem;
+
+                // Valor Projetado (Considerando edições no buffer)
+                if (buffer) {
+                    const statusFinal = buffer.novoStatus || (item.statusRegistro || 'ATIVO');
+                    if (statusFinal === 'ATIVO') {
+                        let lpuItem = item.lpu;
+                        if (buffer.novaLpuId) {
+                            lpuItem = AprovacoesComplementares.listaCompletaLpus.find(l => l.id == buffer.novaLpuId);
+                        }
+
+                        const qtdFinal = buffer.novaQtd !== undefined ? buffer.novaQtd : item.quantidade;
+                        const precoUnit = lpuItem ? (lpuItem.valorSemImposto || lpuItem.valor || 0) : 0;
+
+                        valorProjetadoOS += (qtdFinal * precoUnit);
+                    }
+                } else {
+                    // Sem alteração, soma o valor original ao projetado (se ativo)
+                    if ((item.statusRegistro || 'ATIVO') === 'ATIVO') {
+                        valorProjetadoOS += valorOriginalItem;
+                    }
+                }
+            });
+        }
+
+        // Soma os novos itens do lote aprovados, usando LPU/Qtd/Status da decisão
+        if (AprovacoesComplementares.currentLoteItens) {
+            const valorNovoItens = AprovacoesComplementares.currentLoteItens.reduce((sum, item) => {
+                const decisao = AprovacoesComplementares.loteDecisoes[item.id];
+                // Ignora itens rejeitados ou marcados como INATIVO
+                if (!decisao || decisao.decisao !== 'aprovar') return sum;
+                if ((decisao.statusRegistro || 'ATIVO') !== 'ATIVO') return sum;
+                // Usa LPU e Qtd da decisão (pode ter sido alterada pelo coordenador)
+                const lpuId = decisao.lpuId || item.lpuOriginalId;
+                const lpu = AprovacoesComplementares.listaCompletaLpus.find(l => l.id == lpuId);
+                const valorUnit = lpu ? (lpu.valor || 0) : 0;
+                const qtd = decisao.quantidade || item.quantidadeOriginal;
+                return sum + (valorUnit * qtd);
+            }, 0);
+            valorProjetadoOS += valorNovoItens;
+        }
+
+        // Atualiza Widgets no Topo
+        AprovacoesComplementares.renderizarDetalhesOs(valorAtualOS, valorProjetadoOS);
+
+        // Atualiza total aprovado no rodapé da tabela de lote
+        const footerEl = document.getElementById('lote-total-footer');
+        if (footerEl && AprovacoesComplementares.currentLoteItens) {
+            const totalAprovado = AprovacoesComplementares.currentLoteItens.reduce((sum, item) => {
+                const decisao = AprovacoesComplementares.loteDecisoes[item.id];
+                if (!decisao || decisao.decisao !== 'aprovar') return sum;
+                if ((decisao.statusRegistro || 'ATIVO') !== 'ATIVO') return sum;
+                const lpuId = decisao.lpuId || item.lpuOriginalId;
+                const lpu = AprovacoesComplementares.listaCompletaLpus.find(l => l.id == lpuId);
+                const qtd = decisao.quantidade || item.quantidadeOriginal;
+                return sum + ((lpu ? lpu.valor : 0) * qtd);
+            }, 0);
+            footerEl.textContent = AprovacoesComplementares.formatarMoeda(totalAprovado);
+        }
+    },
+
+    // Atualiza o campo "Vlr Est." de um item do lote
+    atualizarValorEstimadoItem: (itemId) => {
+        const decisao = AprovacoesComplementares.loteDecisoes[itemId];
+        if (!decisao) return;
+        const lpuId = decisao.lpuId;
+        const qtd = decisao.quantidade || 1;
+        const lpu = AprovacoesComplementares.listaCompletaLpus.find(l => l.id == lpuId);
+        const valorEst = lpu ? (lpu.valor || 0) * qtd : 0;
+        const el = document.getElementById('valor-est-' + itemId);
+        if (el) el.value = AprovacoesComplementares.formatarMoeda(valorEst).replace('R$', '').trim();
+    },
+
+    // Filtra as options do select de LPU de um item pelo texto digitado
+    filtrarLpuSelect: (itemId, termo) => {
+        const select = document.getElementById('lpu-sel-' + itemId);
+        if (!select) return;
+        const t = termo.toLowerCase().trim();
+        Array.from(select.options).forEach(opt => {
+            opt.style.display = (!t || opt.text.toLowerCase().includes(t)) ? '' : 'none';
+        });
+        // Se houver apenas 1 visível, pré-seleciona automaticamente
+        const visiveis = Array.from(select.options).filter(o => o.style.display !== 'none');
+        if (visiveis.length === 1 && t.length > 2) {
+            select.value = visiveis[0].value;
+            select.dispatchEvent(new Event('change'));
+        }
+    },
+
+    renderizarDetalhesOs: (valorAtual = 0, valorProjetado = 0) => {
+        const os = AprovacoesComplementares.currentOsCompleta;
         if (!os) return;
+
         let regional = os.regional;
         let site = os.site;
         if (os.detalhes && os.detalhes.length > 0) {
             if (!regional || regional === 'null') regional = os.detalhes[0].regional;
             if (!site || site === 'null') site = os.detalhes[0].site;
         }
+
+        const fmtAtual = AprovacoesComplementares.formatarMoeda(valorAtual);
+        const fmtProj = AprovacoesComplementares.formatarMoeda(valorProjetado);
+
+        // Lógica de cores: Verde se o custo baixar ou mantiver, Laranja se aumentar
+        const isAumento = valorProjetado > valorAtual;
+        const corProj = isAumento ? 'text-warning-emphasis' : 'text-success';
+        const bgProj = isAumento ? 'bg-warning-subtle' : 'bg-success-subtle';
+        const iconeProj = isAumento ? 'bi-graph-up-arrow' : 'bi-check-lg';
+
         const html = `
-            <div class="col-md-4">
-                <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Código OS</small>
-                <span class="fw-bold text-dark">${os.os || '-'}</span>
+            <div class="col-md-5 border-end">
+                <div class="d-flex justify-content-between mb-2">
+                    <div>
+                        <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Código OS</small>
+                        <span class="fw-bold text-dark">${os.os || '-'}</span>
+                    </div>
+                     <div class="text-end px-3">
+                        <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Regional</small>
+                        <span class="fw-bold text-dark">${regional || '-'}</span>
+                    </div>
+                </div>
+                 <div>
+                    <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Site / Local</small>
+                    <span class="text-dark d-block text-truncate" title="${site}">${site || '-'}</span>
+                </div>
             </div>
-            <div class="col-md-4">
-                <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Regional</small>
-                <span class="fw-bold text-dark">${regional || '-'}</span>
-            </div>
-            <div class="col-md-4">
-                <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Site / Local</small>
-                <span class="text-dark d-block text-truncate" title="${site}">${site || '-'}</span>
+
+            <div class="col-md-7 ps-4">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="p-2 rounded border bg-white">
+                            <small class="text-secondary d-block fw-bold text-uppercase mb-1" style="font-size: 0.65rem;">Total Atual</small>
+                            <span class="fw-bold text-secondary d-block fs-5">${fmtAtual}</span>
+                        </div>
+                    </div>
+                     <div class="col-6">
+                        <div class="p-2 rounded border ${bgProj}">
+                            <small class="${corProj} d-block fw-bold text-uppercase mb-1" style="font-size: 0.65rem;">Projeção Final</small>
+                            <div class="d-flex align-items-center">
+                                <span class="fw-bold ${corProj} fs-5 me-2">${fmtProj}</span>
+                                <i class="bi ${iconeProj} ${corProj}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
+
         document.getElementById('osDetailsContainer').innerHTML = html;
+    },
+
+    renderizarItensExistentesComBuffer: (isController = false) => {
+        const itens = AprovacoesComplementares.currentOsCompleta.detalhes || [];
+        const tbody = document.getElementById('tbodyItensExistentes');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (itens.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3 small">Nenhum item vinculado a esta OS.</td></tr>';
+            return;
+        }
+
+        itens.forEach(item => {
+            const tr = document.createElement('tr');
+            const alteracao = AprovacoesComplementares.alteracoesBuffer[item.id];
+
+            // Trata valor unitário
+            let rawValor = 0;
+            if (item.lpu) {
+                if (item.lpu.valor !== undefined && item.lpu.valor !== null) rawValor = item.lpu.valor;
+                else if (item.lpu.valorSemImposto !== undefined && item.lpu.valorSemImposto !== null) rawValor = item.lpu.valorSemImposto;
+            }
+            if (rawValor === 0 && item.valorTotal && item.quantidade) {
+                rawValor = item.valorTotal / item.quantidade;
+            }
+
+            const statusOriginal = item.statusRegistro || 'ATIVO';
+            const qtdOriginal = item.quantidade;
+            const lpuNomeOriginal = item.lpu ? (item.lpu.nomeLpu || item.lpu.nome || '-') : '-';
+
+            const statusFinal = alteracao && alteracao.novoStatus ? alteracao.novoStatus : statusOriginal;
+            const qtdFinal = alteracao && alteracao.novaQtd ? alteracao.novaQtd : qtdOriginal;
+            const lpuAlterada = alteracao && alteracao.novaLpuId && alteracao.novaLpuId != (item.lpu?.id);
+
+            if (alteracao) tr.classList.add('item-modificado');
+            if (statusFinal === 'INATIVO') tr.classList.add('text-muted', 'bg-light');
+
+            // Formatação Visual
+            const htmlQtd = (alteracao && alteracao.novaQtd != qtdOriginal)
+                ? `<span class="valor-antigo me-1">${qtdOriginal}</span><span class="valor-novo">${qtdFinal}</span>`
+                : qtdOriginal;
+
+            const htmlStatus = (alteracao && alteracao.novoStatus != statusOriginal)
+                ? `<span class="badge bg-secondary text-decoration-line-through me-1" style="font-size:0.65rem">${statusOriginal}</span><span class="badge ${statusFinal === 'ATIVO' ? 'bg-success' : 'bg-danger'}" style="font-size:0.65rem">${statusFinal} (Prop.)</span>`
+                : `<span class="badge ${statusOriginal === 'ATIVO' ? 'bg-success-subtle text-success border border-success' : 'bg-secondary-subtle text-secondary'} rounded-pill" style="font-size:0.65rem">${statusOriginal}</span>`;
+
+            let htmlLpu = `<span class="d-inline-block text-truncate" style="max-width:180px;" title="${lpuNomeOriginal}">${lpuNomeOriginal}</span>`;
+            if (lpuAlterada) {
+                const novaLpu = AprovacoesComplementares.listaCompletaLpus.find(l => l.id == alteracao.novaLpuId);
+                const novoNome = novaLpu ? novaLpu.nome.split('|')[1] || novaLpu.nome : '(Trocado)';
+                htmlLpu = `<div class="d-flex flex-column"><span class="text-decoration-line-through text-muted small" style="font-size:0.7em">${lpuNomeOriginal}</span><span class="valor-novo small text-truncate" style="max-width:180px;" title="${novoNome}"><i class="bi bi-arrow-return-right me-1"></i>${novoNome}</span></div>`;
+            }
+
+            const btnIcon = statusFinal === 'ATIVO' ? 'bi-slash-circle' : 'bi-arrow-counterclockwise';
+            const btnClass = statusFinal === 'ATIVO' ? 'btn-outline-danger' : 'btn-outline-success';
+            const btnTitle = statusFinal === 'ATIVO' ? 'Propor Inativação' : 'Restaurar / Ativar';
+
+            const acoesHtml = isController ?
+                `<span class="text-muted small"><i class="bi bi-lock-fill"></i></span>` :
+                `<div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-primary" onclick="AprovacoesComplementares.abrirModalEdicaoItem(${item.id})" title="Editar Item"><i class="bi bi-pencil-square"></i></button>
+                    <button type="button" class="btn ${btnClass}" onclick="AprovacoesComplementares.toggleStatusBuffer(${item.id}, '${statusFinal}')" title="${btnTitle}"><i class="bi ${btnIcon}"></i></button>
+                 </div>`;
+
+            tr.innerHTML = `
+                <td class="ps-3"><small class="font-monospace text-muted">${item.lpu ? item.lpu.codigoLpu : '-'}</small></td>
+                <td>${htmlLpu}</td>
+                <td class="text-center fw-bold">${htmlQtd}</td>
+                <td class="text-end text-muted small">${AprovacoesComplementares.formatarMoeda(rawValor)}</td>
+                <td class="text-end fw-bold text-dark">${AprovacoesComplementares.formatarMoeda(item.valorTotal)}</td>
+                <td class="text-center">${htmlStatus}</td>
+                <td class="text-center pe-3">${acoesHtml}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    },
+
+    toggleStatusBuffer: (id, statusAtual) => {
+        const novoStatus = statusAtual === 'ATIVO' ? 'INATIVO' : 'ATIVO';
+        if (!AprovacoesComplementares.alteracoesBuffer[id]) {
+            AprovacoesComplementares.alteracoesBuffer[id] = {};
+        }
+        AprovacoesComplementares.alteracoesBuffer[id].novoStatus = novoStatus;
+        AprovacoesComplementares.renderizarItensExistentesComBuffer(false);
+        AprovacoesComplementares.recalcularTotaisTela();
+    },
+
+    abrirModalEdicaoItem: async (itemId) => {
+        const item = AprovacoesComplementares.currentOsCompleta.detalhes.find(d => d.id === itemId);
+        if (!item) return;
+
+        const buffer = AprovacoesComplementares.alteracoesBuffer[itemId] || {};
+
+        document.getElementById('editItemIdHidden').value = itemId;
+        document.getElementById('modalEditQtd').value = buffer.novaQtd || item.quantidade;
+        document.getElementById('modalEditBoq').value = buffer.novoBoq || item.boq || '';
+
+        const select = document.getElementById('modalEditLpuSelect');
+
+        if (AprovacoesComplementares.choicesEdit) { AprovacoesComplementares.choicesEdit.destroy(); }
+
+        let html = '<option value="">Selecione...</option>';
+        const currentLpuId = buffer.novaLpuId || (item.lpu ? item.lpu.id : null);
+
+        AprovacoesComplementares.listaCompletaLpus.forEach(l => {
+            html += `<option value="${l.id}" ${l.id == currentLpuId ? 'selected' : ''}>${l.nome}</option>`;
+        });
+        select.innerHTML = html;
+
+        AprovacoesComplementares.choicesEdit = new Choices(select, { searchEnabled: true, itemSelectText: '', placeholderValue: 'Pesquisar...', shouldSort: false });
+
+        const modalEl = document.getElementById('modalEditarItemOs');
+        let modal = bootstrap.Modal.getInstance(modalEl);
+        if (!modal) modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    },
+
+    salvarEdicaoBuffer: () => {
+        const id = document.getElementById('editItemIdHidden').value;
+        const lpuId = document.getElementById('modalEditLpuSelect').value;
+        const qtd = document.getElementById('modalEditQtd').value;
+        const boq = document.getElementById('modalEditBoq').value;
+
+        if (!lpuId || !qtd) { AprovacoesComplementares.mostrarAlerta("Preencha LPU e Quantidade."); return; }
+
+        if (!AprovacoesComplementares.alteracoesBuffer[id]) {
+            AprovacoesComplementares.alteracoesBuffer[id] = {};
+        }
+        AprovacoesComplementares.alteracoesBuffer[id].novaLpuId = parseInt(lpuId);
+        AprovacoesComplementares.alteracoesBuffer[id].novaQtd = parseInt(qtd);
+        AprovacoesComplementares.alteracoesBuffer[id].novoBoq = boq;
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarItemOs'));
+        if (modal) modal.hide();
+        AprovacoesComplementares.renderizarItensExistentesComBuffer(false);
+        AprovacoesComplementares.recalcularTotaisTela();
     },
 
     salvarAprovacaoLote: async () => {
@@ -687,14 +1165,29 @@ const AprovacoesComplementares = {
             try {
                 if (!decisao || decisao.decisao === 'aprovar') {
                     const endpoint = isController ? 'controller/aprovar' : 'coordenador/aprovar';
+
+                    // Monta alterações dos itens existentes
+                    let listaAlteracoes = [];
+                    if (AprovacoesComplementares.alteracoesBuffer) {
+                        listaAlteracoes = Object.entries(AprovacoesComplementares.alteracoesBuffer).map(([keyId, dados]) => {
+                            return {
+                                itemId: Number(keyId),
+                                novaQtd: dados.novaQtd ? Number(dados.novaQtd) : null,
+                                novaLpuId: dados.novaLpuId ? Number(dados.novaLpuId) : null,
+                                novoBoq: dados.novoBoq || "",
+                                novoStatus: dados.novoStatus || "ATIVO"
+                            };
+                        });
+                    }
+
                     const dto = {
                         aprovadorId: Number(usuarioId),
                         lpuId: (decisao && decisao.lpuId) ? Number(decisao.lpuId) : item.lpuOriginalId,
                         quantidade: (decisao && decisao.quantidade) ? Number(decisao.quantidade) : item.quantidadeOriginal,
-                        boq: '',
-                        statusRegistro: 'ATIVO',
+                        boq: (decisao && decisao.boq) ? decisao.boq : '',
+                        statusRegistro: (decisao && decisao.statusRegistro) ? decisao.statusRegistro : 'ATIVO',
                         justificativa: justificativa,
-                        alteracoesItensExistentesJson: null
+                        alteracoesItensExistentesJson: listaAlteracoes.length > 0 ? JSON.stringify(listaAlteracoes) : null
                     };
                     const resp = await fetch(`${AprovacoesComplementares.MS_URL}/${item.id}/${endpoint}`, {
                         method: 'POST',
@@ -726,6 +1219,7 @@ const AprovacoesComplementares = {
 
         AprovacoesComplementares.currentLoteItens = null;
         AprovacoesComplementares.loteDecisoes = {};
+        AprovacoesComplementares.alteracoesBuffer = {};
         AprovacoesComplementares.carregarPendencias();
     },
 
@@ -747,8 +1241,7 @@ const AprovacoesComplementares = {
         modal.show();
     },
 
-        prepararRejeicaoInicial: (id, status) => {
-        // Compat: chamado via botão de rejeição individual (se existir)
+    prepararRejeicaoInicial: (id, status) => {
         const item = AprovacoesComplementares.ultimaListaPendentes.find(i => i.id == id);
         if (item) {
             const loteKey = item.loteId || ('_single_' + item.id);

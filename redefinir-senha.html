@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redefinir Senha - INPROUT SERVICES</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/root.css">
+    <link rel="stylesheet" href="assets/css/login.css">
+    <link rel="icon" href="assets/imgs/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="login-branding">
+            </div>
+
+        <div class="login-form-wrapper">
+            <div class="login-form-container">
+
+            <img src="assets/imgs/login/logo.png" alt="Logo Inprout Services" class="login-logo">
+
+                <h2 class="form-title">Redefinir Senha</h2>
+                <p class="form-subtitle">Digite sua nova senha abaixo.</p>
+
+                <form id="formRedefinirSenha" novalidate>
+                    <div id="mensagem" class="alert d-none" role="alert"></div>
+
+                    <div class="input-group mb-3">
+                        <div class="form-floating">
+                            <input type="password" class="form-control" id="novaSenha" placeholder="Nova senha" required minlength="8">
+                            <label for="novaSenha">Nova senha</label>
+                        </div>
+                        <button class="btn btn-outline-secondary" type="button" id="toggleNovaSenha">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <div class="form-floating">
+                            <input type="password" class="form-control" id="confirmarSenha" placeholder="Confirmar senha" required minlength="8">
+                            <label for="confirmarSenha">Confirmar senha</label>
+                        </div>
+                        <button class="btn btn-outline-secondary" type="button" id="toggleConfirmarSenha">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+
+                    <div class="d-grid">
+                        <button id="btnRedefinir" type="submit" class="btn btn-login">
+                            <span class="btn-text">Redefinir Senha</span>
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle password visibility - Nova Senha
+        const toggleNovaSenha = document.querySelector('#toggleNovaSenha');
+        const novaSenhaInput = document.querySelector('#novaSenha');
+        const iconNova = toggleNovaSenha.querySelector('i');
+
+        toggleNovaSenha.addEventListener('click', function () {
+            const type = novaSenhaInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            novaSenhaInput.setAttribute('type', type);
+            iconNova.classList.toggle('bi-eye');
+            iconNova.classList.toggle('bi-eye-slash');
+        });
+
+        // Toggle password visibility - Confirmar Senha
+        const toggleConfirmarSenha = document.querySelector('#toggleConfirmarSenha');
+        const confirmarSenhaInput = document.querySelector('#confirmarSenha');
+        const iconConfirmar = toggleConfirmarSenha.querySelector('i');
+
+        toggleConfirmarSenha.addEventListener('click', function () {
+            const type = confirmarSenhaInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            confirmarSenhaInput.setAttribute('type', type);
+            iconConfirmar.classList.toggle('bi-eye');
+            iconConfirmar.classList.toggle('bi-eye-slash');
+        });
+    </script>
+    <script src="assets/js/login/redefinir-senha.js?v=1.0"></script>
+
+</body>
+</html>

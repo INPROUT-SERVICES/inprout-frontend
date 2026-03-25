@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Administração - INPROUT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/root.css" />
+    <link rel="stylesheet" href="../assets/css/global.css" />
+    <link rel="stylesheet" href="../assets/css/index.css" />
+    <link rel="stylesheet" href="../assets/css/admin.css" />
+    <link rel="icon" href="../assets/imgs/favicon.svg" type="image/svg+xml">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <button class="btn toggle-sidebar" id="menu-toggle">
+                <i class="bi bi-grid fs-5"></i>
+            </button>
+            <a href="../index.html">
+                <img src="../assets/imgs/login/logo.png" alt="Logo Inprout" class="logo-navbar mx-3">
+            </a>
+
+            <div class="dropdown ms-auto">
+                <a class="btn dropdown-toggle user-dropdown" href="#" role="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-person-circle"></i> <span id="nomeUsuario">Olá, Usuário</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><button type="button" class="dropdown-item" data-bs-toggle="modal"
+                            data-bs-target="#modalMinhaConta">Minha Conta</button></li>
+                    <li><a class="dropdown-item" href="#" id="logoutBtn">Sair</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div id="sidebar-container"></div>
+
+    <div class="container-fluid my-4">
+
+        <ul class="nav nav-tabs mb-4" id="adminTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold" id="usuarios-tab" data-bs-toggle="tab"
+                    data-bs-target="#usuarios-pane" type="button" role="tab" aria-controls="usuarios-pane"
+                    aria-selected="true">
+                    <i class="bi bi-people me-2"></i>Usuários
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="log-login-tab" data-bs-toggle="tab"
+                    data-bs-target="#log-login-pane" type="button" role="tab" aria-controls="log-login-pane"
+                    aria-selected="false">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Log de Login
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="log-acoes-tab" data-bs-toggle="tab"
+                    data-bs-target="#log-acoes-pane" type="button" role="tab" aria-controls="log-acoes-pane"
+                    aria-selected="false">
+                    <i class="bi bi-journal-text me-2"></i>Log de Ações Admin
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="adminTabContent">
+
+            <!-- Tab 1: Usuários -->
+            <div class="tab-pane fade show active" id="usuarios-pane" role="tabpanel" aria-labelledby="usuarios-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-search text-muted"></i>
+                        <input type="text" class="form-control form-control-sm" id="filtroUsuarios"
+                            placeholder="Buscar por nome ou e-mail..." style="width: 300px;">
+                    </div>
+                    <button class="btn btn-success btn-sm" id="btnNovoUsuario"
+                        data-bs-toggle="modal" data-bs-target="#modalNovoUsuario"
+                        style="background-color: #198754; border-color: #198754;">
+                        <i class="bi bi-person-plus me-1"></i> Novo Usuário
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle" id="tabelaUsuarios">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nome</th>
+                                <th>E-mail</th>
+                                <th>Role</th>
+                                <th>Segmentos</th>
+                                <th>Status</th>
+                                <th class="text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyUsuarios">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <i class="bi bi-hourglass-split me-1"></i> Carregando usuários...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 2: Log de Login -->
+            <div class="tab-pane fade" id="log-login-pane" role="tabpanel" aria-labelledby="log-login-tab">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-search text-muted"></i>
+                    <input type="text" class="form-control form-control-sm" id="filtroLogLogin"
+                        placeholder="Filtrar por e-mail..." style="width: 300px;">
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle" id="tabelaLogLogin">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>E-mail</th>
+                                <th>Sucesso</th>
+                                <th>IP</th>
+                                <th>User-Agent</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyLogLogin">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="bi bi-hourglass-split me-1"></i> Carregando logs...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-3" id="paginacaoLogLogin">
+                    <span class="text-muted small" id="paginaInfoLogin">Página 1</span>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" id="btnLoginAnterior" disabled>
+                            <i class="bi bi-chevron-left me-1"></i> Anterior
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" id="btnLoginProxima">
+                            Próxima <i class="bi bi-chevron-right ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Log de Ações Admin -->
+            <div class="tab-pane fade" id="log-acoes-pane" role="tabpanel" aria-labelledby="log-acoes-tab">
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle" id="tabelaLogAcoes">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Admin</th>
+                                <th>Ação</th>
+                                <th>Usuário Alvo</th>
+                                <th>Detalhes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyLogAcoes">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="bi bi-hourglass-split me-1"></i> Carregando logs...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-3" id="paginacaoLogAcoes">
+                    <span class="text-muted small" id="paginaInfoAcoes">Página 1</span>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" id="btnAcoesAnterior" disabled>
+                            <i class="bi bi-chevron-left me-1"></i> Anterior
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" id="btnAcoesProxima">
+                            Próxima <i class="bi bi-chevron-right ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal: Novo Usuário -->
+    <div class="modal fade" id="modalNovoUsuario" tabindex="-1" aria-labelledby="modalNovoUsuarioLabel">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #4a665a; color: #fff;">
+                    <h5 class="modal-title" id="modalNovoUsuarioLabel">
+                        <i class="bi bi-person-plus me-2"></i> Novo Usuário
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formNovoUsuario">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Nome</label>
+                            <input type="text" class="form-control" id="novoUsuarioNome" required
+                                placeholder="Nome completo">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">E-mail</label>
+                            <input type="email" class="form-control" id="novoUsuarioEmail" required
+                                placeholder="email@dominio.com">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Senha</label>
+                            <input type="password" class="form-control" id="novoUsuarioSenha" required
+                                placeholder="Senha inicial">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Role</label>
+                            <select class="form-select" id="novoUsuarioRole" required>
+                                <option value="" disabled selected>Selecione a role...</option>
+                                <option value="ADMIN">ADMIN</option>
+                                <option value="COORDINATOR">COORDINATOR</option>
+                                <option value="MANAGER">MANAGER</option>
+                                <option value="CONTROLLER">CONTROLLER</option>
+                                <option value="ASSISTANT">ASSISTANT</option>
+                                <option value="DOCUMENTIST">DOCUMENTIST</option>
+                                <option value="VISUALIZADOR">VISUALIZADOR</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Segmentos</label>
+                            <div id="novoUsuarioSegmentos" class="d-flex flex-wrap gap-2 border rounded p-2">
+                                <span class="text-muted small">Carregando segmentos...</span>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold text-danger">
+                                <i class="bi bi-shield-lock me-1"></i> Senha Admin (confirmação)
+                            </label>
+                            <input type="password" class="form-control" id="novoUsuarioSenhaAdmin" required
+                                placeholder="Sua senha de administrador">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnSalvarNovoUsuario"
+                        style="background-color: #198754; border-color: #198754;">
+                        <i class="bi bi-check-circle"></i> Criar Usuário
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Alterar Role -->
+    <div class="modal fade" id="modalAlterarRole" tabindex="-1" aria-labelledby="modalAlterarRoleLabel">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #4a665a; color: #fff;">
+                    <h5 class="modal-title" id="modalAlterarRoleLabel">
+                        <i class="bi bi-person-gear me-2"></i> Alterar Role
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="alterarRoleUsuarioId">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nova Role</label>
+                        <select class="form-select" id="alterarRoleSelect" required>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="COORDINATOR">COORDINATOR</option>
+                            <option value="MANAGER">MANAGER</option>
+                            <option value="CONTROLLER">CONTROLLER</option>
+                            <option value="ASSISTANT">ASSISTANT</option>
+                            <option value="DOCUMENTIST">DOCUMENTIST</option>
+                            <option value="VISUALIZADOR">VISUALIZADOR</option>
+                        </select>
+                    </div>
+                    <hr>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold text-danger">
+                            <i class="bi bi-shield-lock me-1"></i> Senha Admin
+                        </label>
+                        <input type="password" class="form-control" id="alterarRoleSenhaAdmin" required
+                            placeholder="Sua senha de administrador">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnSalvarRole"
+                        style="background-color: #198754; border-color: #198754;">
+                        <i class="bi bi-check-circle"></i> Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Alterar Segmentos -->
+    <div class="modal fade" id="modalAlterarSegmentos" tabindex="-1" aria-labelledby="modalAlterarSegmentosLabel">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #4a665a; color: #fff;">
+                    <h5 class="modal-title" id="modalAlterarSegmentosLabel">
+                        <i class="bi bi-diagram-3 me-2"></i> Alterar Segmentos
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="alterarSegmentosUsuarioId">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Segmentos</label>
+                        <div id="alterarSegmentosCheckboxes" class="d-flex flex-wrap gap-2 border rounded p-2">
+                            <span class="text-muted small">Carregando segmentos...</span>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold text-danger">
+                            <i class="bi bi-shield-lock me-1"></i> Senha Admin
+                        </label>
+                        <input type="password" class="form-control" id="alterarSegmentosSenhaAdmin" required
+                            placeholder="Sua senha de administrador">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnSalvarSegmentos"
+                        style="background-color: #198754; border-color: #198754;">
+                        <i class="bi bi-check-circle"></i> Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Resetar Senha -->
+    <div class="modal fade" id="modalResetarSenha" tabindex="-1" aria-labelledby="modalResetarSenhaLabel">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #4a665a; color: #fff;">
+                    <h5 class="modal-title" id="modalResetarSenhaLabel">
+                        <i class="bi bi-key me-2"></i> Resetar Senha
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="resetarSenhaUsuarioId">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nova Senha</label>
+                        <input type="password" class="form-control" id="resetarSenhaNova" required
+                            placeholder="Nova senha do usuário">
+                    </div>
+                    <hr>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold text-danger">
+                            <i class="bi bi-shield-lock me-1"></i> Senha Admin
+                        </label>
+                        <input type="password" class="form-control" id="resetarSenhaSenhaAdmin" required
+                            placeholder="Sua senha de administrador">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnSalvarResetarSenha"
+                        style="background-color: #198754; border-color: #198754;">
+                        <i class="bi bi-check-circle"></i> Resetar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Confirmar Ativar/Desativar -->
+    <div class="modal fade" id="modalConfirmarStatus" tabindex="-1" aria-labelledby="modalConfirmarStatusLabel">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #4a665a; color: #fff;">
+                    <h5 class="modal-title" id="modalConfirmarStatusLabel">
+                        <i class="bi bi-toggle-on me-2"></i> Confirmar Alteração
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="confirmarStatusUsuarioId">
+                    <input type="hidden" id="confirmarStatusAcao">
+                    <p class="mb-3 text-center" id="confirmarStatusTexto">
+                        Deseja ativar/desativar o usuário X?
+                    </p>
+                    <hr>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold text-danger">
+                            <i class="bi bi-shield-lock me-1"></i> Senha Admin
+                        </label>
+                        <input type="password" class="form-control" id="confirmarStatusSenhaAdmin" required
+                            placeholder="Sua senha de administrador">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnConfirmarStatus"
+                        style="background-color: #198754; border-color: #198754;">
+                        <i class="bi bi-check-circle"></i> Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Minha Conta -->
+    <div class="modal fade" id="modalMinhaConta" tabindex="-1" aria-labelledby="modalMinhaContaLabel">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalMinhaContaLabel">
+                        <i class="bi bi-person-circle me-2"></i> Minha Conta
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <i class="bi bi-person-circle" style="font-size: 4rem; color: #198754;"></i>
+                        <h5 class="mt-2" id="nomeUsuarioModal">Nome do Usuário</h5>
+                        <p class="text-muted" id="emailUsuarioModal">email@dominio.com</p>
+                        <div id="userInfoDetalhes" class="mt-2"></div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#alterarEmail" aria-expanded="false">
+                            <i class="bi bi-envelope"></i> Alterar E-mail
+                        </button>
+                        <div class="collapse mt-2" id="alterarEmail">
+                            <form id="formAlterarEmail">
+                                <div class="mb-2">
+                                    <label class="form-label">Novo E-mail</label>
+                                    <input type="email" class="form-control" id="novoEmail"
+                                        placeholder="Digite seu novo e-mail">
+                                </div>
+                            </form>
+                        </div>
+                        <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#alterarSenha" aria-expanded="false">
+                            <i class="bi bi-shield-lock"></i> Alterar Senha
+                        </button>
+                        <div class="collapse mt-2" id="alterarSenha">
+                            <form id="formAlterarSenha">
+                                <div class="mb-2">
+                                    <label class="form-label">Nova Senha</label>
+                                    <input type="password" class="form-control" id="novaSenha"
+                                        placeholder="Digite sua nova senha">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Confirmar Nova Senha</label>
+                                    <input type="password" class="form-control" id="confirmarSenha"
+                                        placeholder="Confirme sua nova senha">
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnSalvarMinhaConta"
+                        style="background-color: #198754; border-color: #198754;">
+                        <i class="bi bi-check-circle"></i> Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../assets/js/general/global.js"></script>
+    <script src="../assets/js/general/sidebar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="../assets/js/admin/admin.js"></script>
+
+</body>
+
+</html>

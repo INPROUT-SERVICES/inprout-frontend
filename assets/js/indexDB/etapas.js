@@ -222,15 +222,14 @@ async function carregarTabelaEtapas() {
 
             let acoesHtml = '';
             if (isAdmin) {
+                const escapedNome = (row.nome || '').replace(/'/g, "\\'");
                 const toggleBtn = ativo
-                    ? `<button class="btn btn-sm btn-outline-danger btn-toggle-etapa" data-id="${row.id}" data-acao="desativar" title="Desativar"><i class="bi bi-pause-circle"></i></button>`
-                    : `<button class="btn btn-sm btn-outline-success btn-toggle-etapa" data-id="${row.id}" data-acao="ativar" title="Ativar"><i class="bi bi-play-circle"></i></button>`;
+                    ? `<button class="btn-icon-modern delete" onclick="prepararToggleEtapa(${row.id}, 'desativar')" title="Desativar"><i class="bi bi-pause-circle"></i></button>`
+                    : `<button class="btn-icon-modern edit" onclick="prepararToggleEtapa(${row.id}, 'ativar')" title="Ativar"><i class="bi bi-play-circle"></i></button>`;
                 acoesHtml = `
                     <td>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-sm btn-outline-warning btn-editar-etapa" data-id="${row.id}" data-codigo="${row.codigo}" data-nome="${row.nome}" title="Editar"><i class="bi bi-pencil"></i></button>
-                            ${toggleBtn}
-                        </div>
+                        <button class="btn-icon-modern edit" onclick="editarEtapaGeral(${row.id}, '${row.codigo}', '${escapedNome}')" title="Editar"><i class="bi bi-pencil-square"></i></button>
+                        ${toggleBtn}
                     </td>`;
             }
 
@@ -276,21 +275,7 @@ async function carregarTabelaEtapas() {
                 btn.textContent = ocultar ? "Mostrar" : "Ocultar";
             });
 
-            // Evento de editar etapa (ADMIN)
-            const btnEditar = tr.querySelector(".btn-editar-etapa");
-            if (btnEditar) {
-                btnEditar.addEventListener("click", () => {
-                    abrirModalEditarEtapaGeral(btnEditar.dataset.id, btnEditar.dataset.codigo, btnEditar.dataset.nome);
-                });
-            }
-
-            // Evento de ativar/desativar etapa (ADMIN)
-            const btnToggle = tr.querySelector(".btn-toggle-etapa");
-            if (btnToggle) {
-                btnToggle.addEventListener("click", () => {
-                    toggleAtivoEtapa(btnToggle.dataset.id, btnToggle.dataset.acao);
-                });
-            }
+            // Ações de editar/toggle agora usam onclick inline (padrão geral.js)
         });
     } catch (err) {
         console.error("Erro ao carregar tabela de etapas:", err);
@@ -300,7 +285,11 @@ async function carregarTabelaEtapas() {
 
 // ========== FUNÇÕES DE GERENCIAMENTO DE ETAPAS (ADMIN) ==========
 
-function abrirModalEditarEtapaGeral(id, codigo, nome) {
+let idEtapaParaToggle = null;
+let acaoEtapaParaToggle = null;
+let modalToggleEtapaInstance = null;
+
+function editarEtapaGeral(id, codigo, nome) {
     document.getElementById("editEtapaGeralId").value = id;
     document.getElementById("editEtapaGeralCodigo").value = codigo;
     document.getElementById("editEtapaGeralNome").value = nome;
@@ -318,6 +307,7 @@ async function salvarEdicaoEtapaGeral() {
     }
 
     const descricao = codigo + " - " + nome;
+    toggleLoader(true);
 
     try {
         const res = await fetchComAuth(`${urlEtapas}/${id}`, {
@@ -338,23 +328,41 @@ async function salvarEdicaoEtapaGeral() {
     } catch (err) {
         console.error("Erro ao editar etapa:", err);
         mostrarToast("Erro ao editar etapa.", "error");
+    } finally {
+        toggleLoader(false);
     }
 }
 
-async function toggleAtivoEtapa(id, acao) {
+function prepararToggleEtapa(id, acao) {
+    idEtapaParaToggle = id;
+    acaoEtapaParaToggle = acao;
     const textoAcao = acao === "ativar" ? "ativar" : "desativar";
-    const result = await Swal.fire({
-        title: `${acao === "ativar" ? "Ativar" : "Desativar"} Etapa?`,
-        text: `Tem certeza que deseja ${textoAcao} esta etapa?`,
-        icon: "question",
-        showCancelButton: true,
-        confirmButtonColor: acao === "ativar" ? "#198754" : "#dc3545",
-        cancelButtonColor: "#6c757d",
-        confirmButtonText: `Sim, ${textoAcao}`,
-        cancelButtonText: "Cancelar"
-    });
+    document.getElementById("toggleEtapaAcaoTexto").textContent = textoAcao;
 
-    if (!result.isConfirmed) return;
+    const titulo = document.getElementById("modalToggleEtapaTitle");
+    titulo.innerHTML = acao === "ativar"
+        ? '<i class="bi bi-play-circle me-2"></i>Ativar Etapa'
+        : '<i class="bi bi-pause-circle me-2"></i>Desativar Etapa';
+
+    const btnConfirmar = document.getElementById("btnConfirmarToggleEtapa");
+    btnConfirmar.className = acao === "ativar" ? "btn btn-success" : "btn btn-danger";
+    btnConfirmar.textContent = acao === "ativar" ? "Sim, Ativar" : "Sim, Desativar";
+
+    if (!modalToggleEtapaInstance) {
+        modalToggleEtapaInstance = new bootstrap.Modal(document.getElementById("modalToggleEtapa"));
+    }
+    modalToggleEtapaInstance.show();
+}
+
+async function confirmarToggleEtapa() {
+    if (!idEtapaParaToggle) return;
+
+    const acao = acaoEtapaParaToggle;
+    const id = idEtapaParaToggle;
+    const textoAcao = acao === "ativar" ? "ativar" : "desativar";
+
+    modalToggleEtapaInstance.hide();
+    toggleLoader(true);
 
     try {
         const res = await fetchComAuth(`${urlEtapas}/${id}/${acao}`, {
@@ -372,8 +380,20 @@ async function toggleAtivoEtapa(id, acao) {
     } catch (err) {
         console.error(`Erro ao ${textoAcao} etapa:`, err);
         mostrarToast(`Erro ao ${textoAcao} etapa.`, "error");
+    } finally {
+        toggleLoader(false);
+        idEtapaParaToggle = null;
+        acaoEtapaParaToggle = null;
     }
 }
+
+// Listener do botão confirmar no modal de toggle
+document.addEventListener("DOMContentLoaded", () => {
+    const btnConfirmar = document.getElementById("btnConfirmarToggleEtapa");
+    if (btnConfirmar) {
+        btnConfirmar.addEventListener("click", confirmarToggleEtapa);
+    }
+});
 
 function configurarFormularioAdicionarEtapa() {
     form.addEventListener("submit", async (e) => { // Tornamos o listener async

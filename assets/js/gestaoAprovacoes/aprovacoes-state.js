@@ -16,6 +16,7 @@ window.todasPendenciasAtividades = [];
 window.minhasDocsPendentes = [];
 window.minhasDocsHistorico = [];
 window.dadosCpsGlobais = [];
+window.pendenciasSolicitacoesOSCount = 0;
 
 // Variáveis de Datas Globais
 window.histDataFim = new Date();

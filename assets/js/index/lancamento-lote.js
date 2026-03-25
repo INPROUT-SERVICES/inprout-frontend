@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectEtapaGeral = document.getElementById(`etapaGeral-lpu-${idSufixo}`);
         if (selectEtapaGeral) {
             selectEtapaGeral.innerHTML = '<option value="" selected disabled>Selecione...</option>';
-            todasAsEtapasLote.forEach(e => selectEtapaGeral.add(new Option(`${e.codigo} - ${e.nome}`, e.id)));
+            todasAsEtapasLote.filter(e => e.ativo !== false).forEach(e => selectEtapaGeral.add(new Option(`${e.codigo} - ${e.nome}`, e.id)));
         }
 
         if (typeof DocumentacaoModule !== 'undefined') {

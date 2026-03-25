@@ -110,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const visibilidade = {
             ADMIN: ['filaFaturamento', 'solicitarId', 'solicitarAdiantamento', 'visaoAdiantamentos', 'historicoFaturado'],
             CONTROLLER: ['filaFaturamento', 'solicitarId', 'solicitarAdiantamento', 'visaoAdiantamentos', 'historicoFaturado'],
+            VISUALIZADOR: ['filaFaturamento', 'solicitarId', 'solicitarAdiantamento', 'visaoAdiantamentos', 'historicoFaturado'],
             ASSISTANT: ['filaFaturamento', 'visaoAdiantamentos', 'historicoFaturado'],
             COORDINATOR: ['solicitarId', 'solicitarAdiantamento', 'visaoAdiantamentos', 'historicoFaturado'],
             MANAGER: []
@@ -152,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (kpis.faturadosMes) kpis.faturadosMes.textContent = formatarMoeda(data.faturadoMes || 0);
 
             // Visibilidade dos Cards
-            if (['ADMIN', 'CONTROLLER'].includes(userRole)) Object.values(cards).forEach(c => c && (c.style.display = 'block'));
+            if (['ADMIN', 'CONTROLLER', 'VISUALIZADOR'].includes(userRole)) Object.values(cards).forEach(c => c && (c.style.display = 'block'));
             else if (userRole === 'COORDINATOR') {
                 if (cards.solicitacao) cards.solicitacao.style.display = 'block';
                 if (cards.recusados) cards.recusados.style.display = 'block';

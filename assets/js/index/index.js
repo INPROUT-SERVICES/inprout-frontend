@@ -19,34 +19,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const formatarData = (data) => data ? data.split('-').reverse().join('/') : '';
 
     const dataMapping = {
-        "STATUS APROVAÇÃO": (lancamento) => (lancamento.situacaoAprovacao || '').replace(/_/g, ' '),
-        "DATA ATIVIDADE": (lancamento) => lancamento.dataAtividade || '',
-        "OS": (lancamento) => getNestedValue(lancamento, 'os.os'),
-        "SITE": (lancamento) => getNestedValue(lancamento, 'detalhe.site'),
-        "SEGMENTO": (lancamento) => getNestedValue(lancamento, 'os.segmento.nome'),
-        "PROJETO": (lancamento) => getNestedValue(lancamento, 'os.projeto'),
-        "LPU": (lancamento) => labelLpu(getNestedValue(lancamento, 'detalhe.lpu')),
-        "GESTOR TIM": (lancamento) => getNestedValue(lancamento, 'os.gestorTim'),
-        "REGIONAL": (lancamento) => getNestedValue(lancamento, 'detalhe.regional'),
-        "VISTORIA": (lancamento) => lancamento.vistoria || 'N/A',
-        "PLANO DE VISTORIA": (lancamento) => formatarData(lancamento.planoVistoria),
-        "DESMOBILIZAÇÃO": (lancamento) => lancamento.desmobilizacao || 'N/A',
-        "PLANO DE DESMOBILIZAÇÃO": (lancamento) => formatarData(lancamento.planoDesmobilizacao),
-        "INSTALAÇÃO": (lancamento) => lancamento.instalacao || 'N/A',
-        "PLANO DE INSTALAÇÃO": (lancamento) => formatarData(lancamento.planoInstalacao),
-        "ATIVAÇÃO": (lancamento) => lancamento.ativacao || 'N/A',
-        "PLANO DE ATIVAÇÃO": (lancamento) => formatarData(lancamento.planoAtivacao),
-        "DOCUMENTAÇÃO": (lancamento) => lancamento.documentacao || 'N/A',
-        "PLANO DE DOCUMENTAÇÃO": (lancamento) => formatarData(lancamento.planoDocumentacao),
-        "ETAPA GERAL": (lancamento) => (getNestedValue(lancamento, 'etapa.codigoGeral') && getNestedValue(lancamento, 'etapa.nomeGeral')) ? `${getNestedValue(lancamento, 'etapa.codigoGeral')} - ${getNestedValue(lancamento, 'etapa.nomeGeral')}` : '',
-        "ETAPA DETALHADA": (lancamento) => (getNestedValue(lancamento, 'etapa.indiceDetalhado') && getNestedValue(lancamento, 'etapa.nomeDetalhado')) ? `${getNestedValue(lancamento, 'etapa.indiceDetalhado')} - ${getNestedValue(lancamento, 'etapa.nomeDetalhado')}` : '',
-        "STATUS": (lancamento) => lancamento.status || '',
-        "SITUAÇÃO": (lancamento) => lancamento.situacao || '',
-        "DETALHE DIÁRIO": (lancamento) => lancamento.detalheDiario || '',
-        "CÓD. PRESTADOR": (lancamento) => getNestedValue(lancamento, 'prestador.codigo'),
-        "PRESTADOR": (lancamento) => getNestedValue(lancamento, 'prestador.nome'),
-        "VALOR": (lancamento) => formatarMoeda(lancamento.valor),
-        "GESTOR": (lancamento) => getNestedValue(lancamento, 'manager.nome'),
+        "STATUS APROVAÇÃO": (l) => (l.situacaoAprovacao || '').replace(/_/g, ' '),
+        "DATA ATIVIDADE": (l) => l.dataAtividade || '',
+        "OS": (l) => l.os || '',
+        "SITE": (l) => l.site || '',
+        "SEGMENTO": (l) => l.segmento || '',
+        "PROJETO": (l) => l.projeto || '',
+        "LPU": (l) => (l.lpuCodigo || l.lpuNome) ? `${l.lpuCodigo || ''}${l.lpuCodigo && l.lpuNome ? ' - ' : ''}${l.lpuNome || ''}` : '',
+        "GESTOR TIM": (l) => l.gestorTim || '',
+        "REGIONAL": (l) => l.regional || '',
+        "VISTORIA": (l) => l.vistoria || 'N/A',
+        "PLANO DE VISTORIA": (l) => l.planoVistoria || '',
+        "DESMOBILIZAÇÃO": (l) => l.desmobilizacao || 'N/A',
+        "PLANO DE DESMOBILIZAÇÃO": (l) => l.planoDesmobilizacao || '',
+        "INSTALAÇÃO": (l) => l.instalacao || 'N/A',
+        "PLANO DE INSTALAÇÃO": (l) => l.planoInstalacao || '',
+        "ATIVAÇÃO": (l) => l.ativacao || 'N/A',
+        "PLANO DE ATIVAÇÃO": (l) => l.planoAtivacao || '',
+        "DOCUMENTAÇÃO": (l) => l.documentacao || 'N/A',
+        "PLANO DE DOCUMENTAÇÃO": (l) => l.planoDocumentacao || '',
+        "ETAPA GERAL": (l) => (l.etapaGeralCodigo && l.etapaGeralNome) ? `${l.etapaGeralCodigo} - ${l.etapaGeralNome}` : '',
+        "ETAPA DETALHADA": (l) => (l.etapaDetalhadaIndice && l.etapaDetalhadaNome) ? `${l.etapaDetalhadaIndice} - ${l.etapaDetalhadaNome}` : '',
+        "STATUS": (l) => (l.status || '').replace(/_/g, ' '),
+        "SITUAÇÃO": (l) => (l.situacao || '').replace(/_/g, ' '),
+        "DETALHE DIÁRIO": (l) => l.detalheDiario || '',
+        "CÓD. PRESTADOR": (l) => l.prestadorCodigo || '',
+        "PRESTADOR": (l) => l.prestador || '',
+        "VALOR": (l) => formatarMoeda(l.valor),
+        "GESTOR": (l) => l.manager || '',
         "AÇÃO": () => ''
     };
 
@@ -58,13 +58,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const columnKeyMap = {
         "DATA ATIVIDADE": "dataAtividade",
-        "OS": "os.os",
-        "SITE": "detalhe.site",
-        "SEGMENTO": "os.segmento.nome",
-        "PROJETO": "os.projeto",
-        "PRESTADOR": "prestador.nome",
+        "OS": "os",
+        "SITE": "site",
+        "SEGMENTO": "segmento",
+        "PROJETO": "projeto",
+        "PRESTADOR": "prestador",
         "VALOR": "valor",
-        "GESTOR": "manager.nome",
+        "GESTOR": "manager",
         "SITUAÇÃO": "situacao",
         "STATUS APROVAÇÃO": "situacaoAprovacao"
     };
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
             kpiPendenteContainer.classList.add('d-none');
         }
 
-        if (['COORDINATOR', 'ADMIN', 'CONTROLLER'].includes(userRole)) {
+        if (['COORDINATOR', 'ADMIN', 'CONTROLLER', 'VISUALIZADOR'].includes(userRole)) {
             if (kpiPendenteContainer) {
                 kpiPendenteContainer.classList.remove('d-none');
                 kpiPendenteContainer.classList.add('d-flex');
@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (navPendenteDoc) {
-            if (['ADMIN', 'MANAGER', 'COORDINATOR', 'CONTROLLER', 'DOCUMENTIST'].includes(userRole)) {
+            if (['ADMIN', 'MANAGER', 'COORDINATOR', 'CONTROLLER', 'DOCUMENTIST', 'VISUALIZADOR'].includes(userRole)) {
                 navPendenteDoc.style.display = 'block';
             }
         }
@@ -207,6 +207,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 [btnNovoLancamento, btnSolicitarMaterial, btnSolicitarComplementar, btnExportar].forEach(el => {
                     if (el) el.style.display = 'block';
                 });
+                break;
+
+            case 'VISUALIZADOR':
+                // Visualizador só exporta — sem botões de ação
+                if (btnExportar) btnExportar.style.display = 'block';
+                if (navLancamentos) navLancamentos.style.display = 'none';
                 break;
         }
 
@@ -277,24 +283,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderizarCardsDashboard(lancamentos) {
+    function renderizarCardsDashboard() {
         const hoje = new Date().toLocaleDateString('pt-BR');
-        const statusPendenteAprovacao = ['PENDENTE_COORDENADOR', 'AGUARDANDO_EXTENSAO_PRAZO', 'PENDENTE_CONTROLLER'];
-        const statusRecusado = ['RECUSADO_COORDENADOR', 'RECUSADO_CONTROLLER'];
 
-        const totalLancamentosHoje = lancamentos.filter(l => l.situacaoAprovacao === 'RASCUNHO' && l.dataAtividade === hoje).length;
-        const totalPendentesAprovacao = lancamentos.filter(l => statusPendenteAprovacao.includes(l.situacaoAprovacao)).length;
-        const totalRecusados = lancamentos.filter(l => statusRecusado.includes(l.situacaoAprovacao)).length;
+        const totalLancamentosHoje = dadosRascunhos.filter(l => l.dataAtividade === hoje).length;
+        const totalPendentesAprovacao = dadosPendentesAprovacao.length;
+        const totalRecusados = dadosMinhasPendencias.length;
+        const totalParalisadas = dadosParalisados.length;
+
+        // Em andamento: detalhes únicos que não são paralisados nem finalizados (dos rascunhos + pendentes + histórico)
         const projetosAtivos = new Set();
-        lancamentos.forEach(l => {
-            if (l.situacao !== 'Paralisado' && l.situacao !== 'Finalizado' && l.os && l.detalhe && l.detalhe.lpu) {
-                const chaveProjeto = `${l.os.id}-${l.detalhe.lpu.id}`;
-                projetosAtivos.add(chaveProjeto);
+        [...dadosRascunhos, ...dadosPendentesAprovacao, ...dadosHistorico].forEach(l => {
+            if (l.situacao !== 'PARALISADO' && l.situacao !== 'FINALIZADO' && l.osId && l.lpuId) {
+                projetosAtivos.add(`${l.osId}-${l.lpuId}`);
             }
         });
         const totalEmAndamento = projetosAtivos.size;
-        const totalParalisadas = getProjetosParalisados().length;
-        const totalFinalizadasHoje = lancamentos.filter(l => l.situacao === 'Finalizado' && l.dataAtividade === hoje).length;
+        const totalFinalizadasHoje = dadosHistorico.filter(l => l.situacao === 'FINALIZADO' && l.dataAtividade === hoje).length;
 
         document.getElementById('card-lancamentos-hoje').textContent = totalLancamentosHoje;
         document.getElementById('card-pendentes-aprovacao').textContent = totalPendentesAprovacao;
@@ -328,41 +333,53 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Projetos finalizados (para botão retomar)
         const projetosFinalizados = new Set();
-        todosLancamentos.forEach(l => {
-            if (l.situacao === 'Finalizado' && l.os && l.detalhe && l.detalhe.lpu) {
-                const chaveProjeto = `${l.os.id}-${l.detalhe.lpu.id}`;
-                projetosFinalizados.add(chaveProjeto);
+        dadosHistorico.forEach(l => {
+            if (l.situacao === 'FINALIZADO' && l.osId && l.lpuId) {
+                projetosFinalizados.add(`${l.osId}-${l.lpuId}`);
             }
         });
 
         const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
         const frag = document.createDocumentFragment();
 
-        dados.forEach(lancamento => {
+        dados.forEach(l => {
             const tr = document.createElement('tr');
-            const detalhe = lancamento.detalhe || {};
-            const os = lancamento.os || {};
-            const lpu = detalhe.lpu || {};
-            const etapa = lancamento.etapa || {};
-            const prestador = lancamento.prestador || {};
-            const manager = lancamento.manager || {};
+
+            const lpuLabel = (l.lpuCodigo || l.lpuNome)
+                ? `${l.lpuCodigo || ''}${l.lpuCodigo && l.lpuNome ? ' - ' : ''}${l.lpuNome || ''}`
+                : '';
 
             const mapaDeCelulas = {
-                "DATA ATIVIDADE": lancamento.dataAtividade || '', "OS": os.os || '', "SITE": detalhe.site || '',
-                "SEGMENTO": os.segmento ? os.segmento.nome : '', "PROJETO": os.projeto || '', "LPU": labelLpu(lpu),
-                "GESTOR TIM": os.gestorTim || '', "REGIONAL": detalhe.regional || '', "VISTORIA": lancamento.vistoria || 'N/A',
-                "PLANO DE VISTORIA": formatarData(lancamento.planoVistoria), "DESMOBILIZAÇÃO": lancamento.desmobilizacao || 'N/A',
-                "PLANO DE DESMOBILIZAÇÃO": formatarData(lancamento.planoDesmobilizacao), "INSTALAÇÃO": lancamento.instalacao || 'N/A',
-                "PLANO DE INSTALAÇÃO": formatarData(lancamento.planoInstalacao), "ATIVAÇÃO": lancamento.ativacao || 'N/A',
-                "PLANO DE ATIVAÇÃO": formatarData(lancamento.planoAtivacao), "DOCUMENTAÇÃO": lancamento.documentacao || 'N/A',
-                "PLANO DE DOCUMENTAÇÃO": formatarData(lancamento.planoDocumentacao),
-                "ETAPA GERAL": (etapa.codigoGeral && etapa.nomeGeral) ? `${etapa.codigoGeral} - ${etapa.nomeGeral}` : '',
-                "ETAPA DETALHADA": (etapa.indiceDetalhado && etapa.nomeDetalhado) ? `${etapa.indiceDetalhado} - ${etapa.nomeDetalhado}` : '',
-                "STATUS": lancamento.status || '', "SITUAÇÃO": lancamento.situacao || '', "DETALHE DIÁRIO": lancamento.detalheDiario || '',
-                "CÓD. PRESTADOR": prestador.codigo || '', "PRESTADOR": prestador.nome || '', "VALOR": formatarMoeda(lancamento.valor),
-                "GESTOR": manager.nome || '',
-                "STATUS APROVAÇÃO": `<span class="badge rounded-pill text-bg-secondary">${(lancamento.situacaoAprovacao || '').replace(/_/g, ' ')}</span>`
+                "DATA ATIVIDADE": l.dataAtividade || '',
+                "OS": l.os || '',
+                "SITE": l.site || '',
+                "SEGMENTO": l.segmento || '',
+                "PROJETO": l.projeto || '',
+                "LPU": lpuLabel,
+                "GESTOR TIM": l.gestorTim || '',
+                "REGIONAL": l.regional || '',
+                "VISTORIA": l.vistoria || 'N/A',
+                "PLANO DE VISTORIA": l.planoVistoria || '',
+                "DESMOBILIZAÇÃO": l.desmobilizacao || 'N/A',
+                "PLANO DE DESMOBILIZAÇÃO": l.planoDesmobilizacao || '',
+                "INSTALAÇÃO": l.instalacao || 'N/A',
+                "PLANO DE INSTALAÇÃO": l.planoInstalacao || '',
+                "ATIVAÇÃO": l.ativacao || 'N/A',
+                "PLANO DE ATIVAÇÃO": l.planoAtivacao || '',
+                "DOCUMENTAÇÃO": l.documentacao || 'N/A',
+                "PLANO DE DOCUMENTAÇÃO": l.planoDocumentacao || '',
+                "ETAPA GERAL": (l.etapaGeralCodigo && l.etapaGeralNome) ? `${l.etapaGeralCodigo} - ${l.etapaGeralNome}` : '',
+                "ETAPA DETALHADA": (l.etapaDetalhadaIndice && l.etapaDetalhadaNome) ? `${l.etapaDetalhadaIndice} - ${l.etapaDetalhadaNome}` : '',
+                "STATUS": (l.status || '').replace(/_/g, ' '),
+                "SITUAÇÃO": (l.situacao || '').replace(/_/g, ' '),
+                "DETALHE DIÁRIO": l.detalheDiario || '',
+                "CÓD. PRESTADOR": l.prestadorCodigo || '',
+                "PRESTADOR": l.prestador || '',
+                "VALOR": formatarMoeda(l.valor),
+                "GESTOR": l.manager || '',
+                "STATUS APROVAÇÃO": `<span class="badge rounded-pill text-bg-secondary">${(l.situacaoAprovacao || '').replace(/_/g, ' ')}</span>`
             };
 
             colunas.forEach(nomeColuna => {
@@ -371,32 +388,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (nomeColuna === 'SELEÇÃO') {
                     td.className = "text-center";
-                    td.innerHTML = `<input type="checkbox" class="form-check-input check-doc-item" value="${lancamento.id}">`;
+                    td.innerHTML = `<input type="checkbox" class="form-check-input check-doc-item" value="${l.id}">`;
                 } else if (nomeColuna === 'AÇÃO') {
                     let buttonsHtml = '';
 
                     if (tbodyElement.id === 'tbody-pendente-doc') {
-                        buttonsHtml += `<button class="btn btn-sm btn-primary btn-receber-doc" data-id="${lancamento.id}" title="Confirmar Recebimento"><i class="bi bi-file-earmark-check"></i></button>`;
+                        buttonsHtml += `<button class="btn btn-sm btn-primary btn-receber-doc" data-id="${l.id}" title="Confirmar Recebimento"><i class="bi bi-file-earmark-check"></i></button>`;
                     }
 
                     if (userRole === 'ADMIN' || userRole === 'MANAGER') {
                         if (tbodyElement.id === 'tbody-minhas-pendencias') {
-                            buttonsHtml += `<button class="btn btn-sm btn-success btn-reenviar" data-id="${lancamento.id}" title="Corrigir e Reenviar"><i class="bi bi-pencil-square"></i></button>`;
-                            if (!lancamento.statusPagamento && lancamento.situacaoAprovacao !== 'RECUSADO_CONTROLLER') {
-                                buttonsHtml += ` <button class="btn btn-sm btn-danger btn-excluir-lancamento" data-id="${lancamento.id}" title="Excluir Lançamento"><i class="bi bi-trash"></i></button>`;
+                            buttonsHtml += `<button class="btn btn-sm btn-success btn-reenviar" data-id="${l.id}" title="Corrigir e Reenviar"><i class="bi bi-pencil-square"></i></button>`;
+                            if (!l.statusPagamento && l.situacaoAprovacao !== 'RECUSADO_CONTROLLER') {
+                                buttonsHtml += ` <button class="btn btn-sm btn-danger btn-excluir-lancamento" data-id="${l.id}" title="Excluir Lançamento"><i class="bi bi-trash"></i></button>`;
                             }
                         } else if (tbodyElement.id === 'tbody-lancamentos') {
-                            buttonsHtml += `<button class="btn btn-sm btn-secondary btn-editar-rascunho" data-id="${lancamento.id}" title="Editar Rascunho"><i class="bi bi-pencil"></i></button>`;
-                            buttonsHtml += ` <button class="btn btn-sm btn-danger btn-excluir-lancamento" data-id="${lancamento.id}" title="Excluir Lançamento"><i class="bi bi-trash"></i></button>`;
+                            buttonsHtml += `<button class="btn btn-sm btn-secondary btn-editar-rascunho" data-id="${l.id}" title="Editar Rascunho"><i class="bi bi-pencil"></i></button>`;
+                            buttonsHtml += ` <button class="btn btn-sm btn-danger btn-excluir-lancamento" data-id="${l.id}" title="Excluir Lançamento"><i class="bi bi-trash"></i></button>`;
                         } else if (tbodyElement.id === 'tbody-paralisados' || tbodyElement.id === 'tbody-historico') {
-                            const chaveProjetoAtual = `${os.id}-${lpu.id}`;
-                            if (typeof projetosFinalizados !== 'undefined' && !projetosFinalizados.has(chaveProjetoAtual)) {
-                                buttonsHtml += `<button class="btn btn-sm btn-warning btn-retomar" data-id="${lancamento.id}" title="Retomar Lançamento"><i class="bi bi-play-circle"></i></button>`;
+                            const chaveProjetoAtual = `${l.osId}-${l.lpuId}`;
+                            if (!projetosFinalizados.has(chaveProjetoAtual)) {
+                                buttonsHtml += `<button class="btn btn-sm btn-warning btn-retomar" data-id="${l.id}" title="Retomar Lançamento"><i class="bi bi-play-circle"></i></button>`;
                             }
                         }
                     }
 
-                    buttonsHtml += ` <button class="btn btn-sm btn-info btn-ver-comentarios" data-id="${lancamento.id}" title="Ver Comentários" data-bs-toggle="modal" data-bs-target="#modalComentarios"><i class="bi bi-chat-left-text"></i></button>`;
+                    buttonsHtml += ` <button class="btn btn-sm btn-info btn-ver-comentarios" data-id="${l.id}" title="Ver Comentários" data-bs-toggle="modal" data-bs-target="#modalComentarios"><i class="bi bi-chat-left-text"></i></button>`;
 
                     td.innerHTML = `<div class="btn-group" role="group">${buttonsHtml}</div>`;
                 } else {
@@ -413,48 +430,9 @@ document.addEventListener('DOMContentLoaded', () => {
         tbodyElement.appendChild(frag);
     }
 
+    // getDadosFiltrados mantido para compatibilidade com exportação e outros usos
     function getDadosFiltrados() {
-        let dadosFiltrados = [...todosLancamentos];
-        const termoBusca = searchInput.value.toLowerCase().trim();
-
-        if (termoBusca) {
-            dadosFiltrados = dadosFiltrados.filter(l => {
-                const textoPesquisavel = [
-                    l.os?.os, l.detalhe?.site, l.os?.segmento?.nome, l.os?.projeto,
-                    l.detalhe?.lpu?.nomeLpu, l.detalhe?.lpu?.codigoLpu, l.prestador?.nome
-                ].join(' ').toLowerCase();
-                return textoPesquisavel.includes(termoBusca);
-            });
-        }
-
-        if (filtrosAtivos.periodo) {
-            const hoje = new Date();
-            hoje.setHours(0, 0, 0, 0);
-            dadosFiltrados = dadosFiltrados.filter(l => {
-                const partesData = l.dataAtividade.split('/');
-                const dataAtividade = new Date(partesData[2], partesData[1] - 1, partesData[0]);
-                if (filtrosAtivos.periodo.start && filtrosAtivos.periodo.end) {
-                    return dataAtividade >= filtrosAtivos.periodo.start && dataAtividade <= filtrosAtivos.periodo.end;
-                }
-                switch (filtrosAtivos.periodo) {
-                    case 'hoje': return dataAtividade.getTime() === hoje.getTime();
-                    case 'ontem': const ontem = new Date(hoje); ontem.setDate(hoje.getDate() - 1); return dataAtividade.getTime() === ontem.getTime();
-                    case 'semana': const umaSemanaAtras = new Date(hoje); umaSemanaAtras.setDate(hoje.getDate() - 6); return dataAtividade >= umaSemanaAtras;
-                    case 'mes': const umMesAtras = new Date(hoje); umMesAtras.setMonth(hoje.getMonth() - 1); return dataAtividade >= umMesAtras;
-                    default: return true;
-                }
-            });
-        }
-
-        if (filtrosAtivos.status) {
-            dadosFiltrados = dadosFiltrados.filter(l => l.situacaoAprovacao === filtrosAtivos.status);
-        }
-
-        if (filtrosAtivos.osId) {
-            dadosFiltrados = dadosFiltrados.filter(l => l.os.id == filtrosAtivos.osId);
-        }
-
-        return dadosFiltrados;
+        return aplicarFiltrosLocais(todosLancamentos);
     }
 
     // Listener para checkboxes individuais (Delegation)
@@ -473,29 +451,66 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function carregarLancamentos(append = false) {
-        if (!append) {
-            indexDataFim = new Date();
-            indexDataInicio = new Date();
-            indexDataInicio.setDate(indexDataFim.getDate() - 30);
-            todosLancamentos = [];
-        }
+    // Dados separados por aba
+    let dadosRascunhos = [];
+    let dadosPendentesAprovacao = [];
+    let dadosMinhasPendencias = [];
+    let dadosHistorico = [];
+    let dadosParalisados = [];
+    let historicoPage = 0;
+    let historicoTotalPages = 0;
+
+    function getComparer() {
+        return (a, b) => {
+            let valA = a[sortConfig.key];
+            let valB = b[sortConfig.key];
+            const isDate = sortConfig.key.toLowerCase().includes('data');
+            const isValue = sortConfig.key.toLowerCase().includes('valor');
+            if (isDate) { valA = valA ? parseDataBrasileira(valA) : new Date(0); valB = valB ? parseDataBrasileira(valB) : new Date(0); }
+            else if (isValue) { valA = Number(valA) || 0; valB = Number(valB) || 0; }
+            if (typeof valA === 'string') { return sortConfig.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA); }
+            else { return sortConfig.direction === 'asc' ? valA - valB : valB - valA; }
+        };
+    }
+
+    async function carregarLancamentos() {
+        todosLancamentos = [];
         toggleLoader(true);
         try {
-            const response = await fetchComAuth('/api/lancamentos');
-            if (!response.ok) throw new Error(`Erro na rede: ${response.statusText}`);
-            const lancamentosDaApi = await response.json();
+            // Dispara todas as chamadas em paralelo
+            const [resRascunhos, resPendentes, resPendAprov, resParalisados, resHistorico] = await Promise.all([
+                fetchComAuth(`${API_BASE_URL}/lancamentosviewer`),
+                fetchComAuth(`${API_BASE_URL}/lancamentosviewer/pendentes`),
+                fetchComAuth(`${API_BASE_URL}/lancamentosviewer/pendentes-aprovacao`),
+                fetchComAuth(`${API_BASE_URL}/lancamentosviewer/paralisados`),
+                fetchComAuth(`${API_BASE_URL}/lancamentosviewer/historicos?page=0&size=100`)
+            ]);
 
-            // Filtra e atualiza a variável global
-            todosLancamentos = filtrarLancamentosParaUsuario(lancamentosDaApi);
+            dadosRascunhos = resRascunhos.ok ? await resRascunhos.json() : [];
+            dadosMinhasPendencias = resPendentes.ok ? await resPendentes.json() : [];
+            dadosPendentesAprovacao = resPendAprov.ok ? await resPendAprov.json() : [];
+            dadosParalisados = resParalisados.ok ? await resParalisados.json() : [];
 
-            // Renderiza os componentes da tela
-            renderizarCardsDashboard(todosLancamentos);
+            if (resHistorico.ok) {
+                const pageData = await resHistorico.json();
+                dadosHistorico = pageData.content || [];
+                historicoPage = pageData.number || 0;
+                historicoTotalPages = pageData.totalPages || 0;
+            } else {
+                dadosHistorico = [];
+            }
 
-            // --- AQUI É A CHAMADA IMPORTANTE ---
+            // Monta todosLancamentos para compatibilidade (dashboard, filtroOS, exportação)
+            todosLancamentos = [
+                ...dadosRascunhos,
+                ...dadosMinhasPendencias,
+                ...dadosPendentesAprovacao,
+                ...dadosParalisados,
+                ...dadosHistorico
+            ];
+
+            renderizarCardsDashboard();
             popularFiltroOS();
-            // -----------------------------------
-
             renderizarTodasAsTabelas();
         } catch (error) {
             console.error('Falha ao buscar lançamentos:', error);
@@ -505,39 +520,95 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function carregarMaisHistorico() {
+        if (historicoPage + 1 >= historicoTotalPages) {
+            mostrarToast('Não há mais registros no histórico.', 'warning');
+            return;
+        }
+        const btnMais = document.getElementById('btn-carregar-mais-historico');
+        if (btnMais) { btnMais.disabled = true; btnMais.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Carregando...'; }
+        try {
+            const termo = searchInput ? searchInput.value.trim() : '';
+            const searchParam = termo ? `&search=${encodeURIComponent(termo)}` : '';
+            const res = await fetchComAuth(`${API_BASE_URL}/lancamentosviewer/historicos?page=${historicoPage + 1}&size=100${searchParam}`);
+            if (res.ok) {
+                const pageData = await res.json();
+                const novos = pageData.content || [];
+                dadosHistorico = [...dadosHistorico, ...novos];
+                historicoPage = pageData.number;
+                historicoTotalPages = pageData.totalPages;
+                todosLancamentos = [...todosLancamentos, ...novos];
+                renderizarTabela(aplicarFiltrosLocais(dadosHistorico).sort(getComparer()), tbodyHistorico, colunasHistorico);
+                atualizarContadorKpi();
+                atualizarBtnMaisHistorico();
+            }
+        } catch (e) {
+            console.error(e);
+            mostrarToast('Erro ao carregar mais histórico.', 'error');
+        } finally {
+            if (btnMais) { btnMais.disabled = false; btnMais.innerHTML = '<i class="bi bi-arrow-down-circle"></i> Carregar Mais'; }
+        }
+    }
+
+    function atualizarBtnMaisHistorico() {
+        const btn = document.getElementById('btn-carregar-mais-historico');
+        if (btn) {
+            btn.style.display = (historicoPage + 1 < historicoTotalPages) ? '' : 'none';
+        }
+    }
+
+    function aplicarFiltrosLocais(dados) {
+        let filtrados = [...dados];
+        const termoBusca = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        if (termoBusca) {
+            filtrados = filtrados.filter(l => {
+                const texto = [l.os, l.site, l.segmento, l.projeto, l.lpuNome, l.lpuCodigo, l.prestador].join(' ').toLowerCase();
+                return texto.includes(termoBusca);
+            });
+        }
+        if (filtrosAtivos.periodo) {
+            filtrados = filtrados.filter(l => {
+                if (!l.dataAtividade) return false;
+                const partesData = l.dataAtividade.split('/');
+                const dataAtividade = new Date(partesData[2], partesData[1] - 1, partesData[0]);
+                if (filtrosAtivos.periodo.start && filtrosAtivos.periodo.end) {
+                    return dataAtividade >= filtrosAtivos.periodo.start && dataAtividade <= filtrosAtivos.periodo.end;
+                }
+                const hoje = new Date(); hoje.setHours(0,0,0,0);
+                switch (filtrosAtivos.periodo) {
+                    case 'hoje': return dataAtividade.getTime() === hoje.getTime();
+                    case 'ontem': const ontem = new Date(hoje); ontem.setDate(hoje.getDate() - 1); return dataAtividade.getTime() === ontem.getTime();
+                    case 'semana': const sem = new Date(hoje); sem.setDate(hoje.getDate() - 6); return dataAtividade >= sem;
+                    case 'mes': const mes = new Date(hoje); mes.setMonth(hoje.getMonth() - 1); return dataAtividade >= mes;
+                    default: return true;
+                }
+            });
+        }
+        if (filtrosAtivos.status) {
+            filtrados = filtrados.filter(l => l.situacaoAprovacao === filtrosAtivos.status);
+        }
+        if (filtrosAtivos.osId) {
+            filtrados = filtrados.filter(l => l.osId == filtrosAtivos.osId);
+        }
+        return filtrados;
+    }
+
     function renderizarTodasAsTabelas() {
-        const dadosParaExibir = getDadosFiltrados();
+        const comparer = getComparer();
 
-        // 1. Definição do Comparer (Mantido)
-        const comparer = (a, b) => {
-            let valA = getNestedValue(a, sortConfig.key);
-            let valB = getNestedValue(b, sortConfig.key);
-            const isDate = sortConfig.key.toLowerCase().includes('data');
-            const isValue = sortConfig.key.toLowerCase().includes('valor');
-            if (isDate) { valA = valA ? parseDataBrasileira(valA) : new Date(0); valB = valB ? parseDataBrasileira(valB) : new Date(0); }
-            else if (isValue) { valA = Number(valA) || 0; valB = Number(valB) || 0; }
-            if (typeof valA === 'string') { return sortConfig.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA); }
-            else { return sortConfig.direction === 'asc' ? valA - valB : valB - valA; }
-        };
+        const rascunhos = aplicarFiltrosLocais(dadosRascunhos).sort(comparer);
+        const pendentesAprovacao = aplicarFiltrosLocais(dadosPendentesAprovacao).sort(comparer);
+        const minhasPendencias = aplicarFiltrosLocais(dadosMinhasPendencias).sort(comparer);
+        const historico = aplicarFiltrosLocais(dadosHistorico).sort(comparer);
+        const paralisados = aplicarFiltrosLocais(dadosParalisados).sort(comparer);
 
-        const statusPendentes = ['PENDENTE_COORDENADOR', 'AGUARDANDO_EXTENSAO_PRAZO', 'PENDENTE_CONTROLLER'];
-        const statusRejeitados = ['RECUSADO_COORDENADOR', 'RECUSADO_CONTROLLER'];
-
-        // 2. Filtragem e Ordenação Normal
-        const rascunhos = dadosParaExibir.filter(l => l.situacaoAprovacao === 'RASCUNHO').sort(comparer);
-        const pendentesAprovacao = dadosParaExibir.filter(l => statusPendentes.includes(l.situacaoAprovacao)).sort(comparer);
-        const minhasPendencias = dadosParaExibir.filter(l => statusRejeitados.includes(l.situacaoAprovacao)).sort(comparer);
-        const historico = dadosParaExibir.filter(l => !['RASCUNHO', ...statusPendentes, ...statusRejeitados].includes(l.situacaoAprovacao)).sort(comparer);
-        const paralisados = getProjetosParalisados().sort(comparer);
-
-        // 3. Atualização de KPIs (Mantido)
+        // KPI Valor Pendente
         const kpiValorEl = document.getElementById('kpi-valor-pendente');
         if (kpiValorEl) {
             const totalPendente = pendentesAprovacao.reduce((acc, curr) => acc + (curr.valor || 0), 0);
             kpiValorEl.textContent = formatarMoeda(totalPendente);
         }
 
-        // 4. Renderização das Tabelas
         if (typeof inicializarCabecalhos === 'function') inicializarCabecalhos();
 
         renderizarTabela(rascunhos, tbodyLancamentos, colunasLancamentos);
@@ -546,13 +617,13 @@ document.addEventListener('DOMContentLoaded', () => {
         renderizarTabela(historico, tbodyHistorico, colunasHistorico);
         renderizarTabela(paralisados, tbodyParalisados, colunasMinhasPendencias);
 
-        // 5. Atualização de Notificações e Badges (Mantido)
         if (notificacaoPendencias) {
             notificacaoPendencias.textContent = minhasPendencias.length;
             notificacaoPendencias.style.display = minhasPendencias.length > 0 ? '' : 'none';
         }
 
         atualizarContadorKpi();
+        atualizarBtnMaisHistorico();
     }
 
     function atualizarContadorKpi() {
@@ -787,28 +858,29 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        async function popularSelect(selectElement, url, valueField, textFieldFormatter) {
+        async function popularSelect(selectElement, url, valueField, textFieldFormatter, filterFn) {
             try {
                 const response = await fetchComAuth(url);
                 if (!response.ok) throw new Error(`Falha ao carregar dados: ${response.statusText}`);
-                const data = await response.json();
+                let data = await response.json();
+                const dataFiltrada = filterFn ? data.filter(filterFn) : data;
                 if (selectElement.id.includes('prestadorId') && typeof Choices !== 'undefined') {
                     if (selectElement.choices) selectElement.choices.destroy();
                     selectElement.innerHTML = '';
                     const choices = new Choices(selectElement, { searchEnabled: true, placeholder: true, placeholderValue: 'Busque pelo nome ou código...', itemSelectText: '', noResultsText: 'Nenhum resultado' });
-                    const choicesData = data.map(item => ({ value: item[valueField], label: textFieldFormatter(item) }));
+                    const choicesData = dataFiltrada.map(item => ({ value: item[valueField], label: textFieldFormatter(item) }));
                     choices.setChoices(choicesData, 'value', 'label', false);
                     selectElement.choices = choices;
                 } else {
                     selectElement.innerHTML = `<option value="" selected disabled>Selecione...</option>`;
-                    data.forEach(item => {
+                    dataFiltrada.forEach(item => {
                         const option = document.createElement('option');
                         option.value = item[valueField];
                         option.textContent = textFieldFormatter(item);
                         selectElement.appendChild(option);
                     });
                 }
-                return data;
+                return data; // retorna dados completos (sem filtro) para cache
             } catch (error) {
                 console.error(`Erro ao popular o select #${selectElement.id}:`, error);
                 selectElement.innerHTML = `<option value="" selected disabled>Erro ao carregar</option>`;
@@ -867,9 +939,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 todosOsPrestadores = await popularSelect(document.getElementById('prestadorId'), '/api/index/prestadores/ativos', 'id', item => `${item.codigoPrestador} - ${item.prestador}`);
             }
 
-            // Carrega Etapas (se ainda não carregou)
+            // Carrega Etapas (se ainda não carregou) — filtra somente ativas
             if (todasAsEtapas.length === 0) {
-                todasAsEtapas = await popularSelect(document.getElementById('etapaGeralSelect'), '/api/index/etapas', 'id', item => `${item.codigo} - ${item.nome}`);
+                todasAsEtapas = await popularSelect(document.getElementById('etapaGeralSelect'), '/api/index/etapas', 'id', item => `${item.codigo} - ${item.nome}`, item => item.ativo !== false);
             }
 
             if (typeof DocumentacaoModule !== 'undefined') {
@@ -894,7 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (editingId) formAdicionar.dataset.editingId = editingId;
             else delete formAdicionar.dataset.editingId;
 
-            if (lancamento.detalhe && lancamento.detalhe.id) formAdicionar.dataset.osLpuDetalheId = lancamento.detalhe.id;
+            if (lancamento.detalheId) formAdicionar.dataset.osLpuDetalheId = lancamento.detalheId;
             else delete formAdicionar.dataset.osLpuDetalheId;
 
             if (lpuContainer) lpuContainer.classList.add('d-none');
@@ -931,22 +1003,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 5. QUINTO: Preenchimento dos demais dados (OS, Valores, etc.)
-            if (lancamento.os) {
-                if (selectProjeto && lancamento.os.projeto) {
-                    if (!selectProjeto.querySelector(`option[value="${lancamento.os.projeto}"]`)) {
-                        selectProjeto.add(new Option(lancamento.os.projeto, lancamento.os.projeto, true, true));
+            if (lancamento.osId) {
+                if (selectProjeto && lancamento.projeto) {
+                    if (!selectProjeto.querySelector(`option[value="${lancamento.projeto}"]`)) {
+                        selectProjeto.add(new Option(lancamento.projeto, lancamento.projeto, true, true));
                     }
-                    selectProjeto.value = lancamento.os.projeto;
+                    selectProjeto.value = lancamento.projeto;
                 }
-                if (selectOS && lancamento.os.id) {
-                    if (!selectOS.querySelector(`option[value="${lancamento.os.id}"]`)) {
-                        selectOS.add(new Option(lancamento.os.os, lancamento.os.id, true, true));
+                if (selectOS && lancamento.osId) {
+                    if (!selectOS.querySelector(`option[value="${lancamento.osId}"]`)) {
+                        selectOS.add(new Option(lancamento.os, lancamento.osId, true, true));
                     }
-                    selectOS.value = lancamento.os.id;
+                    selectOS.value = lancamento.osId;
                 }
                 try {
-                    // Busca dados completos da OS para preencher campos read-only
-                    const response = await fetchComAuth(`/api/os/${lancamento.os.id}`);
+                    const response = await fetchComAuth(`/api/os/${lancamento.osId}`);
                     if (!response.ok) throw new Error('Falha ao recarregar dados da OS para edição.');
                     const osDataCompleta = await response.json();
                     preencherCamposOS(osDataCompleta);
@@ -966,15 +1037,21 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             ['planoVistoria', 'planoDesmobilizacao', 'planoInstalacao', 'planoAtivacao', 'planoDocumentacao'].forEach(k => {
                 const el = document.getElementById(k);
-                if (el && lancamento[k]) el.value = lancamento[k].split('/').reverse().join('-');
+                if (el && lancamento[k]) {
+                    // Converte dd/MM/yyyy → yyyy-MM-dd para input[type=date]
+                    const partes = lancamento[k].split('/');
+                    if (partes.length === 3) el.value = `${partes[2]}-${partes[1]}-${partes[0]}`;
+                }
             });
 
             if (selectLPU) selectLPU.innerHTML = '';
-            if (lancamento.detalhe && lancamento.detalhe.lpu) {
-                const lpu = lancamento.detalhe.lpu;
+            if (lancamento.lpuId) {
+                const lpuLabel = (lancamento.lpuCodigo || lancamento.lpuNome)
+                    ? `${lancamento.lpuCodigo || ''}${lancamento.lpuCodigo && lancamento.lpuNome ? ' - ' : ''}${lancamento.lpuNome || ''}`
+                    : '';
                 if (selectLPU) {
-                    selectLPU.add(new Option(labelLpu(lpu), lpu.id));
-                    selectLPU.value = lpu.id;
+                    selectLPU.add(new Option(lpuLabel, lancamento.lpuId));
+                    selectLPU.value = lancamento.lpuId;
                 }
                 if (lpuContainer) lpuContainer.classList.remove('d-none');
             }
@@ -991,14 +1068,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const choicesData = prestadores.map(item => ({ value: item.id, label: `${item.codigoPrestador} - ${item.prestador}` }));
                 choices.setChoices(choicesData, 'value', 'label', false);
                 selectPrestadorEl.choices = choices;
-                if (lancamento.prestador?.id) setTimeout(() => { selectPrestadorEl.choices.setChoiceByValue(String(lancamento.prestador.id)); }, 100);
+                if (lancamento.prestadorId) setTimeout(() => { selectPrestadorEl.choices.setChoiceByValue(String(lancamento.prestadorId)); }, 100);
             }
 
-            if (lancamento.etapa && lancamento.etapa.id && selectEtapaGeral) {
-                const etapaGeralPai = todasAsEtapas.find(eg => eg.codigo === lancamento.etapa.codigoGeral);
+            if (lancamento.etapaDetalhadaId && selectEtapaGeral) {
+                const etapaGeralPai = todasAsEtapas.find(eg => eg.codigo === lancamento.etapaGeralCodigo);
                 if (etapaGeralPai) {
                     selectEtapaGeral.value = etapaGeralPai.id;
-                    await popularDropdownsDependentes(etapaGeralPai.id, lancamento.etapa.id, lancamento.status);
+                    await popularDropdownsDependentes(etapaGeralPai.id, lancamento.etapaDetalhadaId, lancamento.status);
                 }
             } else if (selectEtapaGeral) {
                 selectEtapaGeral.value = '';
@@ -1061,9 +1138,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     reenviarBtn.innerHTML = originalContent;
                 }
             } else if (comentariosBtn) {
-                const lancamento = todosLancamentos.find(l => l.id == comentariosBtn.dataset.id);
-                if (lancamento) exibirComentarios(lancamento);
-                else mostrarToast('Lançamento não encontrado.', 'error');
+                const lancamentoId = comentariosBtn.dataset.id;
+                try {
+                    const res = await fetchComAuth(`${API_BASE_URL}/lancamentos/${lancamentoId}`);
+                    if (res.ok) {
+                        const lancamentoCompleto = await res.json();
+                        exibirComentarios(lancamentoCompleto);
+                    } else {
+                        mostrarToast('Erro ao carregar comentários.', 'error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    mostrarToast('Erro ao carregar comentários.', 'error');
+                }
             } else if (submeterBtn) {
                 const lancamentoId = submeterBtn.dataset.id;
                 const btnConfirmar = document.getElementById('btnConfirmarSubmissao');
@@ -1084,21 +1171,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // getProjetosParalisados agora retorna dados do endpoint /paralisados
         function getProjetosParalisados() {
-            const ultimosLancamentosPorProjeto = new Map();
-            todosLancamentos.forEach(l => {
-                if (l.detalhe && l.detalhe.id) {
-                    const chaveProjeto = l.detalhe.id;
-                    if (!ultimosLancamentosPorProjeto.has(chaveProjeto) || l.id > ultimosLancamentosPorProjeto.get(chaveProjeto).id) {
-                        ultimosLancamentosPorProjeto.set(chaveProjeto, l);
-                    }
-                }
-            });
-            const lancamentosParalisados = [];
-            for (const ultimoLancamento of ultimosLancamentosPorProjeto.values()) {
-                if (ultimoLancamento.situacao === 'Paralisado') lancamentosParalisados.push(ultimoLancamento);
-            }
-            return lancamentosParalisados;
+            return dadosParalisados;
         }
 
         document.getElementById('btnConfirmarExclusaoLancamentoDefinitiva')?.addEventListener('click', async function (e) {
@@ -1191,7 +1266,8 @@ document.addEventListener('DOMContentLoaded', () => {
             inputTexto.value = '';
         }
 
-        modalTitle.innerHTML = `<i class="bi bi-chat-left-text-fill me-2"></i> Comentários - OS: ${getNestedValue(lancamento, 'os.os') || 'N/A'}`;
+        const osLabel = typeof lancamento.os === 'string' ? lancamento.os : (lancamento.os?.os || 'N/A');
+        modalTitle.innerHTML = `<i class="bi bi-chat-left-text-fill me-2"></i> Comentários - OS: ${osLabel}`;
         modalBody.innerHTML = '';
 
         if (!lancamento.comentarios || lancamento.comentarios.length === 0) {
@@ -1314,24 +1390,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!todosLancamentos || todosLancamentos.length === 0) return;
 
-        // Cria um Map para garantir OS únicas
         const osMap = new Map();
-
         todosLancamentos.forEach(l => {
-            if (l.os && l.os.id && l.os.os) {
-                // Usa o ID como chave para unicidade
-                if (!osMap.has(l.os.id)) {
-                    osMap.set(l.os.id, l.os.os);
+            if (l.osId && l.os) {
+                if (!osMap.has(l.osId)) {
+                    osMap.set(l.osId, l.os);
                 }
             }
         });
 
-        // Converte para array e ordena alfabeticamente
         const osUnicas = Array.from(osMap.entries())
             .map(([id, osNome]) => ({ id, os: osNome }))
             .sort((a, b) => a.os.localeCompare(b.os));
 
-        // Adiciona as opções ao select
         osUnicas.forEach(item => {
             filtroOsEl.add(new Option(item.os, item.id));
         });
@@ -1364,9 +1435,35 @@ document.addEventListener('DOMContentLoaded', () => {
         renderizarTodasAsTabelas();
     });
 
+    let searchHistoricoTimeout = null;
     searchInput.addEventListener('input', () => {
         renderizarTodasAsTabelas();
+
+        // Busca server-side no histórico (debounce 500ms)
+        clearTimeout(searchHistoricoTimeout);
+        searchHistoricoTimeout = setTimeout(() => {
+            const termo = searchInput.value.trim();
+            buscarHistoricoServerSide(termo);
+        }, 500);
     });
+
+    async function buscarHistoricoServerSide(termo) {
+        const searchParam = termo ? `&search=${encodeURIComponent(termo)}` : '';
+        try {
+            const res = await fetchComAuth(`${API_BASE_URL}/lancamentosviewer/historicos?page=0&size=100${searchParam}`);
+            if (res.ok) {
+                const pageData = await res.json();
+                dadosHistorico = pageData.content || [];
+                historicoPage = pageData.number || 0;
+                historicoTotalPages = pageData.totalPages || 0;
+                renderizarTabela(aplicarFiltrosLocais(dadosHistorico).sort(getComparer()), tbodyHistorico, colunasHistorico);
+                atualizarBtnMaisHistorico();
+                atualizarContadorKpi();
+            }
+        } catch (e) {
+            console.error('Erro na busca do histórico:', e);
+        }
+    }
 
     // ==========================================================
     // LÓGICA DO MODAL DE SOLICITAÇÃO DE MATERIAL (COM TRANSPORTE)
@@ -1715,23 +1812,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (itensLote.length === 0) {
                 container.style.display = 'none';
                 tbody.innerHTML = '';
-                totalEl.textContent = 'R$ 0,00';
+                if (totalEl) totalEl.textContent = 'R$ 0,00';
                 return;
             }
             container.style.display = '';
-            let total = 0;
             tbody.innerHTML = itensLote.map((item, idx) => {
-                const subtotal = item.valor * item.quantidade;
-                total += subtotal;
                 return `<tr>
-                    <td><small class="text-truncate d-inline-block" style="max-width:320px;" title="${item.label}">${item.label}</small></td>
+                    <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;" title="${item.label}">${item.label}</td>
                     <td class="text-center">${item.quantidade}</td>
-                    <td class="text-end">${parseFloat(item.valor).toLocaleString('pt-BR', {style:'currency',currency:'BRL'})}</td>
-                    <td class="text-end fw-bold">${subtotal.toLocaleString('pt-BR', {style:'currency',currency:'BRL'})}</td>
                     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="window._removerItemLote(${idx})" title="Remover"><i class="bi bi-trash3"></i></button></td>
                 </tr>`;
             }).join('');
-            totalEl.textContent = total.toLocaleString('pt-BR', {style:'currency',currency:'BRL'});
+            if (totalEl) {
+                const total = itensLote.reduce((acc, item) => acc + (item.valor * item.quantidade), 0);
+                totalEl.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            }
         }
 
         window._removerItemLote = function(idx) {
@@ -1809,8 +1904,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     todasAsOSComplementar = await response.json();
                 }
 
+                // Filtra apenas OSs que possuem OsLpuDetalhe cadastrado
+                const osComDetalhes = todasAsOSComplementar.filter(os => os.detalhes && os.detalhes.length > 0);
+
                 // Popula Projetos
-                const projetosUnicos = [...new Set(todasAsOSComplementar.map(os => os.projeto))];
+                const projetosUnicos = [...new Set(osComDetalhes.map(os => os.projeto))];
                 const projetoChoicesData = [{ value: '', label: 'Selecione o projeto...', selected: true, disabled: true }];
                 projetosUnicos.forEach(projeto => {
                     projetoChoicesData.push({ value: projeto, label: projeto });
@@ -1819,7 +1917,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Popula OSs
                 const osChoicesData = [{ value: '', label: 'Selecione a OS...', selected: true, disabled: true }];
-                todasAsOSComplementar.forEach(os => {
+                osComDetalhes.forEach(os => {
                     osChoicesData.push({ value: os.os, label: os.os });
                 });
                 choicesOS.setChoices(osChoicesData, 'value', 'label', true);
@@ -1922,8 +2020,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const segmentoId = osCorrespondente?.segmento?.id || null;
             const payload = {
                 osId: parseInt(osIdParaApi),
+                segmentoId: segmentoId,
                 solicitanteId: parseInt(localStorage.getItem('usuarioId')),
                 solicitanteNome: localStorage.getItem('usuarioNome') || 'Usuário',
                 justificativa: document.getElementById('justificativaComplementar').value,
@@ -1970,47 +2070,122 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const btnExportar = document.getElementById('btnExportar');
-    if (btnExportar) {
-        btnExportar.addEventListener('click', () => {
+    // ==================== EXPORTAÇÃO COM MODAL ====================
+    const checkExportTodos = document.getElementById('exportTodosPeriodos');
+    const exportDataInicio = document.getElementById('exportDataInicio');
+    const exportDataFim = document.getElementById('exportDataFim');
+
+    if (checkExportTodos) {
+        checkExportTodos.addEventListener('change', () => {
+            const disabled = checkExportTodos.checked;
+            if (exportDataInicio) exportDataInicio.disabled = disabled;
+            if (exportDataFim) exportDataFim.disabled = disabled;
+        });
+        // Inicia desabilitado
+        if (exportDataInicio) exportDataInicio.disabled = true;
+        if (exportDataFim) exportDataFim.disabled = true;
+    }
+
+    const btnConfirmarExportar = document.getElementById('btnConfirmarExportar');
+    if (btnConfirmarExportar) {
+        btnConfirmarExportar.addEventListener('click', () => {
+            const exportarTodos = checkExportTodos ? checkExportTodos.checked : true;
+            let dataInicio = null;
+            let dataFim = null;
+
+            if (!exportarTodos) {
+                if (exportDataInicio && exportDataInicio.value) dataInicio = new Date(exportDataInicio.value + 'T00:00:00');
+                if (exportDataFim && exportDataFim.value) dataFim = new Date(exportDataFim.value + 'T23:59:59');
+                if (!dataInicio || !dataFim) {
+                    mostrarToast('Informe as datas de início e fim.', 'error');
+                    return;
+                }
+                if (dataInicio > dataFim) {
+                    mostrarToast('A data de início não pode ser maior que a data fim.', 'error');
+                    return;
+                }
+            }
+
+            function filtrarPorPeriodo(dados) {
+                if (exportarTodos) return dados;
+                return dados.filter(l => {
+                    if (!l.dataAtividade) return false;
+                    const partes = l.dataAtividade.split('/');
+                    if (partes.length !== 3) return false;
+                    const dt = new Date(partes[2], partes[1] - 1, partes[0]);
+                    return dt >= dataInicio && dt <= dataFim;
+                });
+            }
+
+            // Dados de Pendente Doc do DocumentacaoModule
+            const solicitacoesPendenteDoc = (typeof DocumentacaoModule !== 'undefined' && DocumentacaoModule.getSolicitacoes)
+                ? DocumentacaoModule.getSolicitacoes() : [];
+            const colunasPendenteDocExport = ["STATUS", "DATA SOLICITAÇÃO", "OS", "PROJETO", "SOLICITANTE", "TIPO DOCUMENTO", "RESPONSÁVEL"];
+
             const dadosParaExportar = {
                 "Pendências": {
-                    dados: getDadosFiltrados().filter(l => ['RECUSADO_COORDENADOR', 'RECUSADO_CONTROLLER'].includes(l.situacaoAprovacao)),
+                    dados: filtrarPorPeriodo(aplicarFiltrosLocais(dadosMinhasPendencias)),
                     colunas: colunasMinhasPendencias
                 },
                 "Lançamentos": {
-                    dados: getDadosFiltrados().filter(l => l.situacaoAprovacao === 'RASCUNHO'),
+                    dados: filtrarPorPeriodo(aplicarFiltrosLocais(dadosRascunhos)),
                     colunas: colunasLancamentos
                 },
                 "Pendente Aprovação": {
-                    dados: getDadosFiltrados().filter(l => ['PENDENTE_COORDENADOR', 'AGUARDANDO_EXTENSAO_PRAZO', 'PENDENTE_CONTROLLER'].includes(l.situacaoAprovacao)),
+                    dados: filtrarPorPeriodo(aplicarFiltrosLocais(dadosPendentesAprovacao)),
                     colunas: colunasPrincipais
                 },
+                "Pendente Doc": {
+                    dados: solicitacoesPendenteDoc,
+                    colunas: colunasPendenteDocExport,
+                    customMapper: true
+                },
                 "Paralisados": {
-                    dados: getProjetosParalisados(),
+                    dados: filtrarPorPeriodo(aplicarFiltrosLocais(dadosParalisados)),
                     colunas: colunasMinhasPendencias
                 },
                 "Histórico": {
-                    dados: getDadosFiltrados().filter(l => !['RASCUNHO', 'PENDENTE_COORDENADOR', 'AGUARDANDO_EXTENSAO_PRAZO', 'PENDENTE_CONTROLLER', 'RECUSADO_COORDENADOR', 'RECUSADO_CONTROLLER'].includes(l.situacaoAprovacao)),
+                    dados: filtrarPorPeriodo(aplicarFiltrosLocais(dadosHistorico)),
                     colunas: colunasHistorico
                 }
             };
+
             const wb = XLSX.utils.book_new();
             for (const aba in dadosParaExportar) {
-                const { dados, colunas } = dadosParaExportar[aba];
-                const rows = dados.map(lancamento => {
-                    return colunas.map(coluna => {
-                        const func = dataMapping[coluna];
-                        if (func) return func(lancamento);
-                        return "";
+                const { dados, colunas, customMapper } = dadosParaExportar[aba];
+                let rows;
+                if (customMapper && aba === 'Pendente Doc') {
+                    rows = dados.map(sol => [
+                        sol.status || '',
+                        sol.criadoEm ? new Date(sol.criadoEm).toLocaleDateString('pt-BR') : '-',
+                        sol.os || `OS ${sol.osId || ''}`,
+                        sol.projeto || '',
+                        sol.solicitanteNome || 'Sistema',
+                        sol.documento ? sol.documento.nome : '-',
+                        sol.documentistaNome || 'Sem Responsável'
+                    ]);
+                } else {
+                    rows = dados.map(lancamento => {
+                        return colunas.map(coluna => {
+                            const func = dataMapping[coluna];
+                            if (func) return func(lancamento);
+                            return "";
+                        });
                     });
-                });
+                }
                 const ws = XLSX.utils.aoa_to_sheet([colunas, ...rows]);
                 const colWidths = colunas.map(col => ({ wch: Math.max(15, col.length + 2) }));
                 ws['!cols'] = colWidths;
                 XLSX.utils.book_append_sheet(wb, ws, aba);
             }
-            XLSX.writeFile(wb, "lancamentos.xlsx");
+
+            const sufixo = exportarTodos ? 'completo' : `${exportDataInicio.value}_a_${exportDataFim.value}`;
+            XLSX.writeFile(wb, `lancamentos_${sufixo}.xlsx`);
+
+            // Fecha modal
+            const modalEl = document.getElementById('modalExportar');
+            if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+            mostrarToast('Relatório exportado com sucesso!', 'success');
         });
     }
 
@@ -2091,4 +2266,5 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarLancamentos();
     configurarVisibilidadePorRole();
     window.carregarLancamentos = carregarLancamentos;
+    window.carregarMaisHistorico = carregarMaisHistorico;
 });

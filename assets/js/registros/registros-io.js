@@ -32,6 +32,11 @@ const RegistrosIO = {
             const botoesAcao = document.getElementById('botoes-acao');
             if (botoesAcao) botoesAcao.classList.add('d-none');
         }
+        // VISUALIZADOR: esconde botões de importação e financeiro, mantém exportar
+        if (role === 'VISUALIZADOR') {
+            const btnFinanceiro = document.getElementById('btnImportarFinanceiro');
+            if (btnFinanceiro) btnFinanceiro.classList.add('d-none');
+        }
     },
 
     // --- MUDANÇA: Gera o Template Dinamicamente com todas as colunas ---
@@ -129,11 +134,16 @@ const RegistrosIO = {
                     if (!response.ok) {
                         let errorMsg = `Erro no servidor: ${response.status}`;
                         try {
-                            const errorData = await response.json();
-                            errorMsg = errorData.message || JSON.stringify(errorData);
-                        } catch (e) {
+                            // Lê como texto primeiro para evitar "body stream already read"
                             const errorText = await response.text();
-                            errorMsg = errorText || errorMsg;
+                            try {
+                                const errorData = JSON.parse(errorText);
+                                errorMsg = errorData.message || JSON.stringify(errorData);
+                            } catch (parseErr) {
+                                if (errorText) errorMsg = errorText;
+                            }
+                        } catch (e) {
+                            // Falha ao ler response - usa mensagem padrão
                         }
                         throw new Error(errorMsg);
                     }
@@ -440,18 +450,27 @@ const RegistrosIO = {
                 // const detalhesAtivos = os.detalhes.filter(d => d.statusRegistro !== 'INATIVO'); (REMOVIDO)
 
                 os.detalhes.forEach(detalhe => {
-                    let lancamentoParaExibir = detalhe.ultimoLancamento;
+                    let lancamentoParaExibir = null;
 
                     // Se for INATIVO, não buscamos lançamentos operacionais, apenas mantemos o registro
                     const isInativo = detalhe.statusRegistro === 'INATIVO';
 
-                    if (!isInativo && !lancamentoParaExibir && detalhe.lancamentos && detalhe.lancamentos.length > 0) {
-                        const operacionais = detalhe.lancamentos.filter(l => l.situacaoAprovacao !== 'APROVADO_LEGADO');
-                        if (operacionais.length > 0) {
-                            lancamentoParaExibir = operacionais.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
-                        } else {
-                            lancamentoParaExibir = detalhe.lancamentos.reduce((prev, curr) => (prev.id > curr.id) ? prev : curr);
+                    if (!isInativo && detalhe.lancamentos && detalhe.lancamentos.length > 0) {
+                        // CORREÇÃO: Filtra APENAS lançamentos APROVADOS (igual à tela de registros)
+                        // Só mostra dados de lançamentos que já passaram pelo fluxo de aprovação
+                        const historicoAprovado = detalhe.lancamentos.filter(l =>
+                            l.situacaoAprovacao === 'APROVADO' ||
+                            l.situacaoAprovacao === 'APROVADO_LEGADO'
+                        );
+
+                        if (historicoAprovado.length > 0) {
+                            // Pega o mais recente dos aprovados (maior ID)
+                            lancamentoParaExibir = historicoAprovado.reduce((prev, curr) =>
+                                (prev.id > curr.id) ? prev : curr
+                            );
                         }
+                        // Se não houver nenhum aprovado, lancamentoParaExibir fica null
+                        // (como se não existissem lançamentos - comportamento correto)
                     }
 
                     // Cria o objeto da linha

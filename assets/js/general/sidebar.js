@@ -87,7 +87,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     'gestaoAprovacoes.html': 'pages/gestaoAprovacoes.html',
                     'faturamento.html': 'pages/faturamento.html',
                     'gateReport.html': 'pages/gateReport.html',
-                    'controle-cps.html': 'pages/controle-cps.html'
+                    'controle-cps.html': 'pages/controle-cps.html',
+                    'admin.html': 'pages/admin.html'
                 };
 
                 for (const [key, value] of Object.entries(linkMap)) {
@@ -105,7 +106,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 // 1. REGRA DE FATURAMENTO:
                 // Se NÃO for ADMIN e NÃO for CONTROLLER, esconde o link.
-                if (role !== 'ADMIN' && role !== 'CONTROLLER') {
+                if (role !== 'ADMIN' && role !== 'CONTROLLER' && role !== 'VISUALIZADOR') {
                     if (faturamentoLink) faturamentoLink.parentElement.style.display = 'none';
                 }
 
@@ -114,6 +115,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (role === 'MANAGER') {
                     if (cpsLink) cpsLink.parentElement.style.display = 'none';
                     if (gateReportLink) gateReportLink.parentElement.style.display = 'none';
+                }
+
+                // 3. ADMINISTRAÇÃO: só ADMIN vê
+                const adminLink = document.getElementById('sidebar-admin-link');
+                if (adminLink && role !== 'ADMIN') {
+                    adminLink.style.display = 'none';
                 }
 
             } catch (error) {

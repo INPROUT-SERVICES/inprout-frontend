@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="../assets/css/global.css" />
     <link rel="stylesheet" href="../assets/css/indexDB/indexDB.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-
+    <link rel="icon" href="../assets/imgs/favicon.svg" type="image/svg+xml">
 </head>
 
 <body>
@@ -25,7 +25,6 @@
             <button class="btn toggle-sidebar" id="menu-toggle">
                 <i class="bi bi-grid fs-5"></i>
             </button>
-            <link rel="icon" href="../assets/imgs/login/logo.png" type="image/png">
             <a href="../index.html">
                 <img src="../assets/imgs/login/logo.png" alt="Logo Inprout" class="logo-navbar mx-3">
             </a>
@@ -641,6 +640,27 @@
                     <button type="button" class="btn btn-success" onclick="salvarEdicaoEtapaGeral()">
                         <i class="bi bi-check-circle"></i> Salvar
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Confirmar Ativar/Desativar Etapa -->
+    <div class="modal fade" id="modalToggleEtapa" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalToggleEtapaTitle">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Ação
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja <strong id="toggleEtapaAcaoTexto"></strong> esta etapa?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmarToggleEtapa">Confirmar</button>
                 </div>
             </div>
         </div>
@@ -1526,18 +1546,19 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
 
-    <script src="../assets/js/general/global.js?v=5.5"></script>
-    <script src="../assets/js/general/sidebar.js?v=5.5"></script>
+    <script src="../assets/js/general/global.js?v=5.6"></script>
+    <script src="../assets/js/general/sidebar.js?v=5.6"></script>
     <script src="https://unpkg.com/imask"></script>
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-    <script src="../assets/js/indexDB/etapas.js?v=5.5"></script>
-    <script src="../assets/js/indexDB/prestadores.js?v=5.5"></script>
-    <script src="../assets/js/indexDB/lpus.js?v=5.5"></script>
-    <script src="../assets/js/indexDB/gate.js?v=5.5"></script>
-    <script src="../assets/js/indexDB/geral.js?v=5.5"></script>
+    <script src="../assets/js/indexDB/etapas.js?v=5.6"></script>
+    <script src="../assets/js/indexDB/prestadores.js?v=5.6"></script>
+    <script src="../assets/js/indexDB/lpus.js?v=5.6"></script>
+    <script src="../assets/js/indexDB/gate.js?v=5.6"></script>
+    <script src="../assets/js/indexDB/geral.js?v=5.6"></script>
 
 
 

@@ -203,7 +203,7 @@ function aplicarFiltroDocumentacao(tipoFiltro) {
         else thAssunto.classList.add('d-none');
     }
 
-    const HISTORICO_STATUSES = ['FINALIZADO', 'FINALIZADO_FORA_PRAZO', 'DEVOLVIDO', 'REPROVADO', 'RECUSADO'];
+    const HISTORICO_STATUSES = ['FINALIZADO', 'FINALIZADO_FORA_PRAZO', 'DEVOLVIDO', 'REPROVADO'];
 
     switch (tipoFiltro) {
         case 'HISTORICO':
@@ -216,6 +216,9 @@ function aplicarFiltroDocumentacao(tipoFiltro) {
             break;
         case 'EM_ANALISE':
             dadosFiltrados = solicitacoesDocCache.filter(item => item.status === 'RECEBIDO');
+            break;
+        case 'RECUSADOS':
+            dadosFiltrados = solicitacoesDocCache.filter(item => item.status === 'RECUSADO');
             break;
         case 'TODOS':
         default:
@@ -350,7 +353,7 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro, total
     const userId = String(localStorage.getItem('usuarioId') || "0");
 
     // KPIs Dashboard — calculados do cache completo (não dos filtrados)
-    const HIST = ['FINALIZADO', 'FINALIZADO_FORA_PRAZO', 'DEVOLVIDO', 'REPROVADO', 'RECUSADO'];
+    const HIST = ['FINALIZADO', 'FINALIZADO_FORA_PRAZO', 'DEVOLVIDO', 'REPROVADO'];
     const docsPendentes = solicitacoesDocCache.filter(i => !HIST.includes(i.status));
     const docsHistorico = solicitacoesDocCache.filter(i => HIST.includes(i.status));
 
@@ -425,9 +428,15 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro, total
         const btnComentarios = `<button class="btn btn-sm btn-outline-secondary" onclick="abrirModalComentarios('${item.id}', false)" title="Ver Histórico/Comentários"><i class="bi bi-clock-history"></i></button>`;
 
         let acoesHtml = '';
-        const isHistoricoOuFinalizado = contextoFiltro === 'HISTORICO' || status.includes('FINALIZADO') || status === 'DEVOLVIDO' || status === 'REPROVADO' || status === 'RECUSADO';
+        const isHistoricoOuFinalizado = contextoFiltro === 'HISTORICO' || status.includes('FINALIZADO') || status === 'DEVOLVIDO' || status === 'REPROVADO';
 
-        if (!isHistoricoOuFinalizado) {
+        if (status === 'RECUSADO') {
+            // Re-solicitar: ADMIN, COORDINATOR ou MANAGER
+            const podeResolicitar = isAdmin || userRole === 'COORDINATOR' || userRole === 'MANAGER';
+            if (podeResolicitar) {
+                acoesHtml += `<button class="btn btn-sm btn-warning me-1" onclick="iniciarResolicitacao('${item.id}')" title="Re-solicitar Documento"><i class="bi bi-arrow-repeat"></i> Re-solicitar</button>`;
+            }
+        } else if (!isHistoricoOuFinalizado) {
             if (status === 'AGUARDANDO_RECEBIMENTO') {
                 // Receber: apenas ADMIN
                 if (isAdmin) {
@@ -449,8 +458,9 @@ function renderizarTabelaDocsAgrupada(listaDeSolicitacoes, contextoFiltro, total
         const displayAssunto = contextoFiltro === 'HISTORICO' ? '' : 'd-none';
         const provaEnvioTexto = item.provaEnvio ? `<span class="text-truncate d-inline-block text-primary fw-bold" style="max-width: 150px;" title="${item.provaEnvio}"><i class="bi bi-link-45deg"></i> ${item.provaEnvio}</span>` : '-';
 
+        const trClass = status === 'RECUSADO' ? 'table-danger' : '';
         const tr = `
-            <tr>
+            <tr class="${trClass}">
                 <td class="align-middle text-center">${botoesFinal}</td>
                 <td class="align-middle text-center">${htmlStatus}</td>
                 <td class="align-middle fw-bold text-primary">${osCodigo}</td>
@@ -858,6 +868,44 @@ function iniciarRecusa(id) {
     abrirModalComentarios(id, true);
 }
 
+function iniciarResolicitacao(id) {
+    abrirModalComentarios(id, false, true);
+}
+
+async function processarResolicitacao(id, motivo, btnElement, modalInstance) {
+    if (!motivo.trim()) {
+        mostrarToast("Informe o motivo da re-solicitação.", "warning");
+        return;
+    }
+
+    if (typeof setButtonLoading === 'function') setButtonLoading(btnElement, true);
+    toggleLoader(true, '#minhas-docs-pane');
+
+    try {
+        const userId = parseInt(localStorage.getItem('usuarioId'));
+        const resp = await fetchComAuth(`/api/docs/solicitacoes/${id}/resolicitar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ actorUsuarioId: userId, comentario: motivo })
+        });
+
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.message || errData.error || `Erro ao re-solicitar (Status: ${resp.status})`);
+        }
+
+        mostrarToast("Documento re-solicitado com sucesso. Voltou para Aguardando Recebimento.", "success");
+        modalInstance.hide();
+        limparBackdropModal();
+        await carregarDadosDocumentacao();
+    } catch (e) {
+        mostrarToast("Erro na re-solicitação: " + e.message, 'error');
+        if (typeof setButtonLoading === 'function') setButtonLoading(btnElement, false);
+    } finally {
+        toggleLoader(false, '#minhas-docs-pane');
+    }
+}
+
 async function carregarHistoricoNoModal(id) {
     const container = document.getElementById('listaComentariosContainer');
     container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><br><span class="mt-2 text-muted">Carregando histórico...</span></div>';
@@ -909,7 +957,7 @@ async function carregarHistoricoNoModal(id) {
     }
 }
 
-function abrirModalComentarios(id, isRecusa = false) {
+function abrirModalComentarios(id, isRecusa = false, isResolicitacao = false) {
     const modalEl = document.getElementById('modalComentarios');
     const modal = new bootstrap.Modal(modalEl);
 
@@ -929,6 +977,13 @@ function abrirModalComentarios(id, isRecusa = false) {
         txtArea.placeholder = "Motivo da recusa (obrigatório para recusar)...";
 
         novoBtn.addEventListener('click', () => processarRecusa(id, txtArea.value, novoBtn, modal));
+    } else if (isResolicitacao) {
+        document.getElementById('modalComentariosLabel').innerHTML = '<i class="bi bi-arrow-repeat text-warning"></i> Re-solicitar Documento';
+        novoBtn.className = 'btn btn-warning';
+        novoBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Confirmar Re-solicitação';
+        txtArea.placeholder = "Motivo da re-solicitação (obrigatório)...";
+
+        novoBtn.addEventListener('click', () => processarResolicitacao(id, txtArea.value, novoBtn, modal));
     } else {
         document.getElementById('modalComentariosLabel').innerHTML = '<i class="bi bi-chat-dots text-primary"></i> Histórico e Comentários';
         novoBtn.className = 'btn btn-primary';
@@ -974,11 +1029,16 @@ async function processarRecusa(id, motivo, btnElement, modalInstance) {
 
     try {
         const userId = parseInt(localStorage.getItem('usuarioId'));
-        await fetchComAuth(`/api/docs/solicitacoes/${id}/recusar`, {
+        const resp = await fetchComAuth(`/api/docs/solicitacoes/${id}/recusar`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ actorUsuarioId: userId, comentario: motivo })
         });
+
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.message || errData.error || `Erro ao recusar (Status: ${resp.status})`);
+        }
 
         mostrarToast("Documentação recusada com sucesso.", "success");
         modalInstance.hide();

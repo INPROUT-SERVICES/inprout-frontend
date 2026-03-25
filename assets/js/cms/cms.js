@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Permissões
     const userRole = (localStorage.getItem("role") || "").trim().toUpperCase();
-    const rolesComAcessoTotal = ['ADMIN', 'CONTROLLER'];
+    const rolesComAcessoTotal = ['ADMIN', 'CONTROLLER', 'VISUALIZADOR'];
     const temAcessoTotal = rolesComAcessoTotal.includes(userRole);
 
     const formatarMoeda = (valor) => {

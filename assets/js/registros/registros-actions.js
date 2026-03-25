@@ -305,7 +305,7 @@ const RegistrosActions = {
 
     setupRelatorioEspecial: () => {
         const userRole = RegistrosState.userRole;
-        if (['ADMIN', 'CONTROLLER', 'ASSISTANT'].includes(userRole)) {
+        if (['ADMIN', 'CONTROLLER', 'ASSISTANT', 'VISUALIZADOR'].includes(userRole)) {
             const container = document.getElementById('container-relatorio-especial');
             if (container) container.classList.remove('d-none');
         }
@@ -567,7 +567,9 @@ const NovaOsManager = {
     itensLpu: [],
     choicesInstance: null,
     listaLpusCache: null,
+    listaContratosCache: null,
     modalInstance: null,
+    projetoExistenteOs: null,
 
     getModal: () => {
         if (!NovaOsManager.modalInstance) {
@@ -588,13 +590,22 @@ const NovaOsManager = {
             const response = await fetchComAuth(`${RegistrosState.API_BASE_URL}/contrato`);
             if (!response.ok) throw new Error('Erro ao buscar contratos');
             const contratos = await response.json();
+
+            // Cache dos contratos para o select
+            NovaOsManager.listaContratosCache = contratos.map(c => ({
+                id: c.id,
+                nome: c.nome
+            }));
+
             let lpus = [];
             contratos.forEach(c => {
                 if (c.lpus) c.lpus.forEach(l => {
                     if (l.ativo) lpus.push({
                         id: l.id,
                         nome: `${c.nome} | ${l.codigoLpu} - ${l.nomeLpu}`,
-                        valor: l.valorSemImposto || l.valor || 0
+                        valor: l.valorSemImposto || l.valor || 0,
+                        unidade: l.unidade || '',
+                        contratoNome: c.nome
                     });
                 });
             });
@@ -608,19 +619,63 @@ const NovaOsManager = {
         }
     },
 
+    popularSelectContrato: () => {
+        const select = document.getElementById('novaOsContrato');
+        if (!select || !NovaOsManager.listaContratosCache) return;
+        const valorAtual = select.value;
+        select.innerHTML = '<option value="">Selecione...</option>';
+        NovaOsManager.listaContratosCache.forEach(c => {
+            select.add(new Option(c.nome, c.nome));
+        });
+        if (valorAtual) select.value = valorAtual;
+    },
+
     carregarSegmentos: async () => {
         const select = document.getElementById('novaOsSegmento');
         if (!select) return;
         select.innerHTML = '<option value="">Carregando...</option>';
         try {
-            const segmentos = await RegistrosApi.fetchSegmentos();
-            select.innerHTML = '<option value="" disabled selected>Selecione o segmento...</option>';
-            segmentos.forEach(seg => {
-                const opt = document.createElement('option');
-                opt.value = seg.id;
-                opt.textContent = seg.nome;
-                select.appendChild(opt);
-            });
+            const todosSegmentos = await RegistrosApi.fetchSegmentos();
+            const role = RegistrosState.userRole;
+
+            if (role === 'COORDINATOR') {
+                // Coordenador so pode criar para os seus segmentos
+                const userSegmentoIds = JSON.parse(localStorage.getItem('segmentos')) || [];
+                const meusSegmentos = todosSegmentos.filter(s => userSegmentoIds.includes(s.id));
+
+                if (meusSegmentos.length === 1) {
+                    // Se tem so um segmento, auto-seleciona e trava
+                    select.innerHTML = '';
+                    const opt = document.createElement('option');
+                    opt.value = meusSegmentos[0].id;
+                    opt.textContent = meusSegmentos[0].nome;
+                    opt.selected = true;
+                    select.appendChild(opt);
+                    select.disabled = true;
+                } else if (meusSegmentos.length > 1) {
+                    select.innerHTML = '<option value="" disabled selected>Selecione o segmento...</option>';
+                    select.disabled = false;
+                    meusSegmentos.forEach(seg => {
+                        const opt = document.createElement('option');
+                        opt.value = seg.id;
+                        opt.textContent = seg.nome;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">Nenhum segmento associado</option>';
+                    select.disabled = true;
+                }
+            } else {
+                // ADMIN / ASSISTANT — pode selecionar qualquer segmento
+                select.innerHTML = '<option value="" disabled selected>Selecione o segmento...</option>';
+                select.disabled = false;
+                todosSegmentos.forEach(seg => {
+                    const opt = document.createElement('option');
+                    opt.value = seg.id;
+                    opt.textContent = seg.nome;
+                    select.appendChild(opt);
+                });
+            }
         } catch (err) {
             select.innerHTML = '<option value="">Erro ao carregar</option>';
         }
@@ -630,15 +685,12 @@ const NovaOsManager = {
         const selectEl = document.getElementById('novaOsSelectLpu');
         if (!selectEl) return;
 
-        // Destroi instancia anterior se existir
         if (NovaOsManager.choicesInstance) {
             NovaOsManager.choicesInstance.destroy();
             NovaOsManager.choicesInstance = null;
         }
 
-        // Reset do select
         selectEl.innerHTML = '<option value="">Busque pela LPU...</option>';
-
         const lpus = await NovaOsManager.carregarLpus();
 
         NovaOsManager.choicesInstance = new Choices(selectEl, {
@@ -665,18 +717,113 @@ const NovaOsManager = {
         );
     },
 
+    // Auto-preenche campos ao selecionar LPU (Unidade e Contrato)
+    onLpuSelecionada: () => {
+        const selectEl = document.getElementById('novaOsSelectLpu');
+        const lpuId = parseInt(selectEl?.value);
+        const unidadeEl = document.getElementById('novaOsUnidade');
+        const contratoEl = document.getElementById('novaOsContrato');
+        if (!lpuId || isNaN(lpuId)) {
+            if (unidadeEl) unidadeEl.value = '';
+            return;
+        }
+        const lpuInfo = NovaOsManager.listaLpusCache?.find(l => l.id === lpuId);
+        if (unidadeEl) unidadeEl.value = lpuInfo ? (lpuInfo.unidade || '') : '';
+        if (contratoEl && lpuInfo?.contratoNome) contratoEl.value = lpuInfo.contratoNome;
+    },
+
+    // Validacao de projeto existente (debounced no event listener)
+    validarProjeto: async (nomeProjeto) => {
+        const feedbackEl = document.getElementById('novaOsProjetoFeedback');
+        const inputEl = document.getElementById('novaOsProjeto');
+        const osNumeroEl = document.getElementById('novaOsNumero');
+        if (!feedbackEl) return;
+
+        if (!nomeProjeto || nomeProjeto.trim().length < 2) {
+            feedbackEl.classList.add('d-none');
+            feedbackEl.innerHTML = '';
+            NovaOsManager.projetoExistenteOs = null;
+            if (osNumeroEl) { osNumeroEl.value = ''; osNumeroEl.placeholder = '(Gerado automaticamente)'; }
+            return;
+        }
+
+        try {
+            const resp = await fetchComAuth(`${RegistrosState.API_BASE_URL}/os/por-projeto/${encodeURIComponent(nomeProjeto.trim())}`);
+            if (resp.ok) {
+                const osList = await resp.json();
+                if (osList && osList.length > 0) {
+                    const osExistente = osList[0];
+                    NovaOsManager.projetoExistenteOs = osExistente;
+                    feedbackEl.classList.remove('d-none');
+                    feedbackEl.className = 'small mt-1 text-warning fw-bold';
+                    feedbackEl.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i> Projeto ja existe na OS <strong>${osExistente.os}</strong>. Os itens serao adicionados a esta OS.`;
+                    if (osNumeroEl) { osNumeroEl.value = osExistente.os; }
+                    if (inputEl) inputEl.classList.add('border-warning');
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('Erro ao validar projeto:', e);
+        }
+
+        NovaOsManager.projetoExistenteOs = null;
+        feedbackEl.classList.remove('d-none');
+        feedbackEl.className = 'small mt-1 text-success';
+        feedbackEl.innerHTML = '<i class="bi bi-check-circle me-1"></i> Novo projeto. Uma nova OS sera criada.';
+        if (osNumeroEl) { osNumeroEl.value = ''; osNumeroEl.placeholder = '(Gerado automaticamente)'; }
+        if (inputEl) inputEl.classList.remove('border-warning');
+    },
+
+    // Le os valores do formulario de detalhes
+    lerDetalhesDoForm: () => {
+        return {
+            quantidade: parseInt(document.getElementById('novaOsQtd')?.value) || 0,
+            unidade: document.getElementById('novaOsUnidade')?.value || '',
+            site: document.getElementById('novaOsSite')?.value.trim() || '',
+            contrato: document.getElementById('novaOsContrato')?.value.trim() || '',
+            regional: document.getElementById('novaOsRegional')?.value.trim() || '',
+            lote: document.getElementById('novaOsLote')?.value.trim() || '',
+            boq: document.getElementById('novaOsBoq')?.value.trim() || '',
+            po: document.getElementById('novaOsPo')?.value.trim() || '',
+            item: document.getElementById('novaOsItem')?.value.trim() || '',
+            observacoes: document.getElementById('novaOsObservacoes')?.value.trim() || ''
+        };
+    },
+
+    // Limpa os campos do formulario de detalhes (exceto se replicar estiver ativo)
+    limparFormDetalhes: (manterValores) => {
+        if (manterValores) return; // Replicar dados: mantém os campos
+        const ids = ['novaOsQtd', 'novaOsUnidade', 'novaOsSite', 'novaOsContrato', 'novaOsRegional', 'novaOsLote', 'novaOsBoq', 'novaOsPo', 'novaOsItem', 'novaOsObservacoes'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+    },
+
     abrirModal: async () => {
-        // Limpa estado
         NovaOsManager.itensLpu = [];
+        NovaOsManager.projetoExistenteOs = null;
         const form = document.getElementById('formNovaOs');
         if (form) form.reset();
+
+        const feedbackEl = document.getElementById('novaOsProjetoFeedback');
+        if (feedbackEl) { feedbackEl.classList.add('d-none'); feedbackEl.innerHTML = ''; }
+
+        const osNumeroEl = document.getElementById('novaOsNumero');
+        if (osNumeroEl) { osNumeroEl.value = ''; osNumeroEl.placeholder = '(Gerado automaticamente)'; }
+
+        const inputProjeto = document.getElementById('novaOsProjeto');
+        if (inputProjeto) inputProjeto.classList.remove('border-warning');
+
         NovaOsManager.renderizarTabela();
 
-        // Carrega dados em paralelo
         await Promise.all([
             NovaOsManager.carregarSegmentos(),
             NovaOsManager.inicializarChoicesLpu()
         ]);
+
+        // Popular select de contratos (cache ja preenchido pelo carregarLpus)
+        NovaOsManager.popularSelectContrato();
 
         const modal = NovaOsManager.getModal();
         if (modal) modal.show();
@@ -684,20 +831,21 @@ const NovaOsManager = {
 
     adicionarLpu: () => {
         const selectEl = document.getElementById('novaOsSelectLpu');
-        const qtdEl = document.getElementById('novaOsQuantidade');
         const lpuId = parseInt(selectEl?.value);
-        const quantidade = parseInt(qtdEl?.value);
 
         if (!lpuId || isNaN(lpuId)) {
             RegistrosUtils.mostrarToast('Selecione uma LPU.', 'warning');
             return;
         }
-        if (!quantidade || quantidade <= 0) {
-            RegistrosUtils.mostrarToast('Informe uma quantidade valida.', 'warning');
+
+        // Ler detalhes do form
+        const detalhes = NovaOsManager.lerDetalhesDoForm();
+
+        if (!detalhes.quantidade || detalhes.quantidade <= 0) {
+            RegistrosUtils.mostrarToast('Informe a quantidade.', 'warning');
             return;
         }
 
-        // Verifica duplicata
         if (NovaOsManager.itensLpu.find(i => i.lpuId === lpuId)) {
             RegistrosUtils.mostrarToast('Esta LPU ja foi adicionada.', 'warning');
             return;
@@ -713,16 +861,27 @@ const NovaOsManager = {
             lpuId: lpuInfo.id,
             lpuNome: lpuInfo.nome,
             valor: lpuInfo.valor,
-            quantidade: quantidade
+            ...detalhes
         });
 
         NovaOsManager.renderizarTabela();
 
-        // Limpa selecao
+        // Limpa selecao da LPU
         if (NovaOsManager.choicesInstance) {
             NovaOsManager.choicesInstance.setChoiceByValue('');
         }
-        if (qtdEl) qtdEl.value = '';
+
+        // Limpa detalhes (ou mantém se "replicar" estiver ativo)
+        const replicar = document.getElementById('novaOsReplicarDados')?.checked;
+        NovaOsManager.limparFormDetalhes(replicar);
+
+        // Se nao replicar, limpa a unidade tambem
+        if (!replicar) {
+            const unidadeEl = document.getElementById('novaOsUnidade');
+            if (unidadeEl) unidadeEl.value = '';
+        }
+
+        RegistrosUtils.mostrarToast('Item adicionado!', 'success');
     },
 
     removerLpu: (index) => {
@@ -731,16 +890,15 @@ const NovaOsManager = {
     },
 
     renderizarTabela: () => {
-        const tbody = document.getElementById('tbodyLpusNovaOs');
-        const tfoot = document.getElementById('tfootLpusNovaOs');
-        const semItens = document.getElementById('novaOsSemItens');
+        const tbody = document.getElementById('tbodyItensNovaOs');
+        const tfoot = document.getElementById('tfootItensNovaOs');
         if (!tbody) return;
 
         if (NovaOsManager.itensLpu.length === 0) {
             tbody.innerHTML = `
                 <tr id="novaOsSemItens">
-                    <td colspan="5" class="text-center text-muted py-3">
-                        <i class="bi bi-info-circle me-1"></i> Adicione pelo menos uma LPU
+                    <td colspan="8" class="text-center text-muted py-3">
+                        <i class="bi bi-info-circle me-1"></i> Nenhum item adicionado.
                     </td>
                 </tr>`;
             if (tfoot) tfoot.style.display = 'none';
@@ -749,17 +907,20 @@ const NovaOsManager = {
 
         let totalGeral = 0;
         tbody.innerHTML = NovaOsManager.itensLpu.map((item, idx) => {
-            const total = item.valor * item.quantidade;
+            const total = (item.valor || 0) * (item.quantidade || 0);
             totalGeral += total;
             return `
                 <tr>
-                    <td><small>${item.lpuNome}</small></td>
+                    <td><small class="text-truncate d-inline-block" style="max-width:350px;" title="${item.lpuNome}">${item.lpuNome}</small></td>
                     <td class="text-center">${item.quantidade}</td>
+                    <td><small>${item.unidade || '-'}</small></td>
+                    <td><small>${item.site || '-'}</small></td>
+                    <td><small>${item.contrato || '-'}</small></td>
                     <td class="text-end">${NovaOsManager.formatarMoeda(item.valor)}</td>
                     <td class="text-end fw-bold">${NovaOsManager.formatarMoeda(total)}</td>
                     <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-danger btn-remover-lpu-nova-os" data-index="${idx}" title="Remover">
-                            <i class="bi bi-x-lg"></i>
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0 btn-remover-lpu-nova-os" data-index="${idx}" title="Remover">
+                            <i class="bi bi-trash3"></i>
                         </button>
                     </td>
                 </tr>`;
@@ -772,12 +933,10 @@ const NovaOsManager = {
     },
 
     submeter: async () => {
-        // Validacao
-        const os = document.getElementById('novaOsNumero')?.value.trim();
         const projeto = document.getElementById('novaOsProjeto')?.value.trim();
         const segmentoId = document.getElementById('novaOsSegmento')?.value;
+        const gestorTim = document.getElementById('novaOsGestorTim')?.value.trim() || '';
 
-        if (!os) { RegistrosUtils.mostrarToast('Informe o numero da OS.', 'warning'); return; }
         if (!projeto) { RegistrosUtils.mostrarToast('Informe o projeto.', 'warning'); return; }
         if (!segmentoId) { RegistrosUtils.mostrarToast('Selecione o segmento.', 'warning'); return; }
         if (NovaOsManager.itensLpu.length === 0) {
@@ -785,26 +944,132 @@ const NovaOsManager = {
             return;
         }
 
+        // Determinar o numero da OS
+        let osNumero = '';
+        if (NovaOsManager.projetoExistenteOs) {
+            osNumero = NovaOsManager.projetoExistenteOs.os;
+        }
+
+        // Confirmacao se projeto existente
+        if (NovaOsManager.projetoExistenteOs) {
+            const confirmResult = await Swal.fire({
+                icon: 'question',
+                title: 'Projeto ja existente',
+                html: `<p>O projeto <strong>${projeto}</strong> ja existe na OS <strong>${osNumero}</strong>.</p><p>Os novos itens serao adicionados a esta OS existente. Deseja continuar?</p>`,
+                showCancelButton: true,
+                confirmButtonText: 'Sim, adicionar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#198754'
+            });
+            if (!confirmResult.isConfirmed) return;
+        }
+
+        // COORDINATOR envia para fluxo de aprovação; ADMIN e ASSISTANT criam direto
+        // Lê direto do localStorage para garantir valor atualizado (evita cache de load)
+        const role = (localStorage.getItem('role') || '').trim().toUpperCase();
+        console.log('[NovaOsManager] Role detectado para submissão:', role, '| localStorage raw:', localStorage.getItem('role'));
+
+        if (role === 'COORDINATOR') {
+            return NovaOsManager._submeterComoSolicitacao(projeto, segmentoId, gestorTim, osNumero);
+        }
+
+        // Fluxo direto (ADMIN, ASSISTANT)
+        return NovaOsManager._submeterDireto(projeto, segmentoId, gestorTim, osNumero);
+    },
+
+    // Fluxo de aprovação: COORDINATOR envia solicitação para CONTROLLER
+    _submeterComoSolicitacao: async (projeto, segmentoId, gestorTim, osNumero) => {
+        const btnSubmeter = document.getElementById('btnSubmeterNovaOs');
+        const originalHtml = btnSubmeter.innerHTML;
+        btnSubmeter.disabled = true;
+        btnSubmeter.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enviando...';
+
+        const itens = NovaOsManager.itensLpu.map(lpu => ({
+            lpuId: lpu.lpuId,
+            lpuNome: lpu.lpuNome || '',
+            quantidade: lpu.quantidade,
+            valor: lpu.valor || 0,
+            site: lpu.site || '',
+            contrato: lpu.contrato || '',
+            regional: lpu.regional || '',
+            lote: lpu.lote || '',
+            boq: lpu.boq || '',
+            po: lpu.po || '',
+            item: lpu.item || '',
+            unidade: lpu.unidade || '',
+            observacoes: lpu.observacoes || ''
+        }));
+
+        const payload = {
+            solicitanteId: parseInt(localStorage.getItem('usuarioId')),
+            projeto: projeto,
+            gestorTim: gestorTim,
+            segmentoId: parseInt(segmentoId),
+            osNumero: osNumero || null,
+            itens: itens
+        };
+
+        try {
+            const resp = await fetchComAuth(`${RegistrosState.API_BASE_URL}/solicitacoes-os`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            btnSubmeter.disabled = false;
+            btnSubmeter.innerHTML = originalHtml;
+
+            const modal = NovaOsManager.getModal();
+            if (modal) modal.hide();
+
+            console.log('[NovaOsManager] Resposta do POST /solicitacoes-os:', resp.status, resp.statusText);
+
+            if (resp.ok) {
+                const data = await resp.json().catch(() => ({}));
+                console.log('[NovaOsManager] Solicitação criada com sucesso:', data);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Solicitação Enviada!',
+                    html: '<p>Sua solicitação de criação de OS foi enviada para aprovação do <strong>Controller</strong>.</p><p class="text-muted small">Você pode acompanhar o status na tela de Gestão de Aprovações.</p>',
+                    confirmButtonColor: '#198754'
+                });
+            } else {
+                let errorMsg = `Erro HTTP ${resp.status}`;
+                try {
+                    const errorText = await resp.text();
+                    try {
+                        const errData = JSON.parse(errorText);
+                        errorMsg = errData.message || errorMsg;
+                    } catch (e) {
+                        if (errorText) errorMsg = errorText.substring(0, 200);
+                    }
+                } catch (e) { /* ignora */ }
+                console.error('[NovaOsManager] Erro ao criar solicitação:', errorMsg);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro ao enviar solicitação',
+                    html: `<p>${errorMsg}</p><p class="text-muted small">Status: ${resp.status} ${resp.statusText}</p>`,
+                    confirmButtonColor: '#198754'
+                });
+            }
+        } catch (e) {
+            btnSubmeter.disabled = false;
+            btnSubmeter.innerHTML = originalHtml;
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro de conexão',
+                text: e.message,
+                confirmButtonColor: '#198754'
+            });
+        }
+    },
+
+    // Fluxo direto: ADMIN/ASSISTANT criam OS imediatamente
+    _submeterDireto: async (projeto, segmentoId, gestorTim, osNumero) => {
         const btnSubmeter = document.getElementById('btnSubmeterNovaOs');
         const originalHtml = btnSubmeter.innerHTML;
         btnSubmeter.disabled = true;
         btnSubmeter.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Criando...';
-
-        const base = {
-            os: os,
-            projeto: projeto,
-            gestorTim: document.getElementById('novaOsGestorTim')?.value.trim() || '',
-            segmentoId: parseInt(segmentoId),
-            site: document.getElementById('novaOsSite')?.value.trim() || '',
-            contrato: document.getElementById('novaOsContrato')?.value.trim() || '',
-            regional: document.getElementById('novaOsRegional')?.value.trim() || '',
-            lote: document.getElementById('novaOsLote')?.value.trim() || '',
-            boq: document.getElementById('novaOsBoq')?.value.trim() || '',
-            po: document.getElementById('novaOsPo')?.value.trim() || '',
-            item: document.getElementById('novaOsItem')?.value.trim() || '',
-            unidade: document.getElementById('novaOsUnidade')?.value.trim() || '',
-            observacoes: document.getElementById('novaOsObservacoes')?.value.trim() || ''
-        };
 
         let sucesso = 0;
         let erros = 0;
@@ -812,9 +1077,21 @@ const NovaOsManager = {
 
         for (const lpu of NovaOsManager.itensLpu) {
             const payload = {
-                ...base,
+                os: osNumero,
+                projeto: projeto,
+                gestorTim: gestorTim,
+                segmentoId: parseInt(segmentoId),
                 lpuIds: [lpu.lpuId],
-                quantidade: lpu.quantidade
+                quantidade: lpu.quantidade,
+                site: lpu.site || '',
+                contrato: lpu.contrato || '',
+                regional: lpu.regional || '',
+                lote: lpu.lote || '',
+                boq: lpu.boq || '',
+                po: lpu.po || '',
+                item: lpu.item || '',
+                unidade: lpu.unidade || '',
+                observacoes: lpu.observacoes || ''
             };
 
             try {
@@ -825,6 +1102,12 @@ const NovaOsManager = {
                 });
                 if (resp.ok) {
                     sucesso++;
+                    if (!osNumero) {
+                        try {
+                            const osData = await resp.json();
+                            if (osData && osData.os) osNumero = osData.os;
+                        } catch(e) {}
+                    }
                 } else {
                     erros++;
                     try { const err = await resp.json(); erroMsg = err.message || ''; } catch(e) {}
@@ -842,10 +1125,13 @@ const NovaOsManager = {
         if (modal) modal.hide();
 
         if (erros === 0) {
+            const msg = NovaOsManager.projetoExistenteOs
+                ? `${sucesso} item(ns) adicionado(s) a OS ${osNumero}.`
+                : `OS criada com ${sucesso} item(ns) de LPU.`;
             Swal.fire({
                 icon: 'success',
-                title: 'OS Criada!',
-                text: `${sucesso} item(ns) de LPU criado(s) com sucesso.`,
+                title: NovaOsManager.projetoExistenteOs ? 'Itens Adicionados!' : 'OS Criada!',
+                text: msg,
                 confirmButtonColor: '#198754'
             });
         } else {
@@ -857,7 +1143,6 @@ const NovaOsManager = {
             });
         }
 
-        // Recarrega tabela
         RegistrosApi.carregarDados(0, RegistrosState.termoBusca);
     }
 };

@@ -64,7 +64,7 @@ var API_MATERIALS_URL = window.API_MATERIALS_URL;
         if (!role) role = (localStorage.getItem('role') || localStorage.getItem('userRole') || '').trim().toUpperCase();
         // Remove prefixo ROLE_ se existir (Spring Security pode armazenar com prefixo)
         role = role.replace('ROLE_', '');
-        const podeExportar = ['ADMIN', 'CONTROLLER', 'COORDINATOR', 'MANAGER'].includes(role);
+        const podeExportar = ['ADMIN', 'CONTROLLER', 'COORDINATOR', 'MANAGER', 'VISUALIZADOR'].includes(role);
         if (!podeExportar) return;
 
         const btnExportarHist = document.getElementById('btn-exportar-historico-materiais');

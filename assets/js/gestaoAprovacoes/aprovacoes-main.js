@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const abaAtivaAgora = document.querySelector('#aprovacoesTab .nav-link.active');
 
         // Remove loader de todas as abas possíveis para garantir
-        ['#atividades-pane', '#materiais-pane', '#complementares-pane', '#cps-pendencias-pane', '#minhas-docs-pane'].forEach(id => toggleLoader(false, id));
+        ['#atividades-pane', '#materiais-pane', '#complementares-pane', '#cps-pendencias-pane', '#minhas-docs-pane', '#solicitacoes-os-pane'].forEach(id => toggleLoader(false, id));
 
         if (abaAtivaAgora) {
             const painelAtivoId = abaAtivaAgora.getAttribute('data-bs-target');
@@ -72,6 +72,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             }
             else if (painelAtivoId === '#minhas-docs-pane') {
                 initDocumentacaoTab();
+            }
+            else if (painelAtivoId === '#solicitacoes-os-pane') {
+                if (typeof SolicitacoesOS !== 'undefined') SolicitacoesOS.init();
             }
         }
     });
@@ -121,6 +124,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             else if (targetPaneId === '#cps-historico-pane') { initFiltrosCPS(); carregarHistoricoCPS(); }
             else if (targetPaneId === '#minhas-docs-pane') {
                 initDocumentacaoTab();
+            }
+            else if (targetPaneId === '#solicitacoes-os-pane') {
+                if (typeof SolicitacoesOS !== 'undefined') SolicitacoesOS.init();
             }
         });
     });
@@ -698,8 +704,18 @@ function atualizarBadge(selector, count) {
 function configurarVisibilidadePorRole() {
     const currentRole = (localStorage.getItem("role") || "").trim().toUpperCase();
 
+    // Solicitações OS: visível para CONTROLLER, ADMIN e COORDINATOR
+    const solOsTabLi = document.getElementById('solicitacoes-os-tab-li');
+    if (solOsTabLi) {
+        if (['CONTROLLER', 'ADMIN', 'COORDINATOR'].includes(currentRole)) {
+            solOsTabLi.style.display = '';
+        } else {
+            solOsTabLi.style.display = 'none';
+        }
+    }
+
     if (currentRole === 'MANAGER') {
-        ['atividades-tab', 'materiais-tab', 'complementares-tab', 'cps-pendencias-tab', 'cps-historico-tab'].forEach(id => {
+        ['atividades-tab', 'materiais-tab', 'complementares-tab', 'cps-pendencias-tab', 'cps-historico-tab', 'solicitacoes-os-tab'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.parentElement.style.display = 'none';
         });
@@ -714,7 +730,7 @@ function configurarVisibilidadePorRole() {
         const abasParaEsconder = [
             'atividades-tab', 'historico-atividades-tab', 'cps-pendencias-tab',
             'cps-historico-tab', 'complementares-tab', 'historico-complementares-tab',
-            'materiais-tab', 'historico-materiais-tab'
+            'materiais-tab', 'historico-materiais-tab', 'solicitacoes-os-tab'
         ];
 
         const docPane = document.getElementById('minhas-docs-pane');
@@ -855,6 +871,7 @@ function atualizarBadgesMenuAprovacoes() {
     setBadgeById('badge-materiais', (window.todasPendenciasMateriais || []).length);
     setBadgeById('badge-complementares', (window.todasPendenciasComplementares || []).length);
     setBadgeById('badge-documentacao', (window.minhasDocsPendentes || []).length);
+    setBadgeById('badge-solicitacoes-os', (window.pendenciasSolicitacoesOSCount || 0));
 
     // CPS: se você tiver um array global só com pendências de CPS, plugue aqui
     // setBadgeById('badge-cps', (window.todasPendenciasCps || []).length);
@@ -882,17 +899,18 @@ async function carregarDashboardEBadges() {
 
         // Carregamentos paralelos iniciais
         const promises = [
-            fetchComAuth(`${API_BASE_URL}/lancamentos`), 
+            fetchComAuth(`${API_BASE_URL}/lancamentos`),
             fetchComAuth(`${API_BASE_URL}/lancamentos/pendencias-por-coordenador`),
             fetchComAuth(`${URL_MATERIAIS}/api/materiais/solicitacoes/pendentes`, {
                 headers: { 'X-User-Role': userRole, 'X-User-ID': userId }
             }),
             fetchComAuth(`${URL_COMPLEMENTARES}/v1/solicitacoes-complementares/pendentes?role=${encodeURIComponent(userRole)}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            })
+            }),
+            fetchComAuth(`${API_BASE_URL}/solicitacoes-os/pendentes`)
         ];
 
-        const [resGeral, resPendCoord, resPendMat, resPendCompl] = await Promise.all(promises);
+        const [resGeral, resPendCoord, resPendMat, resPendCompl, resSolOS] = await Promise.all(promises);
 
         if (!resGeral.ok) throw new Error('Falha no dashboard.');
 
@@ -956,6 +974,14 @@ async function carregarDashboardEBadges() {
 
         if (resPendCompl.ok) window.todasPendenciasComplementares = await resPendCompl.json();
         else window.todasPendenciasComplementares = [];
+
+        // Solicitações de OS pendentes (para badge)
+        if (resSolOS.ok) {
+            const solOSData = await resSolOS.json();
+            window.pendenciasSolicitacoesOSCount = Array.isArray(solOSData) ? solOSData.length : 0;
+        } else {
+            window.pendenciasSolicitacoesOSCount = 0;
+        }
 
         if (typeof renderizarCardsDashboard === 'function') {
             renderizarCardsDashboard(

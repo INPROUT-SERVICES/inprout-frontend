@@ -178,29 +178,26 @@ const RegistrosApi = {
         const loader = document.getElementById('dashboard-loader');
         const container = document.getElementById('dashboard-analise-container');
 
-        if(loader) loader.classList.remove('d-none');
-        if(container) container.innerHTML = '';
+        if (loader) loader.classList.remove('d-none');
+        if (container) container.innerHTML = '';
 
         try {
-            // 1. Lê as datas dos filtros (se existirem)
-            const inputInicio = document.getElementById('dashboard-data-inicio');
-            const inputFim = document.getElementById('dashboard-data-fim');
-            const dataInicio = inputInicio ? inputInicio.value : null;
-            const dataFim = inputFim ? inputFim.value : null;
+            // 1. Lê o gate selecionado (agora manda o NOME do gate, não o ID)
+            const gateSelect = document.getElementById('dashboard-gate-select');
+            const gateSelecionado = gateSelect ? gateSelect.value : '';
 
-            // 2. Busca todos os segmentos disponíveis
-            const segmentos = await RegistrosApi.fetchSegmentos();
+            // 2. Chama o endpoint que faz toda a agregação no backend
+            let url = `${RegistrosState.API_BASE_URL}/os/dashboard-por-gate`;
+            if (gateSelecionado) {
+                url += `?gate=${encodeURIComponent(gateSelecionado)}`;
+            }
 
-            // 3. Objeto para guardar os dados finais
-            const statsAgrupados = {};
+            const response = await fetchComAuth(url);
+            if (!response.ok) throw new Error('Falha ao buscar dados do dashboard.');
 
-            // 4. Busca as informações de TODOS os segmentos simultaneamente
-            await Promise.all(segmentos.map(async (segmento) => {
-                const statsDoSegmento = await RegistrosApi.fetchValoresParaSegmento(segmento.id, dataInicio, dataFim);
-                statsAgrupados[segmento.nome] = statsDoSegmento;
-            }));
+            const statsAgrupados = await response.json();
 
-            // 5. Salva no state (para exportação) e manda renderizar
+            // 3. Salva no state (para exportação) e renderiza
             RegistrosState.dashboardData = statsAgrupados;
             RegistrosRender.renderizarCardsDoBackend(statsAgrupados);
 
@@ -208,72 +205,13 @@ const RegistrosApi = {
             console.error(error);
             const totaisContainer = document.getElementById('dashboard-totais-container');
             if (totaisContainer) totaisContainer.innerHTML = '';
-            if(container) container.innerHTML = `
+            if (container) container.innerHTML = `
                 <div class="alert alert-danger text-center">
                     <i class="bi bi-exclamation-triangle-fill"></i> Erro: ${error.message}
                     <br><button class="btn btn-sm btn-outline-danger mt-2" onclick="RegistrosApi.carregarDashboard()">Tentar Novamente</button>
                 </div>`;
         } finally {
-            if(loader) loader.classList.add('d-none');
+            if (loader) loader.classList.add('d-none');
         }
-    },
-
-    fetchValoresParaSegmento: async (segmentoId, dataInicio, dataFim) => {
-
-        // Função interna auxiliar para disparar o GET para a API
-        const fetchValor = async (endpoint, filtroPo, usarDatas = true) => {
-            try {
-                let url = `${RegistrosState.API_BASE_URL}${endpoint}?segmentoId=${segmentoId}&filtroPo=${filtroPo}`;
-                if (usarDatas && dataInicio) url += `&dataInicio=${dataInicio}`;
-                if (usarDatas && dataFim) url += `&dataFim=${dataFim}`;
-                const response = await fetchComAuth(url);
-                if(response.ok) {
-                    const data = await response.json();
-                    return data.total || 0;
-                }
-            } catch (e) {
-                console.error(`Erro ao buscar ${endpoint}:`, e);
-            }
-            return 0;
-        };
-
-        // Endpoints com suporte a datas
-        const endpointsComData = [
-            { key: 'finalizado', url: '/lancamentos/aprovados/finalizados' },
-            { key: 'emAndamento', url: '/lancamentos/aprovados/em-andamento' },
-            { key: 'paralisado', url: '/lancamentos/aprovados/paralisados' },
-            { key: 'aguardandoDoc', url: '/lancamentos/aprovados/aguardando-documentacao' },
-            { key: 'aptoAFaturar', url: '/os/detalhes/apto-a-faturar' },
-            { key: 'faturados', url: '/os/detalhes/faturados' }
-        ];
-
-        // Endpoint sem suporte a datas
-        const endpointsSemData = [
-            { key: 'naoIniciado', url: '/os/detalhes/nao-iniciados' }
-        ];
-
-        const stats = {};
-
-        // Dispara TODAS as requisições em paralelo (muito mais rápido)
-        await Promise.all([
-            ...endpointsComData.map(async (ep) => {
-                const [total, comPo, semPo] = await Promise.all([
-                    fetchValor(ep.url, 'TODOS', true),
-                    fetchValor(ep.url, 'COM_PO', true),
-                    fetchValor(ep.url, 'SEM_PO', true)
-                ]);
-                stats[ep.key] = { total, comPo, semPo };
-            }),
-            ...endpointsSemData.map(async (ep) => {
-                const [total, comPo, semPo] = await Promise.all([
-                    fetchValor(ep.url, 'TODOS', false),
-                    fetchValor(ep.url, 'COM_PO', false),
-                    fetchValor(ep.url, 'SEM_PO', false)
-                ]);
-                stats[ep.key] = { total, comPo, semPo };
-            })
-        ]);
-
-        return stats;
     }
 };

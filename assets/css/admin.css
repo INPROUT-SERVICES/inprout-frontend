@@ -1,0 +1,220 @@
+/* ===== Admin Area Styles ===== */
+
+/* Page header */
+.admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--primary-color, #cce3d3);
+}
+
+.admin-header h2 {
+    font-family: 'Inter', sans-serif;
+    color: #4a665a;
+    font-weight: 600;
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+/* Nav tabs */
+.admin-tabs .nav-link {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #4a665a;
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    padding: 0.6rem 1.2rem;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.admin-tabs .nav-link:hover {
+    color: var(--accent-color, #7da78a);
+    border-bottom-color: var(--secondary-color, #a3bfa8);
+    background: transparent;
+}
+
+.admin-tabs .nav-link.active {
+    color: var(--accent-color, #7da78a);
+    border-bottom-color: var(--accent-color, #7da78a);
+    background: transparent;
+    font-weight: 600;
+}
+
+/* Tables */
+.admin-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.admin-table {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    margin-bottom: 0;
+    width: 100%;
+}
+
+.admin-table thead th {
+    background: var(--primary-color, #cce3d3);
+    color: #4a665a;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 2px solid var(--accent-color, #7da78a);
+    padding: 0.6rem 0.75rem;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+}
+
+.admin-table tbody tr:nth-child(even) {
+    background-color: #f5faf7;
+}
+
+.admin-table tbody tr:hover {
+    background-color: #e8f3ec;
+}
+
+.admin-table td {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+    color: #333;
+}
+
+/* Action buttons */
+.admin-table .btn-action {
+    padding: 0.25rem 0.4rem;
+    font-size: 0.8rem;
+    line-height: 1;
+    border-radius: 4px;
+    margin: 0 2px;
+    border: none;
+}
+
+.admin-table .btn-action:focus {
+    box-shadow: 0 0 0 2px rgba(125, 167, 138, 0.4);
+}
+
+/* Search and filter inputs */
+.admin-search {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    border: 1px solid var(--secondary-color, #a3bfa8);
+    border-radius: 6px;
+    padding: 0.4rem 0.75rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.admin-search:focus {
+    border-color: var(--accent-color, #7da78a);
+    box-shadow: 0 0 0 3px rgba(125, 167, 138, 0.25);
+    outline: none;
+}
+
+.admin-filter-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+/* Modals */
+.admin-modal .modal-header {
+    background-color: #4a665a;
+    color: #fff;
+    border-bottom: none;
+    border-radius: 0;
+    padding: 0.75rem 1rem;
+}
+
+.admin-modal .modal-header .modal-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.admin-modal .modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.admin-modal .modal-body {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    padding: 1.25rem;
+}
+
+.admin-modal .modal-footer {
+    border-top: 1px solid #e0e0e0;
+    padding: 0.75rem 1rem;
+}
+
+/* Segment checkboxes grid */
+.segment-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 1rem;
+}
+
+.segment-grid .form-check {
+    margin-bottom: 0;
+}
+
+.segment-grid .form-check-label {
+    font-size: 0.88rem;
+}
+
+/* Pagination */
+.admin-pagination .page-link {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    color: #4a665a;
+    border-color: #d4e5d9;
+    padding: 0.35rem 0.65rem;
+}
+
+.admin-pagination .page-link:hover {
+    background-color: var(--primary-color, #cce3d3);
+    border-color: var(--secondary-color, #a3bfa8);
+    color: #4a665a;
+}
+
+.admin-pagination .page-item.active .page-link {
+    background-color: var(--accent-color, #7da78a);
+    border-color: var(--accent-color, #7da78a);
+    color: #fff;
+}
+
+.admin-pagination .page-item.disabled .page-link {
+    color: #aaa;
+    background-color: #f9f9f9;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .admin-tabs .nav-link {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.85rem;
+    }
+
+    .admin-filter-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .segment-grid {
+        grid-template-columns: 1fr;
+    }
+}

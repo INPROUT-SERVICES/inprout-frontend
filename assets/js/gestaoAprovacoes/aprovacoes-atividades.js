@@ -64,7 +64,9 @@ async function carregarDadosHistoricoAtividades(append = false) {
         const response = await fetchComAuth(`${API_BASE_URL}/lancamentos/historico/${userId}?${params}`);
         if (!response.ok) throw new Error('Falha ao carregar histórico.');
 
-        const novosDados = await response.json();
+        const respData = await response.json();
+        // O backend retorna Page<> (objeto com content) — extraímos o array
+        const novosDados = Array.isArray(respData) ? respData : (respData.content || []);
 
         if (!append) {
             window.todosHistoricoAtividades = novosDados;
@@ -375,8 +377,11 @@ function renderizarTabelaHistorico(dados) {
     const theadHistorico = document.getElementById('thead-historico');
     if (!tbodyHistorico) return;
 
+    // Garante que dados é sempre um array
+    const lista = Array.isArray(dados) ? dados : (dados?.content || []);
+
     const statusFiltrado = document.getElementById('filtro-historico-status')?.value || 'todos';
-    let dadosFiltrados = statusFiltrado === 'todos' ? dados : dados.filter(l => l.situacaoAprovacao === statusFiltrado);
+    let dadosFiltrados = statusFiltrado === 'todos' ? lista : lista.filter(l => l.situacaoAprovacao === statusFiltrado);
 
     dadosFiltrados.sort((a, b) => {
         const dateA = a.dataAtividade ? new Date(a.dataAtividade.split('/').reverse().join('-')) : new Date(0);

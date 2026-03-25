@@ -939,3 +939,130 @@ span.flatpickr-weekday {
     box-shadow: 0 0 0 0.15rem rgba(125, 167, 138, 0.25) !important;
     outline: none !important;
 }
+
+/* ========================================================== */
+/* ======== MODAL CRIAR OS - LAYOUT COMPACTO ================ */
+/* ========================================================== */
+
+#modalNovaOs .modal-dialog {
+    max-width: 95vw;
+    width: 95vw;
+    margin: 1rem auto;
+}
+
+#modalNovaOs .modal-content {
+    max-height: 95vh;
+}
+
+#modalNovaOs .modal-header {
+    padding: 0.6rem 1rem;
+}
+
+#modalNovaOs .modal-header .modal-title {
+    font-size: 1rem;
+}
+
+#modalNovaOs .modal-body {
+    padding: 0.8rem 1rem !important;
+    overflow-y: auto;
+}
+
+#modalNovaOs .modal-footer {
+    padding: 0.5rem 1rem;
+}
+
+/* Cards internos mais compactos */
+#modalNovaOs .card {
+    margin-bottom: 0.6rem !important;
+}
+
+#modalNovaOs .card-header {
+    padding: 0.4rem 0.75rem;
+}
+
+#modalNovaOs .card-header h6 {
+    font-size: 0.8rem;
+    margin-bottom: 0;
+}
+
+#modalNovaOs .card-body {
+    padding: 0.5rem 0.75rem;
+}
+
+/* Labels e inputs menores */
+#modalNovaOs .form-label {
+    font-size: 0.72rem !important;
+    margin-bottom: 0.15rem !important;
+}
+
+#modalNovaOs .form-control,
+#modalNovaOs .form-select {
+    font-size: 0.8rem !important;
+    padding: 0.3rem 0.5rem !important;
+    height: auto;
+}
+
+#modalNovaOs .form-control-sm,
+#modalNovaOs .form-select-sm {
+    font-size: 0.78rem !important;
+    padding: 0.25rem 0.45rem !important;
+}
+
+/* Rows com menos gap */
+#modalNovaOs .row.g-3 {
+    --bs-gutter-y: 0.4rem;
+    --bs-gutter-x: 0.5rem;
+}
+
+#modalNovaOs .row.g-2 {
+    --bs-gutter-y: 0.3rem;
+    --bs-gutter-x: 0.4rem;
+}
+
+/* Formulário de detalhes mais compacto */
+#modalNovaOs #novaOsFormDetalhes {
+    padding: 0.5rem 0.6rem !important;
+}
+
+#modalNovaOs #novaOsFormDetalhes .text-end {
+    margin-top: 0.4rem !important;
+}
+
+/* Tabela de itens compacta */
+#modalNovaOs .table th,
+#modalNovaOs .table td {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.5rem;
+}
+
+#modalNovaOs .table small {
+    font-size: 0.72rem;
+}
+
+/* Botões do footer menores */
+#modalNovaOs .modal-footer .btn {
+    font-size: 0.85rem;
+    padding: 0.4rem 1rem;
+}
+
+/* Choices.js dentro do modal - compacto */
+#modalNovaOs .choices__inner {
+    font-size: 0.8rem !important;
+    min-height: 32px !important;
+    padding: 0.2rem 0.4rem !important;
+}
+
+#modalNovaOs .choices__list--dropdown .choices__item {
+    font-size: 0.78rem !important;
+    padding: 0.3rem 0.5rem !important;
+}
+
+/* Switch replicar dados */
+#modalNovaOs .form-check-label {
+    font-size: 0.75rem;
+}
+
+/* Feedback de projeto */
+#modalNovaOs #novaOsProjetoFeedback {
+    font-size: 0.72rem;
+}

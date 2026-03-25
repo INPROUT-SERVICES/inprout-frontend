@@ -296,7 +296,7 @@ const RegistrosRender = {
             return;
         }
 
-        if (['ADMIN', 'ASSISTANT'].includes(RegistrosState.userRole)) {
+        if (['ADMIN', 'ASSISTANT', 'VISUALIZADOR'].includes(RegistrosState.userRole)) {
             grupos.sort((a, b) => {
                 const aFinalizada = RegistrosRender.verificarSeOsFinalizada(a);
                 const bFinalizada = RegistrosRender.verificarSeOsFinalizada(b);
@@ -348,7 +348,7 @@ const RegistrosRender = {
 
         let grupos = RegistrosRender.transformarEmGrupos(linhasFiltradas);
 
-        if (['ADMIN', 'ASSISTANT'].includes(RegistrosState.userRole)) {
+        if (['ADMIN', 'ASSISTANT', 'VISUALIZADOR'].includes(RegistrosState.userRole)) {
             grupos.sort((a, b) => {
                 const aFinalizada = RegistrosRender.verificarSeOsFinalizada(a);
                 const bFinalizada = RegistrosRender.verificarSeOsFinalizada(b);
@@ -430,7 +430,19 @@ const RegistrosRender = {
         const format = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const totalGeral = Object.values(totais).reduce((sum, s) => sum + (s.total || 0), 0);
 
+        // Mapeamento de label para categoria do backend
+        const labelToCategoria = {
+            'Não Iniciado': 'naoIniciado',
+            'Em Andamento': 'emAndamento',
+            'Paralisado': 'paralisado',
+            'Aguard. Doc.': 'aguardandoDoc',
+            'Finalizado': 'finalizado',
+            'Apto a Faturar': 'aptoAFaturar',
+            'Faturados': 'faturados'
+        };
+
         const buildCell = (label, icon, colorClass, data) => {
+            const categoria = labelToCategoria[label] || '';
             if (!data || data.total === 0) {
                 return `
                 <div class="totais-cell">
@@ -439,8 +451,8 @@ const RegistrosRender = {
                 </div>`;
             }
             return `
-            <div class="totais-cell">
-                <div class="totais-cell-label ${colorClass}"><i class="bi ${icon} me-1"></i>${label}</div>
+            <div class="totais-cell" onclick="RegistrosRender.exportarCardParaExcel('', '${categoria}', '${label} - Todos')" style="cursor: pointer;" title="Clique para exportar Excel (todos os segmentos)">
+                <div class="totais-cell-label ${colorClass}"><i class="bi ${icon} me-1"></i>${label} <i class="bi bi-download ms-1" style="font-size: 0.65rem; opacity: 0.5;"></i></div>
                 <div class="totais-cell-value">${format(data.total)}</div>
                 <div class="totais-cell-sub">
                     <span class="text-success">PO: ${format(data.comPo)}</span>
@@ -507,6 +519,7 @@ const RegistrosRender = {
     criarCardSegmento: (nome, stats) => {
         const format = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const calcPct = (parcial, total) => total > 0 ? (parcial / total) * 100 : 0;
+        const escAttr = (s) => s.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
         // Calcula o total geral (soma de todos os status)
         const totalGeral = (stats.naoIniciado?.total || 0) + (stats.emAndamento?.total || 0)
@@ -514,13 +527,15 @@ const RegistrosRender = {
             + (stats.finalizado?.total || 0) + (stats.aptoAFaturar?.total || 0)
             + (stats.faturados?.total || 0);
 
-        // Bloco construtor interno para cada status
-        const buildStatBlock = (title, icon, colorClass, data) => {
+        // Bloco construtor interno para cada status (clicável para exportar Excel)
+        const buildStatBlock = (title, icon, colorClass, data, categoria) => {
             if (!data) return '';
+            const clickable = data.total > 0 ? `onclick="RegistrosRender.exportarCardParaExcel('${escAttr(nome)}', '${categoria}', '${escAttr(title)}')" style="cursor: pointer;" title="Clique para exportar Excel"` : '';
             return `
-            <div class="stat-block">
+            <div class="stat-block" ${clickable}>
                 <div class="stat-title ${colorClass}">
                     <span><i class="bi ${icon} me-1"></i> ${title}</span>
+                    ${data.total > 0 ? '<i class="bi bi-download ms-auto" style="font-size: 0.7rem; opacity: 0.5;"></i>' : ''}
                 </div>
                 <div class="stat-value">${format(data.total)}</div>
                 ${data.total > 0 ? `
@@ -537,6 +552,8 @@ const RegistrosRender = {
             `;
         };
 
+        const naoIniciadoClickable = stats.naoIniciado.total > 0 ? `onclick="RegistrosRender.exportarCardParaExcel('${escAttr(nome)}', 'naoIniciado', 'Não Iniciado')" style="cursor: pointer; border:none; padding-top:8px;" title="Clique para exportar Excel"` : 'style="border:none; padding-top:8px;"';
+
         return `
         <div class="segmento-card">
             <div class="segmento-header">
@@ -546,18 +563,19 @@ const RegistrosRender = {
             <div class="segmento-body">
 
                 <div class="stat-group-label">Operacional</div>
-                ${buildStatBlock('Em Andamento', 'bi-play-circle-fill', 'text-andamento', stats.emAndamento)}
-                ${buildStatBlock('Paralisado', 'bi-pause-circle-fill', 'text-paralisado', stats.paralisado)}
-                ${buildStatBlock('Aguard. Documentação', 'bi-file-earmark-text-fill', 'text-aguardando-doc', stats.aguardandoDoc)}
-                ${buildStatBlock('Finalizado', 'bi-check-circle-fill', 'text-finalizado', stats.finalizado)}
+                ${buildStatBlock('Em Andamento', 'bi-play-circle-fill', 'text-andamento', stats.emAndamento, 'emAndamento')}
+                ${buildStatBlock('Paralisado', 'bi-pause-circle-fill', 'text-paralisado', stats.paralisado, 'paralisado')}
+                ${buildStatBlock('Aguard. Documentação', 'bi-file-earmark-text-fill', 'text-aguardando-doc', stats.aguardandoDoc, 'aguardandoDoc')}
+                ${buildStatBlock('Finalizado', 'bi-check-circle-fill', 'text-finalizado', stats.finalizado, 'finalizado')}
 
                 <div class="stat-group-label" style="margin-top: 8px;">Faturamento</div>
-                ${buildStatBlock('Apto a Faturar', 'bi-receipt-cutoff', 'text-apto-faturar', stats.aptoAFaturar)}
-                ${buildStatBlock('Faturados', 'bi-cash-stack', 'text-faturados', stats.faturados)}
+                ${buildStatBlock('Apto a Faturar', 'bi-receipt-cutoff', 'text-apto-faturar', stats.aptoAFaturar, 'aptoAFaturar')}
+                ${buildStatBlock('Faturados', 'bi-cash-stack', 'text-faturados', stats.faturados, 'faturados')}
 
-                <div class="stat-block stat-block-muted" style="border:none; padding-top:8px;">
+                <div class="stat-block stat-block-muted" ${naoIniciadoClickable}>
                     <div class="stat-title text-nao-iniciado">
                         <span><i class="bi bi-circle me-1"></i> Não Iniciado</span>
+                        ${stats.naoIniciado.total > 0 ? '<i class="bi bi-download ms-auto" style="font-size: 0.7rem; opacity: 0.5;"></i>' : ''}
                     </div>
                     <div class="stat-value fs-6 text-muted">${format(stats.naoIniciado.total)}</div>
                     ${stats.naoIniciado.total > 0 ? `
@@ -571,5 +589,73 @@ const RegistrosRender = {
             </div>
         </div>
         `;
+    },
+
+    /**
+     * Exporta para Excel as linhas individuais de um card do dashboard.
+     * Chamado ao clicar em um stat-block.
+     */
+    exportarCardParaExcel: async (segmento, categoria, tituloCategoria) => {
+        try {
+            // Pega o gate selecionado (nome do gate, não o ID)
+            const gateSelect = document.getElementById('dashboard-gate-select');
+            const gate = gateSelect ? gateSelect.value : '';
+
+            let url = `${RegistrosState.API_BASE_URL}/os/dashboard-detalhes?segmento=${encodeURIComponent(segmento)}&categoria=${encodeURIComponent(categoria)}`;
+            if (gate) {
+                url += `&gate=${encodeURIComponent(gate)}`;
+            }
+
+            RegistrosUtils.mostrarToast('Buscando dados...', 'info');
+
+            const response = await fetchComAuth(url);
+            if (!response.ok) throw new Error('Falha ao buscar detalhes.');
+
+            const dados = await response.json();
+
+            if (!dados || dados.length === 0) {
+                RegistrosUtils.mostrarToast('Nenhum registro encontrado para este card.', 'warning');
+                return;
+            }
+
+            // Monta o Excel
+            const headers = ['OS', 'SITE', 'CONTRATO', 'SEGMENTO', 'PROJETO', 'GESTOR TIM', 'REGIONAL', 'CÓD. LPU', 'OBJETO CONTRATADO', 'LOTE', 'BOQ', 'PO', 'ITEM', 'UNIDADE', 'QUANTIDADE', 'VALOR TOTAL', 'SITUAÇÃO', 'FATURAMENTO', 'GATE', 'KEY'];
+
+            const linhas = dados.map(d => [
+                d.os || '', d.site || '', d.contrato || '', d.segmento || '',
+                d.projeto || '', d.gestorTim || '', d.regional || '',
+                d.codigoLpu || '', d.nomeLpu || '', d.lote || '',
+                d.boq || '', d.po || '', d.item || '', d.unidade || '',
+                d.quantidade || 0, d.valorTotal || 0,
+                d.situacao || '', d.faturamento || '', d.gate || '',
+                d.chaveExterna || ''
+            ]);
+
+            const wsData = [headers, ...linhas];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+            // Auto-width
+            ws['!cols'] = headers.map((h, i) => {
+                let maxLen = h.length;
+                linhas.forEach(row => {
+                    const cellLen = String(row[i] || '').length;
+                    if (cellLen > maxLen) maxLen = cellLen;
+                });
+                return { wch: Math.min(maxLen + 2, 50) };
+            });
+
+            const wb = XLSX.utils.book_new();
+            const sheetName = tituloCategoria.substring(0, 31);
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+            const nomeArquivo = `Dashboard_${segmento}_${tituloCategoria.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`;
+            RegistrosIO._downloadXlsx(wb, nomeArquivo);
+
+            RegistrosUtils.mostrarToast(`${dados.length} registros exportados!`, 'success');
+
+        } catch (error) {
+            console.error('Erro ao exportar card:', error);
+            RegistrosUtils.mostrarToast('Erro ao exportar: ' + error.message, 'error');
+        }
     }
 };

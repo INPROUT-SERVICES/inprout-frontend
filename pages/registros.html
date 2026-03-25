@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="../assets/css/index.css" />
     <link rel="stylesheet" href="../assets/css/registros.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <link rel="icon" href="../assets/imgs/favicon.svg" type="image/svg+xml">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -24,7 +25,6 @@
             <button class="btn toggle-sidebar" id="menu-toggle">
                 <i class="bi bi-grid fs-5"></i>
             </button>
-            <link rel="icon" href="../assets/imgs/login/logo.png" type="image/png">
             <a href="../index.html">
                 <img src="../assets/imgs/login/logo.png" alt="Logo Inprout" class="logo-navbar mx-3">
             </a>
@@ -72,25 +72,10 @@
                                 <label for="dashboard-gate-select" class="form-label mb-0 text-muted small fw-bold">
                                     <i class="bi bi-calendar-range me-1"></i>GATE:
                                 </label>
-                                <select class="form-select form-select-sm" id="dashboard-gate-select" style="width: 220px;">
+                                <select class="form-select form-select-sm" id="dashboard-gate-select" style="width: 280px;">
                                     <option value="">Carregando...</option>
                                 </select>
                             </div>
-                            <div class="vr d-none d-md-block" style="height: 28px; opacity: 0.3;"></div>
-                            <div class="d-flex align-items-center gap-2">
-                                <label for="dashboard-data-inicio" class="form-label mb-0 text-muted small fw-bold">De:</label>
-                                <input type="date" class="form-control form-control-sm" id="dashboard-data-inicio" style="width: 160px;">
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <label for="dashboard-data-fim" class="form-label mb-0 text-muted small fw-bold">Até:</label>
-                                <input type="date" class="form-control form-control-sm" id="dashboard-data-fim" style="width: 160px;">
-                            </div>
-                            <button class="btn btn-sm btn-success" id="btnFiltrarDashboard">
-                                <i class="bi bi-funnel-fill me-1"></i> Filtrar
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary" id="btnLimparFiltroDashboard">
-                                <i class="bi bi-x-circle me-1"></i> Limpar
-                            </button>
                             <div class="vr d-none d-md-block" style="height: 28px; opacity: 0.3;"></div>
                             <button class="btn btn-sm btn-outline-success" id="btnExportarDashboard">
                                 <i class="bi bi-download me-1"></i> Exportar
@@ -487,138 +472,162 @@
         </div>
 
         <!-- Modal: Criar Nova OS Manualmente -->
-        <div class="modal fade" id="modalNovaOs" tabindex="-1" aria-labelledby="modalNovaOsLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal fade" id="modalNovaOs" tabindex="-1" aria-labelledby="modalNovaOsLabel" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="modalNovaOsLabel">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title fw-bold" id="modalNovaOsLabel">
                             <i class="bi bi-plus-circle me-2"></i>Criar Nova OS
                         </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body bg-light px-4 py-4">
                         <form id="formNovaOs">
-                            <!-- Bloco 1: Identificacao -->
-                            <h6 class="section-title fw-bold text-success mb-3">
-                                <i class="bi bi-card-heading me-1"></i> Dados da OS
-                            </h6>
-                            <div class="row g-3 mb-4">
-                                <div class="col-md-6">
-                                    <label for="novaOsNumero" class="form-label">Numero da OS <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="novaOsNumero" required placeholder="Ex: OS-001">
+                            <!-- Bloco 1: Identificacao da OS -->
+                            <div class="card border-0 shadow-sm mb-4">
+                                <div class="card-header bg-white border-bottom">
+                                    <h6 class="mb-0 fw-bold text-success">
+                                        <i class="bi bi-card-heading me-1"></i> Dados da OS
+                                    </h6>
                                 </div>
-                                <div class="col-md-6">
-                                    <label for="novaOsProjeto" class="form-label">Projeto <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="novaOsProjeto" required placeholder="Nome do projeto">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="novaOsGestorTim" class="form-label">Gestor TIM</label>
-                                    <input type="text" class="form-control" id="novaOsGestorTim" placeholder="Nome do gestor">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="novaOsSegmento" class="form-label">Segmento <span class="text-danger">*</span></label>
-                                    <select class="form-select" id="novaOsSegmento" required>
-                                        <option value="">Carregando...</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Bloco 2: Detalhes -->
-                            <h6 class="section-title fw-bold text-success mb-3">
-                                <i class="bi bi-list-ul me-1"></i> Detalhes
-                            </h6>
-                            <div class="row g-3 mb-4">
-                                <div class="col-md-4">
-                                    <label for="novaOsSite" class="form-label">Site</label>
-                                    <input type="text" class="form-control" id="novaOsSite">
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="novaOsContrato" class="form-label">Contrato</label>
-                                    <input type="text" class="form-control" id="novaOsContrato">
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="novaOsRegional" class="form-label">Regional</label>
-                                    <input type="text" class="form-control" id="novaOsRegional">
-                                </div>
-                                <div class="col-md-3">
-                                    <label for="novaOsLote" class="form-label">Lote</label>
-                                    <input type="text" class="form-control" id="novaOsLote">
-                                </div>
-                                <div class="col-md-3">
-                                    <label for="novaOsBoq" class="form-label">BOQ</label>
-                                    <input type="text" class="form-control" id="novaOsBoq">
-                                </div>
-                                <div class="col-md-3">
-                                    <label for="novaOsPo" class="form-label">PO</label>
-                                    <input type="text" class="form-control" id="novaOsPo">
-                                </div>
-                                <div class="col-md-3">
-                                    <label for="novaOsItem" class="form-label">Item</label>
-                                    <input type="text" class="form-control" id="novaOsItem">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="novaOsUnidade" class="form-label">Unidade</label>
-                                    <input type="text" class="form-control" id="novaOsUnidade">
-                                </div>
-                                <div class="col-12">
-                                    <label for="novaOsObservacoes" class="form-label">Observacoes</label>
-                                    <textarea class="form-control" id="novaOsObservacoes" rows="2"></textarea>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold">Numero da OS</label>
+                                            <input type="text" class="form-control bg-light" id="novaOsNumero" readonly placeholder="(Gerado automaticamente)" title="O numero sera gerado automaticamente pelo sistema">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="novaOsProjeto" class="form-label small fw-bold">Projeto <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="novaOsProjeto" required placeholder="Nome do projeto">
+                                            <div id="novaOsProjetoFeedback" class="small mt-1 d-none"></div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="novaOsSegmento" class="form-label small fw-bold">Segmento <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="novaOsSegmento" required>
+                                                <option value="">Carregando...</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="novaOsGestorTim" class="form-label small fw-bold">Gestor TIM</label>
+                                            <input type="text" class="form-control" id="novaOsGestorTim" placeholder="Nome do gestor">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Bloco 3: LPUs -->
-                            <h6 class="section-title fw-bold text-success mb-3">
-                                <i class="bi bi-tags me-1"></i> LPUs <span class="text-danger">*</span>
-                            </h6>
-                            <div class="row g-2 mb-3 align-items-end">
-                                <div class="col-md-6">
-                                    <label for="novaOsSelectLpu" class="form-label">Selecionar LPU</label>
-                                    <select class="form-select" id="novaOsSelectLpu">
-                                        <option value="">Busque pela LPU...</option>
-                                    </select>
+                            <!-- Bloco 2: Adicionar Itens LPU -->
+                            <div class="card border-0 shadow-sm mb-4">
+                                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 fw-bold text-success">
+                                        <i class="bi bi-tags me-1"></i> Adicionar Item LPU <span class="text-danger">*</span>
+                                    </h6>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" id="novaOsReplicarDados">
+                                        <label class="form-check-label small fw-bold" for="novaOsReplicarDados">Replicar detalhes do ultimo item</label>
+                                    </div>
                                 </div>
-                                <div class="col-md-3">
-                                    <label for="novaOsQuantidade" class="form-label">Quantidade</label>
-                                    <input type="number" class="form-control" id="novaOsQuantidade" min="1" placeholder="Qtd">
+                                <div class="card-body">
+                                    <!-- Selecao da LPU -->
+                                    <div class="row g-2 mb-3 align-items-end">
+                                        <div class="col">
+                                            <label for="novaOsSelectLpu" class="form-label small fw-bold">Selecionar LPU</label>
+                                            <select class="form-select" id="novaOsSelectLpu">
+                                                <option value="">Busque pela LPU...</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Formulario de detalhes do item (preenchido antes de adicionar) -->
+                                    <div class="border rounded p-3 bg-white mb-3" id="novaOsFormDetalhes">
+                                        <div class="row g-2">
+                                            <div class="col-md-2">
+                                                <label for="novaOsQtd" class="form-label small fw-bold mb-1">Quantidade <span class="text-danger">*</span></label>
+                                                <input type="number" class="form-control form-control-sm" id="novaOsQtd" min="1" placeholder="Qtd">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label for="novaOsUnidade" class="form-label small fw-bold mb-1">Unidade</label>
+                                                <input type="text" class="form-control form-control-sm bg-light" id="novaOsUnidade" readonly title="Preenchido automaticamente da LPU">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label for="novaOsSite" class="form-label small fw-bold mb-1">Site</label>
+                                                <input type="text" class="form-control form-control-sm" id="novaOsSite">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="novaOsContrato" class="form-label small fw-bold mb-1">Contrato</label>
+                                                <select class="form-select form-select-sm" id="novaOsContrato">
+                                                    <option value="">Selecione...</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="novaOsRegional" class="form-label small fw-bold mb-1">Regional</label>
+                                                <input type="text" class="form-control form-control-sm" id="novaOsRegional">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label for="novaOsLote" class="form-label small fw-bold mb-1">Lote</label>
+                                                <input type="text" class="form-control form-control-sm" id="novaOsLote">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label for="novaOsBoq" class="form-label small fw-bold mb-1">BOQ</label>
+                                                <input type="text" class="form-control form-control-sm" id="novaOsBoq">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label for="novaOsPo" class="form-label small fw-bold mb-1">PO</label>
+                                                <input type="text" class="form-control form-control-sm" id="novaOsPo">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label for="novaOsItem" class="form-label small fw-bold mb-1">Item</label>
+                                                <input type="text" class="form-control form-control-sm" id="novaOsItem">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="novaOsObservacoes" class="form-label small fw-bold mb-1">Observacoes</label>
+                                                <input type="text" class="form-control form-control-sm" id="novaOsObservacoes" placeholder="Opcional">
+                                            </div>
+                                        </div>
+                                        <div class="text-end mt-3">
+                                            <button type="button" class="btn btn-success" id="btnAdicionarLpuNovaOs">
+                                                <i class="bi bi-plus-lg me-1"></i> Adicionar Item
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tabela resumo dos itens adicionados -->
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover mb-0" id="tabelaItensNovaOs">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>LPU</th>
+                                                    <th class="text-center" style="width:60px;">Qtd</th>
+                                                    <th style="width:80px;">Unid.</th>
+                                                    <th style="width:80px;">Site</th>
+                                                    <th style="width:90px;">Contrato</th>
+                                                    <th class="text-end" style="width:110px;">Vlr. Unit.</th>
+                                                    <th class="text-end" style="width:120px;">Total Est.</th>
+                                                    <th style="width:40px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbodyItensNovaOs">
+                                                <tr id="novaOsSemItens">
+                                                    <td colspan="8" class="text-center text-muted py-3">
+                                                        <i class="bi bi-info-circle me-1"></i> Nenhum item adicionado.
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                            <tfoot id="tfootItensNovaOs" style="display:none;">
+                                                <tr class="table-success fw-bold">
+                                                    <td colspan="6" class="text-end">Total Geral Estimado:</td>
+                                                    <td class="text-end" id="novaOsTotalGeral">R$ 0,00</td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
                                 </div>
-                                <div class="col-md-3">
-                                    <button type="button" class="btn btn-success w-100" id="btnAdicionarLpuNovaOs">
-                                        <i class="bi bi-plus-lg me-1"></i> Adicionar
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="table-responsive mb-3">
-                                <table class="table table-sm table-hover" id="tabelaLpusNovaOs">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>LPU</th>
-                                            <th class="text-center" style="width:80px;">Qtd</th>
-                                            <th class="text-end" style="width:120px;">Vlr. Unit.</th>
-                                            <th class="text-end" style="width:130px;">Total Est.</th>
-                                            <th style="width:50px;"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tbodyLpusNovaOs">
-                                        <tr id="novaOsSemItens">
-                                            <td colspan="5" class="text-center text-muted py-3">
-                                                <i class="bi bi-info-circle me-1"></i> Adicione pelo menos uma LPU
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                    <tfoot id="tfootLpusNovaOs" style="display:none;">
-                                        <tr class="table-success fw-bold">
-                                            <td colspan="3" class="text-end">Total Geral Estimado:</td>
-                                            <td class="text-end" id="novaOsTotalGeral">R$ 0,00</td>
-                                            <td></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
                             </div>
                         </form>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer border-0 bg-light">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-success" id="btnSubmeterNovaOs">
+                        <button type="button" class="btn btn-success px-4 fw-bold shadow-sm" id="btnSubmeterNovaOs">
                             <i class="bi bi-check-circle me-1"></i> Criar OS
                         </button>
                     </div>
@@ -628,20 +637,20 @@
 
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../assets/js/general/sidebar.js?v=5.5"></script>
-    <script src="../assets/js/general/global.js?v=5.5"></script>
+    <script src="../assets/js/general/sidebar.js?v=5.6"></script>
+    <script src="../assets/js/general/global.js?v=5.6"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
-    <script src="../assets/js/registros/registros-state.js"></script>
-    <script src="../assets/js/registros/registros-utils.js"></script>
-    <script src="../assets/js/registros/registros-render.js"></script>
-    <script src="../assets/js/registros/registros-api.js"></script>
-    <script src="../assets/js/registros/registros-actions.js"></script>
-    <script src="../assets/js/registros/registros-io.js"></script>
-    <script src="../assets/js/registros/registros-main.js"></script>
+    <script src="../assets/js/registros/registros-state.js?v=5.7"></script>
+    <script src="../assets/js/registros/registros-utils.js?v=5.7"></script>
+    <script src="../assets/js/registros/registros-render.js?v=5.7"></script>
+    <script src="../assets/js/registros/registros-api.js?v=5.7"></script>
+    <script src="../assets/js/registros/registros-actions.js?v=5.7"></script>
+    <script src="../assets/js/registros/registros-io.js?v=5.7"></script>
+    <script src="../assets/js/registros/registros-main.js?v=5.7"></script>
 
 </body>
 

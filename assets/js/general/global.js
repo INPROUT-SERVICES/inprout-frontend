@@ -136,7 +136,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!novaSenha) return mostrarToast('Preencha ambos os campos de senha.', 'error');
 
                 try {
-                    const responseSenha = await fetchComAuth(`/api/usuarios/senha?email=${encodeURIComponent(localStorage.getItem('email'))}&novaSenha=${encodeURIComponent(novaSenha)}`, { method: 'PUT' });
+                    const responseSenha = await fetchComAuth(`/api/usuarios/senha`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: localStorage.getItem('email'), novaSenha: novaSenha })
+                    });
                     if (!responseSenha.ok) {
                         const resultadoSenha = await responseSenha.text();
                         throw new Error(resultadoSenha);
@@ -174,9 +178,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (detalhesContainer) {
                 detalhesContainer.innerHTML = ''; // Limpa o conteúdo anterior
 
-                // Verifica se o usuário é Gestor ou Coordenador
-                if (userRole === 'MANAGER' || userRole === 'COORDINATOR') {
-                    const roleTraduzido = userRole === 'MANAGER' ? 'Gestor' : 'Coordenador';
+                // Verifica se o usuário tem um perfil que precisa mostrar detalhes
+                const roleMap = { 'MANAGER': 'Gestor', 'COORDINATOR': 'Coordenador', 'VISUALIZADOR': 'Visualizador' };
+                if (roleMap[userRole]) {
+                    const roleTraduzido = roleMap[userRole];
 
                     try {
                         // Busca a lista completa de segmentos na API

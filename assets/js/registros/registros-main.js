@@ -32,10 +32,28 @@ document.addEventListener('DOMContentLoaded', async function () {
     const btnSubmeterNovaOs = document.getElementById('btnSubmeterNovaOs');
     if (btnSubmeterNovaOs) btnSubmeterNovaOs.addEventListener('click', () => NovaOsManager.submeter());
 
-    // Delegated click para remover LPU da tabela
-    const tabelaLpus = document.getElementById('tabelaLpusNovaOs');
-    if (tabelaLpus) {
-        tabelaLpus.addEventListener('click', (e) => {
+    // Validacao de projeto existente (debounce)
+    const inputProjeto = document.getElementById('novaOsProjeto');
+    if (inputProjeto) {
+        let projetoTimeout = null;
+        inputProjeto.addEventListener('input', (e) => {
+            clearTimeout(projetoTimeout);
+            projetoTimeout = setTimeout(() => {
+                NovaOsManager.validarProjeto(e.target.value);
+            }, 700);
+        });
+    }
+
+    // Auto-preencher Unidade ao selecionar LPU (listener no select via Choices.js change event)
+    const selectLpuEl = document.getElementById('novaOsSelectLpu');
+    if (selectLpuEl) {
+        selectLpuEl.addEventListener('change', () => NovaOsManager.onLpuSelecionada());
+    }
+
+    // Delegated click para remover LPU da tabela de itens
+    const tabelaItensNovaOs = document.getElementById('tabelaItensNovaOs');
+    if (tabelaItensNovaOs) {
+        tabelaItensNovaOs.addEventListener('click', (e) => {
             const btnRemover = e.target.closest('.btn-remover-lpu-nova-os');
             if (btnRemover) {
                 const idx = parseInt(btnRemover.dataset.index);
@@ -58,19 +76,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     // 4. Carrega os dados da tabela
     await RegistrosApi.carregarDados(0, '');
 
-    // 4.5 Inicializa flatpickr nos inputs de data do dashboard (dd/mm/yyyy)
-    if (typeof flatpickr !== 'undefined' && flatpickr.l10ns && flatpickr.l10ns.pt) {
-        const fpConfig = {
-            dateFormat: 'Y-m-d',
-            altInput: true,
-            altFormat: 'd/m/Y',
-            locale: flatpickr.l10ns.pt,
-            altInputClass: 'form-control form-control-sm'
-        };
-        flatpickr('#dashboard-data-inicio', fpConfig);
-        flatpickr('#dashboard-data-fim', fpConfig);
-    }
-
     // 5. Inicializa o seletor de GATEs e configura o dashboard
     await inicializarGateSeletor();
 
@@ -87,32 +92,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    // 7. Listeners dos filtros de data do Dashboard
-    const btnFiltrar = document.getElementById('btnFiltrarDashboard');
-    const btnLimpar = document.getElementById('btnLimparFiltroDashboard');
-
-    if (btnFiltrar) {
-        btnFiltrar.addEventListener('click', () => {
-            // Ao clicar em filtrar com datas manuais, desseleciona o gate
-            const gateSelect = document.getElementById('dashboard-gate-select');
-            if (gateSelect) gateSelect.value = 'custom';
-            RegistrosRender.renderizarDashboardAnalise();
-        });
-    }
-
-    if (btnLimpar) {
-        btnLimpar.addEventListener('click', () => {
-            const inputInicio = document.getElementById('dashboard-data-inicio');
-            const inputFim = document.getElementById('dashboard-data-fim');
-            const gateSelect = document.getElementById('dashboard-gate-select');
-            if (inputInicio?._flatpickr) inputInicio._flatpickr.clear();
-            else if (inputInicio) inputInicio.value = '';
-            if (inputFim?._flatpickr) inputFim._flatpickr.clear();
-            else if (inputFim) inputFim.value = '';
-            if (gateSelect) gateSelect.value = '';
-            RegistrosRender.renderizarDashboardAnalise();
-        });
-    }
 });
 
 /**
@@ -126,15 +105,14 @@ async function inicializarGateSeletor() {
         const gates = await RegistrosApi.fetchGates();
 
         // Monta as opções do select
-        let optionsHTML = '<option value="">Sem filtro de GATE</option>';
-        optionsHTML += '<option value="custom">Personalizado</option>';
+        let optionsHTML = '<option value="">Todos os GATEs</option>';
 
         // Ordena por dataInicio decrescente (mais recente primeiro)
         gates.sort((a, b) => new Date(b.dataInicio) - new Date(a.dataInicio));
 
         const hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
-        let gateAtualId = null;
+        let gateAtualNome = null;
 
         gates.forEach(gate => {
             const inicio = new Date(gate.dataInicio);
@@ -143,8 +121,8 @@ async function inicializarGateSeletor() {
             fim.setHours(23, 59, 59, 999);
 
             // Verifica se hoje está dentro do intervalo deste gate
-            if (hoje >= inicio && hoje <= fim && !gateAtualId) {
-                gateAtualId = gate.id;
+            if (hoje >= inicio && hoje <= fim && !gateAtualNome) {
+                gateAtualNome = gate.nome;
             }
 
             // Formata as datas para exibição
@@ -152,68 +130,24 @@ async function inicializarGateSeletor() {
             const fimFormatado = fim.toLocaleDateString('pt-BR');
             const label = `${gate.nome} (${inicioFormatado} - ${fimFormatado})`;
 
-            optionsHTML += `<option value="${gate.id}" data-inicio="${gate.dataInicio}" data-fim="${gate.dataFim}">${label}</option>`;
+            optionsHTML += `<option value="${gate.nome}">${label}</option>`;
         });
 
         gateSelect.innerHTML = optionsHTML;
 
         // Auto-seleciona o gate vigente
-        if (gateAtualId) {
-            gateSelect.value = gateAtualId;
-            aplicarDatasDoGate(gateSelect);
+        if (gateAtualNome) {
+            gateSelect.value = gateAtualNome;
         }
 
         // Listener para quando o usuário trocar o gate
         gateSelect.addEventListener('change', () => {
-            const valor = gateSelect.value;
-
-            if (valor === '' || valor === 'custom') {
-                // Sem gate ou personalizado: limpa as datas
-                if (valor === '') {
-                    const inputInicio = document.getElementById('dashboard-data-inicio');
-                    const inputFim = document.getElementById('dashboard-data-fim');
-                    if (inputInicio?._flatpickr) inputInicio._flatpickr.clear();
-                    else if (inputInicio) inputInicio.value = '';
-                    if (inputFim?._flatpickr) inputFim._flatpickr.clear();
-                    else if (inputFim) inputFim.value = '';
-                }
-                // Se "custom", mantém as datas atuais para o usuário editar manualmente
-            } else {
-                // Gate selecionado: preenche as datas automaticamente
-                aplicarDatasDoGate(gateSelect);
-            }
-
-            // Recarrega o dashboard
             RegistrosRender.renderizarDashboardAnalise();
         });
 
     } catch (e) {
         console.error('Erro ao inicializar seletor de GATE:', e);
         gateSelect.innerHTML = '<option value="">Erro ao carregar GATEs</option>';
-    }
-}
-
-/**
- * Extrai as datas do gate selecionado e preenche os inputs de data.
- * Usa a API do flatpickr quando disponível, com fallback para .value direto.
- */
-function aplicarDatasDoGate(selectElement) {
-    const selectedOption = selectElement.options[selectElement.selectedIndex];
-    const dataInicioISO = selectedOption.dataset.inicio;
-    const dataFimISO = selectedOption.dataset.fim;
-
-    if (dataInicioISO && dataFimISO) {
-        const inicio = dataInicioISO.split('T')[0];
-        const fim = dataFimISO.split('T')[0];
-
-        const inputInicio = document.getElementById('dashboard-data-inicio');
-        const inputFim = document.getElementById('dashboard-data-fim');
-
-        if (inputInicio?._flatpickr) inputInicio._flatpickr.setDate(inicio, false);
-        else if (inputInicio) inputInicio.value = inicio;
-
-        if (inputFim?._flatpickr) inputFim._flatpickr.setDate(fim, false);
-        else if (inputFim) inputFim.value = fim;
     }
 }
 
@@ -229,7 +163,7 @@ function configurarVisibilidadeAbas() {
     const listaPane = document.getElementById('lista-pane');
 
     // Se NÃO for ADMIN, NÃO for CONTROLLER e NÃO for ASSISTANT, removemos/escondemos o dashboard e ativamos a lista
-    if (role !== 'ADMIN' && role !== 'CONTROLLER' && role !== 'ASSISTANT') {
+    if (role !== 'ADMIN' && role !== 'CONTROLLER' && role !== 'ASSISTANT' && role !== 'VISUALIZADOR') {
         // Esconde o botão da aba Dashboard
         if (dashboardTabBtn) {
             dashboardTabBtn.parentElement.style.display = 'none';

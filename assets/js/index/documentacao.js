@@ -7,6 +7,7 @@ const DocumentacaoModule = (function () {
     let todosUsuariosCache = [];
     let osCache = []; // Cache para armazenar os nomes reais das OSs
     let cachesCarregados = false;
+    let solicitacoesCache = []; // Cache para exportação
 
     // Garante que os dados sejam baixados das APIs (Documentos e Monolito)
     async function carregarCaches() {
@@ -249,7 +250,8 @@ const DocumentacaoModule = (function () {
             const data = await response.json();
 
             let solicitacoes = Array.isArray(data) ? data : (data.content || []);
-            solicitacoes = solicitacoes.filter(sol => sol.status === 'AGUARDANDO_RECEBIMENTO');
+            solicitacoes = solicitacoes.filter(sol => sol.status === 'AGUARDANDO_RECEBIMENTO' || sol.status === 'RECUSADO');
+            solicitacoesCache = solicitacoes; // Salva para exportação
 
             // Filtragem por segmento é feita pelo backend (SolicitacaoDocumentoController.listar)
             // O frontend NÃO precisa filtrar novamente
@@ -284,19 +286,34 @@ const DocumentacaoModule = (function () {
                 const responsavelNome = sol.documentistaNome || (sol.documentistaId ? `ID: ${sol.documentistaId}` : 'Sem Responsável');
                 const tipoDoc = sol.documento ? sol.documento.nome : '-';
                 const dataSolicitacao = sol.criadoEm ? new Date(sol.criadoEm).toLocaleDateString('pt-BR') : '-';
+                const isRecusado = sol.status === 'RECUSADO';
+                const role = (localStorage.getItem('role') || '').toUpperCase();
+
+                // Coluna de ação: checkbox + histórico + botão re-solicitar (se recusado e MANAGER/ADMIN)
+                let acaoHtml = `
+                    <div class="d-flex align-items-center justify-content-center gap-1">
+                        ${!isRecusado ? `<input type="checkbox" class="form-check-input check-doc-lote me-1" value="${sol.id}" style="margin-top: 0;">` : ''}
+                        <button class="btn btn-sm btn-outline-secondary btn-comentar-doc" onclick="abrirModalComentariosIndex('${sol.id}')" title="Ver Histórico/Comentários">
+                            <i class="bi bi-clock-history"></i>
+                        </button>
+                        ${isRecusado && (role === 'MANAGER' || role === 'ADMIN') ? `
+                            <button class="btn btn-sm btn-outline-success" onclick="DocumentacaoModule.resolicitarDocIndex('${sol.id}')" title="Re-solicitar documento">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </button>
+                        ` : ''}
+                    </div>`;
+
+                // Badge de status
+                const statusBadge = isRecusado
+                    ? '<span class="badge bg-danger">Recusado</span>'
+                    : '<span class="badge bg-warning text-dark">Aguardando Recebimento</span>';
+
+                // Destaque visual para recusado
+                if (isRecusado) tr.classList.add('table-danger');
 
                 tr.innerHTML = `
-                    <td class="align-middle text-center">
-                        <div class="d-flex align-items-center justify-content-center">
-                            <input type="checkbox" class="form-check-input check-doc-lote me-2" value="${sol.id}" style="margin-top: 0;">
-                            <button class="btn btn-sm btn-outline-secondary btn-comentar-doc" onclick="abrirModalComentariosIndex('${sol.id}')" title="Ver Histórico/Comentários">
-                                <i class="bi bi-clock-history"></i>
-                            </button>
-                        </div>
-                    </td>
-                    <td class="align-middle text-center">
-                        <span class="badge bg-warning text-dark">Aguardando Recebimento</span>
-                    </td>
+                    <td class="align-middle text-center">${acaoHtml}</td>
+                    <td class="align-middle text-center">${statusBadge}</td>
                     <td class="align-middle">
                         <span class="text-secondary fw-medium">${dataSolicitacao}</span>
                     </td>
@@ -604,11 +621,60 @@ const DocumentacaoModule = (function () {
         return conflitos;
     }
 
+    async function resolicitarDocIndex(solicitacaoId) {
+        const { value: motivo } = await Swal.fire({
+            title: 'Re-solicitar Documento',
+            input: 'textarea',
+            inputLabel: 'Motivo da re-solicitação (obrigatório)',
+            inputPlaceholder: 'Informe o motivo...',
+            showCancelButton: true,
+            confirmButtonText: 'Re-solicitar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#198754',
+            inputValidator: (value) => {
+                if (!value || !value.trim()) return 'Informe o motivo da re-solicitação.';
+            }
+        });
+
+        if (!motivo) return;
+
+        try {
+            const userId = parseInt(localStorage.getItem('usuarioId'));
+            const resp = await fetchComAuth(`/api/docs/solicitacoes/${solicitacaoId}/resolicitar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ actorUsuarioId: userId, comentario: motivo })
+            });
+
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({}));
+                throw new Error(errData.message || errData.error || `Erro (Status: ${resp.status})`);
+            }
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Re-solicitado!',
+                text: 'O documento voltou para Aguardando Recebimento.',
+                confirmButtonColor: '#198754'
+            });
+            carregarAbaPendenteDoc();
+        } catch (e) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro',
+                text: 'Erro na re-solicitação: ' + e.message,
+                confirmButtonColor: '#198754'
+            });
+        }
+    }
+
     return {
         criarSolicitacao,
         carregarAbaPendenteDoc,
         popularSelectDocumento,
-        verificarDuplicatas
+        verificarDuplicatas,
+        resolicitarDocIndex,
+        getSolicitacoes: () => solicitacoesCache
     };
 
 })();
